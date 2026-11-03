@@ -89,7 +89,7 @@
 </head>
 <body>
 <main>
-  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a></p>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a><a href="songs.html">My songs</a></p>
   <h1>Chords in a Key</h1>
   <p class="sub">A key is a family of 7 notes (a scale). Build a chord on each note using only notes from that family,
     and you get 7 chords that sound good together. Most songs use just a few of them.</p>
@@ -177,32 +177,12 @@ const SCALES = [
     ] },
 ];
 
-// ---------- Spelling notes correctly ----------
-// In a scale every letter A–G is used exactly once. That's why the 4th note of F major is
-// B♭ and not A♯: A is already taken. So we give each degree the next letter and work out
-// which ♯ or ♭ it needs to land on the right pitch.
-const LETTERS = "CDEFGAB";
-const NATURAL = [0, 2, 4, 5, 7, 9, 11]; // pitch of C, D, E, F, G, A, B
-const ACCIDENTAL = { "-2": "𝄫", "-1": "♭", "0": "", "1": "♯", "2": "𝄪" };
+// Key names you can pick (spellScale in chord-data.js turns these into correctly spelled scales)
 const ROOT_OPTIONS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
-
-function spellScale(rootName, steps) {
-  const letter = LETTERS.indexOf(rootName[0]);
-  const rootPc = (NATURAL[letter] + (rootName[1] === "#" ? 1 : rootName[1] === "b" ? -1 : 0) + 12) % 12;
-  return steps.map((step, i) => {
-    const l = (letter + i) % 7;
-    const pc = (rootPc + step) % 12;
-    const acc = ((pc - NATURAL[l] + 18) % 12) - 6; // how far from the plain letter: -1 = ♭, +1 = ♯
-    return { pc, name: LETTERS[l] + ACCIDENTAL[acc] };
-  });
-}
 
 // ---------- Building the chords ----------
 // Stack every other note of the scale: degree i gets notes i, i+2, i+4 (and i+6 for a 7th chord).
 // Then measure the gaps to see what kind of chord came out.
-const MAJOR = [0, 2, 4, 5, 7, 9, 11];
-const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
-
 function diatonicChord(steps, i, size) {
   const above = n => (steps[(i + n) % 7] - steps[i] + 12) % 12; // semitones from this chord's root
   const third = above(2), fifth = above(4), seventh = above(6);

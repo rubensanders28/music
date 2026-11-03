@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Songs</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .row + .row { margin-top: 10px; }
+  input[type="text"], input[type="url"], select {
+    font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--btn);
+    background: var(--card); color: var(--ink);
+  }
+  input[type="text"], input[type="url"] { flex: 1 1 180px; min-width: 0; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--muted); flex: 1 1 200px; }
+  .btn {
+    font: inherit; font-size: 0.9rem; font-weight: 600; border: none; border-radius: 8px;
+    padding: 7px 12px; background: var(--btn); color: var(--ink); cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { outline: 2px solid var(--accent); }
+  .btn:disabled { opacity: .5; cursor: default; outline: none; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .link-btn { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 0.85rem; cursor: pointer; }
+
+  /* Chord picker */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit; font-size: 0.85rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--btn); background: transparent; color: var(--muted);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:hover { border-color: var(--accent); }
+  .roots { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; }
+  .roots button {
+    font: inherit; font-weight: 600; line-height: 1.15; padding: 8px 0; border: none; border-radius: 10px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .roots button small { font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+  .roots button:hover { outline: 2px solid var(--accent); }
+  .song-chords { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
+  .song-chord { display: inline-flex; align-items: center; gap: 4px; background: var(--btn); border-radius: 8px; padding: 4px 4px 4px 10px; font-weight: 700; }
+  .song-chord button { border: none; background: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0 4px; }
+  .song-chord button:hover { color: var(--bad); }
+  .step { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
+
+  /* Key */
+  .key-name { font-size: 1.4rem; font-weight: 700; }
+  .numerals { font-family: Georgia, serif; color: var(--accent); font-size: 1.1rem; }
+
+  /* Chord cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; margin-top: 10px; }
+  .grid.piano { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  .chord {
+    background: var(--card); border: 2px solid var(--btn); border-radius: 12px; padding: 8px 6px 6px;
+    text-align: center; transition: border-color .15s, transform .15s;
+  }
+  .chord.playing { border-color: var(--accent); transform: translateY(-3px); }
+  .chord .numeral { font-family: Georgia, serif; color: var(--accent); }
+  .chord .name { font-weight: 700; font-size: 1.15rem; margin-bottom: 4px; }
+  .chord svg { cursor: pointer; }
+  .shape-btn { background: none; border: none; color: var(--accent); font: inherit; font-size: 0.75rem; cursor: pointer; padding: 2px; }
+
+  /* Practice */
+  .question { max-width: 260px; margin: 0 auto; }
+  .question.piano { max-width: 420px; }
+  .answers { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 12px; }
+  .answers button {
+    font: inherit; font-weight: 700; font-size: 1.05rem; padding: 10px 0; border: 2px solid transparent; border-radius: 10px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .answers button:hover { border-color: var(--accent); }
+  .answers button.good { background: var(--good); color: #fff; }
+  .answers button.bad  { background: var(--bad);  color: #fff; }
+  .feedback { min-height: 1.5em; text-align: center; font-weight: 600; margin-top: 8px; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad  { color: var(--bad); }
+  .empty { color: var(--muted); text-align: center; padding: 20px 0; }
+
+  /* Chord diagram colours (the guitar shapes are drawn by chord-data.js) */
+  svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--line); stroke-width: 1.5; }
+  .nut { stroke: var(--line); stroke-width: 6; }
+  .finger { fill: var(--line); }
+  .finger.root { fill: var(--accent); }
+  .marker { fill: none; stroke: var(--line); stroke-width: 2; }
+  .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+  /* Piano keys */
+  .pk-white { fill: #fdfdfb; stroke: #555; stroke-width: 1; }
+  .pk-black { fill: #1c1c1c; }
+  .pk-on { fill: var(--accent-soft); }
+  .pk-root { fill: var(--accent); }
+  .pk-label { fill: #888; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a><a href="keys.html">Chords in a key</a></p>
+  <h1>My Songs</h1>
+  <p class="sub">Look up a song on Ultimate Guitar or Tab4U, enter its chords here, and practise them.</p>
+
+  <!-- 1. Which song -->
+  <div class="panel">
+    <div class="row">
+      <select id="songList" aria-label="Choose a song"></select>
+      <button class="btn" id="newSong">+ New song</button>
+      <button class="btn" id="deleteSong">Delete</button>
+    </div>
+    <div class="row">
+      <label class="field">Song title <input type="text" id="title" placeholder="e.g. Wonderwall"></label>
+      <label class="field">Artist <input type="text" id="artist" placeholder="e.g. Oasis"></label>
+    </div>
+    <div class="row">
+      <label class="field">Link to the chords page <input type="url" id="link" placeholder="Paste the address of the song's page"></label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="openLink">Open link ↗</button>
+      <button class="btn" id="searchUG">Search Ultimate Guitar ↗</button>
+      <button class="btn" id="searchTab4u">Search Tab4U ↗</button>
+    </div>
+  </div>
+
+  <!-- 2. The chords -->
+  <div class="panel">
+    <h2>Chords in this song</h2>
+    <p class="muted">Add them in the order they're played. Pick the chord type, then click the root note.</p>
+    <div class="song-chords" id="songChords"></div>
+    <div class="row"><button class="link-btn" id="undo">Remove last</button><button class="link-btn" id="clear">Clear all</button></div>
+    <p class="step">1. Chord type</p>
+    <div class="chips" id="typePicker"></div>
+    <p class="step">2. Root note (adds the chord)</p>
+    <div class="roots" id="rootPicker"></div>
+  </div>
+
+  <!-- 3. The key -->
+  <div class="panel" id="keyPanel"></div>
+
+  <!-- 4. Diagrams and playback -->
+  <div class="panel">
+    <h2>The chords</h2>
+    <div class="row">
+      <label class="muted">Instrument
+        <select id="instrument">
+          <option value="guitar">Guitar</option>
+          <option value="piano">Piano</option>
+        </select>
+      </label>
+      <label class="muted">Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="playBtn">▶ Play in order</button>
+      <label class="muted">Speed
+        <select id="speed">
+          <option value="2">Slow</option>
+          <option value="1.4" selected>Medium</option>
+          <option value="0.9">Fast</option>
+        </select>
+      </label>
+      <label class="muted"><input type="checkbox" id="loop"> Repeat</label>
+    </div>
+    <div class="grid" id="cards"></div>
+  </div>
+
+  <!-- 5. Practice -->
+  <div class="panel">
+    <h2>Practise this song's chords</h2>
+    <p class="muted">Which chord is this? Uses the instrument chosen above.</p>
+    <div class="question" id="question"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="answers" id="answers"></div>
+    <p class="muted" id="score" style="text-align:center"></p>
+  </div>
+
+  <p class="hint">Your songs are saved in this browser only, so they won't appear on another computer or phone.
+    The chords themselves stay on Ultimate Guitar / Tab4U; this page only keeps the chord names you enter.<br>
+    Sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- Shared code: chord shapes, keys, guitar sound (chord-data.js) and piano sound (piano-sound.js) -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script>
+// ---------- Saving songs ----------
+// Each song: { id, title, artist, link, chords: [{ root: 0–11, type: "min" }, ...] }
+let songs = [];
+let currentId = null;
+try {
+  songs = JSON.parse(localStorage.getItem("mySongs")) || [];
+  currentId = localStorage.getItem("mySongsCurrent");
+} catch (e) {}
+
+function saveSongs() {
+  try {
+    localStorage.setItem("mySongs", JSON.stringify(songs));
+    localStorage.setItem("mySongsCurrent", currentId);
+  } catch (e) {}
+}
+
+function newSong() {
+  const s = { id: Date.now().toString(36), title: "", artist: "", link: "", chords: [] };
+  songs.push(s);
+  currentId = s.id;
+  saveSongs();
+}
+if (songs.length === 0) newSong();
+if (!songs.some(s => s.id === currentId)) currentId = songs[0].id;
+
+const song = () => songs.find(s => s.id === currentId);
+const typeOf = id => TYPES.find(t => t.id === id);
+const sameChord = (a, b) => a.root === b.root && a.type === b.type;
+
+// ---------- 1. Song details ----------
+const $ = id => document.getElementById(id);
+
+function renderSongList() {
+  const list = $("songList");
+  list.innerHTML = "";
+  songs.forEach(s => list.add(new Option((s.title || "Untitled song") + (s.artist ? " – " + s.artist : ""), s.id)));
+  list.value = currentId;
+}
+
+function loadSong() {
+  $("title").value = song().title;
+  $("artist").value = song().artist;
+  $("link").value = song().link;
+  renderSongList();
+  renderAll();
+}
+
+["title", "artist", "link"].forEach(field => $(field).oninput = () => {
+  song()[field] = $(field).value;
+  saveSongs();
+  if (field !== "link") renderSongList();
+});
+$("songList").onchange = () => { currentId = $("songList").value; saveSongs(); loadSong(); };
+$("newSong").onclick = () => { newSong(); loadSong(); $("title").focus(); };
+$("deleteSong").onclick = () => {
+  if (!confirm(`Delete "${song().title || "Untitled song"}"?`)) return;
+  songs = songs.filter(s => s.id !== currentId);
+  if (songs.length === 0) newSong();
+  currentId = songs[0].id;
+  saveSongs();
+  loadSong();
+};
+
+// Links open in a new tab. We only allow normal web addresses (http/https).
+function openTab(url) { window.open(url, "_blank", "noopener"); }
+$("openLink").onclick = () => {
+  let url = song().link.trim();
+  if (!url) return alert("Paste the address of the song's chords page into the Link box first.");
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  openTab(url);
+};
+function searchText() {
+  const q = (song().title + " " + song().artist).trim();
+  if (!q) alert("Type the song title first.");
+  return q;
+}
+$("searchUG").onclick = () => {
+  const q = searchText();
+  if (q) openTab("https://www.ultimate-guitar.com/search.php?search_type=title&value=" + encodeURIComponent(q));
+};
+$("searchTab4u").onclick = () => {
+  const q = searchText();
+  if (q) openTab("https://www.tab4u.com/resultsSimple?tab=songs&q=" + encodeURIComponent(q));
+};
+
+// ---------- 2. Picking chords ----------
+let pickedType = "maj";
+
+TYPES.forEach(t => {
+  const b = document.createElement("button");
+  b.className = "chip";
+  b.textContent = t.label;
+  b.setAttribute("aria-pressed", t.id === pickedType);
+  b.onclick = () => {
+    pickedType = t.id;
+    $("typePicker").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b));
+  };
+  $("typePicker").appendChild(b);
+});
+
+NOTES.forEach((n, i) => {
+  const b = document.createElement("button");
+  b.innerHTML = FLATS[n] ? `${pretty(i)}<br><small>${FLATS[n]}</small>` : n;
+  b.onclick = () => { song().chords.push({ root: i, type: pickedType }); saveSongs(); renderAll(); };
+  $("rootPicker").appendChild(b);
+});
+
+$("undo").onclick = () => { song().chords.pop(); saveSongs(); renderAll(); };
+$("clear").onclick = () => {
+  if (song().chords.length && confirm("Remove all chords from this song?")) { song().chords = []; saveSongs(); renderAll(); }
+};
+
+function renderSongChords() {
+  const box = $("songChords");
+  box.innerHTML = "";
+  if (song().chords.length === 0) box.innerHTML = `<span class="muted">No chords yet.</span>`;
+  song().chords.forEach((c, i) => {
+    const chip = document.createElement("span");
+    chip.className = "song-chord";
+    chip.textContent = label(c);
+    const remove = document.createElement("button");
+    remove.textContent = "×";
+    remove.title = "Remove";
+    remove.onclick = () => { song().chords.splice(i, 1); saveSongs(); renderAll(); };
+    chip.appendChild(remove);
+    box.appendChild(chip);
+  });
+}
+
+// ---------- 3. Finding the key ----------
+// Try all 24 keys (12 major, 12 minor). A key scores a point for every chord whose notes
+// all belong to its scale, plus a small bonus if the key's home chord (the "tonic") is in
+// the song, especially as the first or last chord, because songs tend to start and end at home.
+const MAJOR_KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+const MINOR_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+
+function scaleNotes(k) {
+  const pcs = new Set((k.minor ? MINOR : MAJOR).map(s => (k.pc + s) % 12));
+  if (k.minor) pcs.add((k.pc + 11) % 12); // minor songs often raise the 7th note (that's why E fits in A minor)
+  return pcs;
+}
+const fits = (c, k) => typeOf(c.type).notes.every(n => scaleNotes(k).has((c.root + n) % 12));
+
+function detectKey(chords) {
+  const isTonic = (c, k) => c && c.root === k.pc && typeOf(c.type).notes.includes(k.minor ? 3 : 4);
+  const ranked = [];
+  for (let pc = 0; pc < 12; pc++) {
+    for (const minor of [false, true]) {
+      const k = { pc, minor };
+      k.fit = chords.filter(c => fits(c, k)).length;
+      k.score = k.fit
+        + (chords.some(c => isTonic(c, k)) ? 0.5 : 0)
+        + (isTonic(chords[0], k) ? 0.3 : 0)
+        + (isTonic(chords[chords.length - 1], k) ? 0.2 : 0);
+      ranked.push(k);
+    }
+  }
+  return ranked.sort((a, b) => b.score - a.score);
+}
+
+function keyAscii(k) { return (k.minor ? MINOR_KEYS : MAJOR_KEYS)[k.pc]; }
+function keyName(k) { return keyAscii(k).replace("#", "♯").replace("b", "♭") + (k.minor ? " minor" : " major"); }
+
+// The key we found for the current song (or null), with its correctly spelled scale
+let key = null;
+
+// Where a chord's root sits in the key: the scale degree (0–6) and whether it's raised (+1) or lowered (-1)
+function degreeOf(root) {
+  const notes = key.notes;
+  let d = notes.findIndex(n => n.pc === root);
+  if (d >= 0) return { d, shift: 0 };
+  if (key.minor && root === (notes[0].pc + 11) % 12) return { d: 6, shift: 1 }; // the raised 7th in minor
+  d = notes.findIndex(n => n.pc === (root + 1) % 12);
+  if (d >= 0) return { d, shift: -1 };
+  return { d: notes.findIndex(n => n.pc === (root + 11) % 12), shift: 1 };
+}
+
+// A chord's name, spelled to suit the key (B♭ in F major, A♯ in B major)
+function label(c) {
+  const t = typeOf(c.type);
+  if (!key) return pretty(c.root) + t.suffix;
+  const { d, shift } = degreeOf(c.root);
+  const base = key.notes[d].name;
+  const acc = { "": 0, "♯": 1, "♭": -1, "𝄪": 2, "𝄫": -2 }[base.slice(1)] + shift;
+  return base[0] + ACCIDENTAL[acc] + t.suffix;
+}
+
+// A chord's Roman numeral in the key: uppercase for major, lowercase for minor.
+// Like on the Chords in a Key page, a ♭ or ♯ means "lower/higher than in the major scale",
+// so in A minor the C chord is ♭III.
+function numeral(c) {
+  const t = typeOf(c.type);
+  const { d } = degreeOf(c.root);
+  const diff = ((c.root - key.pc + 12) % 12) - MAJOR[d];
+  const shift = diff > 6 ? diff - 12 : diff < -6 ? diff + 12 : diff;
+  const minorish = t.notes.includes(3) && !t.notes.includes(4);
+  const base = (shift < 0 ? "♭" : shift > 0 ? "♯" : "") + (minorish ? ROMAN[d].toLowerCase() : ROMAN[d]);
+  const special = { dim: "°", dim7: "°7", m7b5: "ø7", aug: "+" }[t.id];
+  if (special) return base + special;
+  return base + (minorish && t.suffix.startsWith("m") && !t.suffix.startsWith("maj") ? t.suffix.slice(1) : t.suffix);
+}
+
+function renderKey() {
+  const chords = song().chords;
+  const panel = $("keyPanel");
+  if (chords.length === 0) {
+    key = null;
+    panel.innerHTML = `<h2>Key</h2><p class="muted">Add some chords and the key will appear here.</p>`;
+    return;
+  }
+  const ranked = detectKey(chords);
+  const best = ranked[0];
+  key = { ...best, notes: spellScale(keyAscii(best), best.minor ? MINOR : MAJOR) };
+
+  const outside = chords.filter(c => !fits(c, best));
+  const uniqueOutside = outside.filter((c, i) => outside.findIndex(o => sameChord(o, c)) === i);
+  const alt = ranked.find(k => k !== best && k.fit === best.fit && best.score - k.score < 0.6);
+  // Songs usually start and end "at home". If this one starts and ends on a chord that isn't
+  // the key's home chord, mention it: the song may really be in that chord's key, with a borrowed chord.
+  const first = chords[0], last = chords[chords.length - 1];
+  const homeHint = chords.length > 2 && sameChord(first, last) && first.root !== best.pc;
+
+  panel.innerHTML = `<h2>Key</h2>
+    <div class="key-name">${keyName(best)}</div>
+    <p class="muted">${best.fit} of ${chords.length} chords fit this key.
+      ${uniqueOutside.length ? `Outside the key: <b>${uniqueOutside.map(label).join(", ")}</b> (a “borrowed” chord: songs do this all the time).` : ""}
+      ${alt && !homeHint ? `It could also be <b>${keyName(alt)}</b>: same notes, but a different home chord. Trust your ear: the chord that sounds like “home” is the key.` : ""}
+      ${homeHint ? `The song starts and ends on <b>${label(first)}</b>, so that chord may feel like “home”. If it does, the song is really in ${label(first)} and borrows a chord or two.` : ""}</p>
+    <p class="numerals">${chords.map(numeral).join(" – ")}</p>
+    <button class="btn" id="seeKey">See all chords in ${keyName(best)} →</button>`;
+
+  // Open the Chords in a Key page with this key already selected
+  $("seeKey").onclick = () => {
+    try { localStorage.setItem("keysPage", JSON.stringify({ root: keyAscii(best), scale: best.minor ? "minor" : "major", size: "3" })); } catch (e) {}
+    location.href = "keys.html";
+  };
+}
+
+// ---------- 4. Chord cards: guitar diagrams or piano keys ----------
+let cards = []; // one per different chord in the song: { chord, shapes, shapeIndex, el }
+
+// Piano: the chord's notes, starting from the root in the octave below middle C.
+// Notes like the 9th (2 semitones) go an octave up when the chord also has a 3rd.
+function pianoNotes(c) {
+  const notes = typeOf(c.type).notes;
+  const hasThird = notes.includes(3) || notes.includes(4);
+  const hasSeventh = notes.includes(10) || notes.includes(11);
+  const up = notes.map(n => {
+    if (n === 2 && hasThird) return 14;                      // 9th
+    if (n === 3 && notes.includes(4)) return 15;             // ♯9th (in 7♯9)
+    if (n === 9 && hasSeventh) return 21;                    // 13th
+    return n;
+  });
+  return up.sort((a, b) => a - b).map(n => 48 + c.root + n);
+}
+
+function drawPiano(svg, midis, rootMidi) {
+  const isWhite = m => NATURAL.includes(m % 12);
+  let low = midis[0], high = midis[midis.length - 1];
+  if (!isWhite(low)) low--;
+  if (!isWhite(high)) high++;
+  const whites = () => { const w = []; for (let m = low; m <= high; m++) if (isWhite(m)) w.push(m); return w; };
+  while (whites().length < 10) { high++; if (!isWhite(high)) high++; } // show at least 10 white keys
+  const W = 20, H = 90, list = whites();
+
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", `0 0 ${list.length * W} ${H}`);
+  const cls = m => (m === rootMidi ? " pk-root" : midis.includes(m) ? " pk-on" : "");
+  list.forEach((m, i) => {
+    svg.appendChild(el("rect", { x: i * W, y: 0, width: W, height: H, class: "pk-white" + cls(m) }));
+    if (m % 12 === 0) svg.appendChild(el("text", { x: i * W + W / 2, y: H - 5, class: "pk-label" }, "C" + (Math.floor(m / 12) - 1)));
+  });
+  // Black keys sit after C, D, F, G and A
+  list.forEach((m, i) => {
+    if (i < list.length - 1 && [0, 2, 5, 7, 9].includes(m % 12)) {
+      svg.appendChild(el("rect", { x: (i + 1) * W - 6, y: 0, width: 12, height: 55, rx: 2, class: "pk-black" + cls(m + 1) }));
+    }
+  });
+}
+
+const instrument = () => $("instrument").value;
+const lefty = () => $("hand").value === "left";
+
+function playChord(card) {
+  if (instrument() === "guitar") return strum(card.shapes[card.shapeIndex]);
+  pianoNotes(card.chord).forEach((m, i) => playPiano(m, i * 0.02));
+}
+
+function renderCards() {
+  stopPlaying();
+  const grid = $("cards");
+  grid.className = "grid" + (instrument() === "piano" ? " piano" : "");
+  grid.innerHTML = "";
+  const unique = song().chords.filter((c, i, all) => all.findIndex(o => sameChord(o, c)) === i);
+  if (unique.length === 0) grid.innerHTML = `<p class="muted">The chords you add will appear here.</p>`;
+  cards = unique.map(chord => {
+    // Open shapes first, then barres from low to high on the neck
+    const shapes = CHORDS.filter(c => c.root === chord.root && c.type.id === chord.type).sort((a, b) => a.barre - b.barre);
+    const card = { chord, shapes, shapeIndex: 0, el: document.createElement("div") };
+    card.el.className = "chord";
+    grid.appendChild(card.el);
+    drawCard(card);
+    return card;
+  });
+}
+
+function drawCard(card) {
+  card.el.innerHTML = `<div class="numeral">${key ? numeral(card.chord) : ""}</div><div class="name">${label(card.chord)}</div>`;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  if (instrument() === "guitar") {
+    svg.setAttribute("viewBox", "0 0 240 285");
+    drawChord(svg, card.shapes[card.shapeIndex], { lefty: lefty(), showRoot: true });
+  } else {
+    const notes = pianoNotes(card.chord);
+    drawPiano(svg, notes, 48 + card.chord.root); // colour the root key
+  }
+  svg.onclick = () => playChord(card);
+  card.el.appendChild(svg);
+  if (instrument() === "guitar" && card.shapes.length > 1) {
+    const btn = document.createElement("button");
+    btn.className = "shape-btn";
+    btn.textContent = `Other shape (${card.shapeIndex + 1}/${card.shapes.length}) ›`;
+    btn.onclick = () => { card.shapeIndex = (card.shapeIndex + 1) % card.shapes.length; drawCard(card); };
+    card.el.appendChild(btn);
+  }
+}
+
+// Play the song's chords in order, lighting up each card while it sounds
+let playTimer = null;
+function stopPlaying() {
+  clearTimeout(playTimer);
+  playTimer = null;
+  cards.forEach(c => c.el.classList.remove("playing"));
+  $("playBtn").textContent = "▶ Play in order";
+}
+function playFrom(i) {
+  const order = song().chords;
+  if (i >= order.length) {
+    if (!$("loop").checked) return stopPlaying();
+    i = 0;
+  }
+  const card = cards.find(c => sameChord(c.chord, order[i]));
+  cards.forEach(c => c.el.classList.toggle("playing", c === card));
+  playChord(card);
+  playTimer = setTimeout(() => playFrom(i + 1), Number($("speed").value) * 1000);
+}
+$("playBtn").onclick = () => {
+  if (playTimer) return stopPlaying();
+  if (song().chords.length === 0) return;
+  $("playBtn").textContent = "■ Stop";
+  playFrom(0);
+};
+
+// ---------- 5. Practice ----------
+let deck = [], asking = null, locked = false;
+let correct = 0, total = 0, streak = 0;
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function resetPractice() {
+  deck = [];
+  correct = total = streak = 0;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  const question = $("question"), answers = $("answers");
+  question.innerHTML = answers.innerHTML = $("feedback").textContent = "";
+  $("score").textContent = total ? `${correct} / ${total} correct · streak ${streak}` : "";
+  if (cards.length < 2) {
+    question.innerHTML = `<p class="empty">Add at least 2 different chords to practise.</p>`;
+    return;
+  }
+
+  // Like a shuffled deck: every chord once, then shuffle again (and don't repeat the last one straight away)
+  if (deck.length === 0) {
+    deck = shuffle(cards.map((_, i) => i));
+    if (asking !== null && deck[deck.length - 1] === asking) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+  }
+  asking = deck.pop();
+  locked = false;
+  const card = cards[asking];
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  if (instrument() === "guitar") {
+    // A random shape, preferring ones near the nut that you'd actually play
+    const practical = card.shapes.filter(s => position(s) !== "high");
+    const pool = practical.length ? practical : card.shapes;
+    svg.setAttribute("viewBox", "0 0 240 285");
+    drawChord(svg, pool[Math.floor(Math.random() * pool.length)], { lefty: lefty(), showRoot: false });
+  } else {
+    drawPiano(svg, pianoNotes(card.chord), null); // no root colour: that would give the answer away
+  }
+  question.className = "question" + (instrument() === "piano" ? " piano" : "");
+  question.appendChild(svg);
+
+  cards.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.textContent = label(c.chord);
+    b.onclick = () => answer(i, b);
+    answers.appendChild(b);
+  });
+}
+
+function answer(i, button) {
+  if (locked) return;
+  locked = true;
+  total++;
+  const right = i === asking;
+  if (right) { correct++; streak++; } else { streak = 0; }
+  $("answers").children[asking].classList.add("good");
+  if (!right) button.classList.add("bad");
+  playChord(cards[asking]);
+  $("feedback").textContent = right ? `Yes! ${label(cards[asking].chord)}` : `That was ${label(cards[asking].chord)}`;
+  $("feedback").className = "feedback " + (right ? "good" : "bad");
+  $("score").textContent = `${correct} / ${total} correct · streak ${streak}`;
+  setTimeout(nextQuestion, right ? 1300 : 2500);
+}
+
+// ---------- Putting it together ----------
+function renderAll() {
+  renderKey();        // first, so chord names can be spelled to suit the key
+  renderSongChords();
+  renderCards();
+  resetPractice();
+}
+
+// Settings, remembered between visits (Hand is shared with the other pages)
+try {
+  const s = JSON.parse(localStorage.getItem("mySongsSettings")) || {};
+  if (s.instrument) $("instrument").value = s.instrument;
+  if (s.speed) $("speed").value = s.speed;
+  $("loop").checked = !!s.loop;
+  $("hand").value = localStorage.getItem("fretTrainerHand") || "right";
+} catch (e) {}
+function saveSettings() {
+  try { localStorage.setItem("mySongsSettings", JSON.stringify({ instrument: instrument(), speed: $("speed").value, loop: $("loop").checked })); } catch (e) {}
+}
+$("instrument").onchange = () => { saveSettings(); renderCards(); resetPractice(); };
+$("speed").onchange = saveSettings;
+$("loop").onchange = saveSettings;
+$("hand").onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", $("hand").value); } catch (e) {}
+  cards.forEach(drawCard);
+  if (!locked) nextQuestion();
+};
+
+loadSong();
+</script>
+</body>
+</html>

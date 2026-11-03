@@ -1,5 +1,5 @@
-// Shared by the chord trainer (chords.html) and the chord library (chord-library.html):
-// the list of chords, how to draw a chord diagram, and how to strum a chord.
+// Shared by all the chord pages (chords.html, chord-library.html, keys.html, songs.html):
+// the list of chords, keys and scales, how to draw a chord diagram, and how to strum a chord.
 // Each page loads this file with <script src="chord-data.js"></script> before its own code.
 
 // ---------- Music basics ----------
@@ -98,6 +98,30 @@ function allChords() {
 const CHORDS = allChords();
 
 function chordName(c) { return pretty(c.root) + c.type.suffix; }
+
+// ---------- Keys and scales ----------
+const MAJOR = [0, 2, 4, 5, 7, 9, 11];        // the major scale, in semitones from the key note
+const MINOR = [0, 2, 3, 5, 7, 8, 10];        // the natural minor scale
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+// In a scale every letter A–G is used exactly once. That's why the 4th note of F major is
+// B♭ and not A♯: A is already taken. So we give each degree the next letter and work out
+// which ♯ or ♭ it needs to land on the right pitch.
+//   rootName: the key note written with # or b, e.g. "F#" or "Bb"
+const LETTERS = "CDEFGAB";
+const NATURAL = [0, 2, 4, 5, 7, 9, 11]; // pitch of C, D, E, F, G, A, B
+const ACCIDENTAL = { "-2": "𝄫", "-1": "♭", "0": "", "1": "♯", "2": "𝄪" };
+
+function spellScale(rootName, steps) {
+  const letter = LETTERS.indexOf(rootName[0]);
+  const rootPc = (NATURAL[letter] + (rootName[1] === "#" ? 1 : rootName[1] === "b" ? -1 : 0) + 12) % 12;
+  return steps.map((step, i) => {
+    const l = (letter + i) % 7;
+    const pc = (rootPc + step) % 12;
+    const acc = ((pc - NATURAL[l] + 18) % 12) - 6; // how far from the plain letter: -1 = ♭, +1 = ♯
+    return { pc, name: LETTERS[l] + ACCIDENTAL[acc] };
+  });
+}
 
 // Where on the neck a chord is played: "open" (uses open strings near the nut),
 // "low" (a barre starting within the first 4 frets) or "high" (further up the neck)

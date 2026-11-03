@@ -98,7 +98,7 @@
 </head>
 <body>
 <div class="narrow">
-  <p><a href="guitar.html">Fretboard trainer →</a> &nbsp; <a href="chords.html">Chord trainer →</a> &nbsp; <a href="chord-library.html">Chord library →</a> &nbsp; <a href="keys.html">Chords in a key →</a></p>
+  <p><a href="guitar.html">Fretboard trainer →</a> &nbsp; <a href="chords.html">Chord trainer →</a> &nbsp; <a href="chord-library.html">Chord library →</a> &nbsp; <a href="keys.html">Chords in a key →</a> &nbsp; <a href="songs.html">My songs →</a></p>
   <h1>Note Trainer</h1>
   <p class="sub">Find the exact note on the piano, in the right octave.</p>
 
@@ -153,6 +153,7 @@
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
 </div>
 
+<script src="piano-sound.js"></script>
 <script>
 // ---------- Music basics ----------
 // The seven note letters, and how many semitones each sits above C.
@@ -181,76 +182,11 @@ function semitone(step, sharp) {
   return 12 * (octave + 1) + SEMITONES[step % 7] + (sharp ? 1 : 0); // MIDI number
 }
 
-function frequency(midi) {
-  return 440 * Math.pow(2, (midi - 69) / 12); // A4 = 440 Hz
-}
-
-// ---------- Sound (Web Audio) ----------
-// Real piano recordings from the open-source tonejs-instruments project (CC BY 3.0).
-// We load every third note (C, D♯, F♯, A in each octave) and stretch the notes in between
-// by one semitone at most. File names use "s" for sharp: "Fs2" = F♯2.
-const SAMPLE_URL = "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/piano/";
-const SAMPLE_NOTES = [];
-for (let octave = 1; octave <= 7; octave++) ["C", "Ds", "Fs", "A"].forEach(n => SAMPLE_NOTES.push(n + octave));
-// A few files aren't available (Ds1, Ds7, C8), so we use their neighbours instead
-SAMPLE_NOTES.splice(SAMPLE_NOTES.indexOf("Ds1"), 1, "D1");
-SAMPLE_NOTES.splice(SAMPLE_NOTES.indexOf("Ds7"), 1, "E7");
-
-const audio = new AudioContext();
-const samples = new Map(); // MIDI number → decoded recording
-
-function sampleMidi(name) {
-  const semis = { C: 0, Cs: 1, D: 2, Ds: 3, E: 4, F: 5, Fs: 6, G: 7, Gs: 8, A: 9, As: 10, B: 11 };
-  const octave = Number(name[name.length - 1]);
-  return 12 * (octave + 1) + semis[name.slice(0, -1)];
-}
-
-// Download every sample in the background. If one fails (e.g. you're offline) we just skip it.
-SAMPLE_NOTES.forEach(name => {
-  fetch(SAMPLE_URL + name + ".mp3")
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-    .then(data => audio.decodeAudioData(data))
-    .then(buffer => samples.set(sampleMidi(name), buffer))
-    .catch(() => {});
-});
-
+// ---------- Sound ----------
+// The piano recordings are loaded by piano-sound.js (shared with My songs)
 function playMidi(midi, when = 0) {
   if (document.getElementById("sound").value === "off") return;
-  audio.resume(); // browsers only allow sound after you've clicked something
-  if (samples.size === 0) return synthNote(midi, when);
-
-  // Use the closest recording we have, and speed it up or slow it down to hit the exact note.
-  // Playing a recording twice as fast makes it one octave higher, so one semitone is 2^(1/12).
-  let nearest = null;
-  for (const m of samples.keys()) if (nearest === null || Math.abs(m - midi) < Math.abs(nearest - midi)) nearest = m;
-
-  const start = audio.currentTime + when;
-  const source = audio.createBufferSource();
-  const gain = audio.createGain();
-  source.buffer = samples.get(nearest);
-  source.playbackRate.value = Math.pow(2, (midi - nearest) / 12);
-  gain.gain.setValueAtTime(0.7, start);
-  gain.gain.setValueAtTime(0.7, start + 1.8);
-  gain.gain.linearRampToValueAtTime(0, start + 2.3); // fade out so the next note starts clean
-  source.connect(gain).connect(audio.destination);
-  source.start(start);
-  source.stop(start + 2.3);
-}
-
-// Fallback when the recordings couldn't be loaded: a simple computer-made tone
-function synthNote(midi, when) {
-  const start = audio.currentTime + when;
-  const osc = audio.createOscillator();
-  const gain = audio.createGain();
-  osc.type = "triangle";
-  osc.frequency.value = frequency(midi);
-  // Quick fade in, slow fade out, so it sounds like a soft pluck instead of a beep
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(0.3, start + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
-  osc.connect(gain).connect(audio.destination);
-  osc.start(start);
-  osc.stop(start + 1.3);
+  playPiano(midi, when);
 }
 
 // ---------- Drawing the staff ----------
