@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chord Library</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+
+  /* Filters: rows of toggle buttons ("chips") */
+  .filters { background: var(--card); border-radius: 14px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .filter { padding: 8px 0; }
+  .filter + .filter { border-top: 1px solid var(--btn); }
+  .filter-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .filter-head h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0; }
+  .link-btn { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit; font-size: 0.9rem; font-weight: 600;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--btn); background: transparent; color: var(--muted);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:hover { border-color: var(--accent); }
+  .options { display: flex; flex-wrap: wrap; gap: 12px; }
+  .options label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+
+  .count { color: var(--muted); margin: 16px 0 0; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+
+  /* One section per root note, each with a grid of chord cards */
+  .root-section h3 { font-size: 1.3rem; margin: 24px 0 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .chord {
+    background: var(--card); border: 2px solid transparent; border-radius: 12px; padding: 8px 6px 6px;
+    cursor: pointer; text-align: center; font: inherit; color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .chord:hover { border-color: var(--accent); }
+  .chord .name { font-weight: 700; font-size: 1.05rem; }
+  .chord .where { color: var(--muted); font-size: 0.75rem; }
+
+  /* Chord diagram colours (the shapes are drawn by chord-data.js) */
+  svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--line); stroke-width: 1.5; }
+  .nut { stroke: var(--line); stroke-width: 6; }
+  .finger { fill: var(--line); }
+  .finger.root { fill: var(--accent); }
+  .marker { fill: none; stroke: var(--line); stroke-width: 2; }
+  .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  .hint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a></p>
+  <h1>Chord Library</h1>
+  <p class="sub">Every chord shape in the trainer. Choose what to show, and click a chord to hear it.</p>
+
+  <div class="filters">
+    <div class="filter">
+      <div class="filter-head"><h2>Chord types</h2>
+        <button class="link-btn" data-all="types">All</button><button class="link-btn" data-none="types">None</button></div>
+      <div class="chips" id="types"></div>
+    </div>
+    <div class="filter">
+      <div class="filter-head"><h2>Root notes</h2>
+        <button class="link-btn" data-all="roots">All</button><button class="link-btn" data-none="roots">None</button></div>
+      <div class="chips" id="roots"></div>
+    </div>
+    <div class="filter">
+      <div class="filter-head"><h2>Where on the neck</h2></div>
+      <div class="chips" id="positions"></div>
+    </div>
+    <div class="filter options">
+      <label>Root dot
+        <select id="rootDot">
+          <option value="on">Highlight</option>
+          <option value="off">Hide</option>
+        </select>
+      </label>
+      <label>Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div id="library"></div>
+
+  <p class="hint">○ means play the string open, × means don't play it, and "5fr" means the diagram starts at the 5th fret.
+    The blue dot is the root note.<br>
+    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- The chord list, diagram drawing and guitar sound are shared with the chord trainer -->
+<script src="chord-data.js"></script>
+<script>
+const POSITIONS = [
+  { id: "open", label: "Open chords" },
+  { id: "low",  label: "Barre, frets 1–4" },
+  { id: "high", label: "Barre, fret 5 and up" },
+];
+
+// What's selected. Each is a Set: a list where every item appears at most once.
+// We remember the choice between visits; the first time, show the basics.
+const selected = {
+  types:     new Set(["maj", "min"]),
+  roots:     new Set(NOTES.map((_, i) => String(i))),
+  positions: new Set(["open", "low"]),
+};
+try {
+  const saved = JSON.parse(localStorage.getItem("chordLibrary"));
+  if (saved) for (const k in selected) selected[k] = new Set(saved[k]);
+} catch (e) {}
+
+function save() {
+  const plain = {};
+  for (const k in selected) plain[k] = [...selected[k]];
+  try { localStorage.setItem("chordLibrary", JSON.stringify(plain)); } catch (e) {}
+}
+
+// ---------- Filter chips ----------
+function makeChips(group, items) {
+  const box = document.getElementById(group);
+  box.innerHTML = "";
+  items.forEach(({ id, label }) => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", selected[group].has(id));
+    b.onclick = () => {
+      if (selected[group].has(id)) selected[group].delete(id); else selected[group].add(id);
+      b.setAttribute("aria-pressed", selected[group].has(id));
+      save();
+      render();
+    };
+    box.appendChild(b);
+  });
+}
+
+const CHIP_ITEMS = {
+  types: TYPES.map(t => ({ id: t.id, label: t.label })),
+  roots: NOTES.map((n, i) => ({ id: String(i), label: FLATS[n] ? `${pretty(i)}/${FLATS[n]}` : n })),
+  positions: POSITIONS,
+};
+for (const group in CHIP_ITEMS) makeChips(group, CHIP_ITEMS[group]);
+
+// The "All" and "None" links above the types and roots
+document.querySelectorAll("[data-all], [data-none]").forEach(btn => {
+  btn.onclick = () => {
+    const group = btn.dataset.all || btn.dataset.none;
+    selected[group] = new Set(btn.dataset.all ? CHIP_ITEMS[group].map(i => i.id) : []);
+    makeChips(group, CHIP_ITEMS[group]);
+    save();
+    render();
+  };
+});
+
+// ---------- The library ----------
+function where(c) {
+  if (position(c) === "open") return "open";
+  return "fret " + Math.min(...c.frets.filter(f => f !== null && f > 0));
+}
+
+function render() {
+  const lefty = document.getElementById("hand").value === "left";
+  const showRoot = document.getElementById("rootDot").value === "on";
+  const library = document.getElementById("library");
+  library.innerHTML = "";
+
+  const shown = CHORDS.filter(c =>
+    selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)));
+
+  document.getElementById("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
+  if (shown.length === 0) {
+    library.innerHTML = `<p class="empty">Nothing selected. Pick at least one chord type, root note and neck position.</p>`;
+    return;
+  }
+
+  // Group by root note (C first), and within a root keep the order of the chord types, lowest on the neck first
+  NOTES.forEach((_, root) => {
+    const here = shown.filter(c => c.root === root)
+      .sort((a, b) => TYPES.indexOf(a.type) - TYPES.indexOf(b.type) || a.barre - b.barre);
+    if (here.length === 0) return;
+
+    const section = document.createElement("section");
+    section.className = "root-section";
+    section.innerHTML = `<h3>${pretty(root)}${FLATS[NOTES[root]] ? " / " + FLATS[NOTES[root]] : ""}</h3>`;
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    here.forEach(c => {
+      const card = document.createElement("button");
+      card.className = "chord";
+      card.title = "Click to hear it";
+      card.innerHTML = `<div class="name">${chordName(c)}</div><div class="where">${where(c)}</div>`;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 240 285");
+      drawChord(svg, c, { lefty, showRoot });
+      card.appendChild(svg);
+      card.onclick = () => strum(c);
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    library.appendChild(section);
+  });
+}
+
+// ---------- Settings ----------
+const hand = document.getElementById("hand");
+try { hand.value = localStorage.getItem("fretTrainerHand") || "right"; } catch (e) {} // shared with the trainers
+hand.onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
+  render();
+};
+document.getElementById("rootDot").onchange = render;
+
+render();
+</script>
+</body>
+</html>
