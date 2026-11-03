@@ -368,12 +368,15 @@ function renderSongChords() {
 const MAJOR_KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const MINOR_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
 
-function scaleNotes(k) {
+// The notes of a key's scale. With raised7 = true, a minor key also gets its 7th note raised by
+// a semitone (G♯ in A minor): minor songs do this all the time, e.g. playing E instead of Em in A minor.
+// We allow it when guessing the key, but tell you about it rather than pretending it's in the scale.
+function scaleNotes(k, raised7) {
   const pcs = new Set((k.minor ? MINOR : MAJOR).map(s => (k.pc + s) % 12));
-  if (k.minor) pcs.add((k.pc + 11) % 12); // minor songs often raise the 7th note (that's why E fits in A minor)
+  if (k.minor && raised7) pcs.add((k.pc + 11) % 12);
   return pcs;
 }
-const fits = (c, k) => typeOf(c.type).notes.every(n => scaleNotes(k).has((c.root + n) % 12));
+const fits = (c, k, raised7 = true) => typeOf(c.type).notes.every(n => scaleNotes(k, raised7).has((c.root + n) % 12));
 
 function detectKey(chords) {
   const isTonic = (c, k) => c && c.root === k.pc && typeOf(c.type).notes.includes(k.minor ? 3 : 4);
@@ -446,8 +449,13 @@ function renderKey() {
   const best = ranked[0];
   key = { ...best, notes: spellScale(keyAscii(best), best.minor ? MINOR : MAJOR) };
 
-  const outside = chords.filter(c => !fits(c, best));
-  const uniqueOutside = outside.filter((c, i) => outside.findIndex(o => sameChord(o, c)) === i);
+  const unique = list => list.filter((c, i) => list.findIndex(o => sameChord(o, c)) === i);
+  const inScale = chords.filter(c => fits(c, best, false));                              // plain scale notes only
+  const usesRaised = unique(chords.filter(c => !fits(c, best, false) && fits(c, best))); // need the raised 7th
+  const uniqueOutside = unique(chords.filter(c => !fits(c, best)));
+  // The raised 7th written to suit the key: G becomes G♯ in A minor
+  const seventh = key.notes[6].name;
+  const raisedName = seventh[0] + ACCIDENTAL[{ "": 0, "♯": 1, "♭": -1, "𝄪": 2, "𝄫": -2 }[seventh.slice(1)] + 1];
   const alt = ranked.find(k => k !== best && k.fit === best.fit && best.score - k.score < 0.6);
   // Songs usually start and end "at home". If this one starts and ends on a chord that isn't
   // the key's home chord, mention it: the song may really be in that chord's key, with a borrowed chord.
@@ -456,7 +464,10 @@ function renderKey() {
 
   panel.innerHTML = `<h2>Key</h2>
     <div class="key-name">${keyName(best)}</div>
-    <p class="muted">${best.fit} of ${chords.length} chords fit this key.
+    <p class="muted">${inScale.length} of ${chords.length} chords use only notes from the ${keyName(best)} scale.
+      ${usesRaised.length ? `<b>${usesRaised.map(label).join(", ")}</b> ${usesRaised.length > 1 ? "use" : "uses"} ${raisedName} instead of ${seventh}:
+        the 7th note raised by a semitone. Minor songs do this all the time, because it pulls strongly back to
+        <b>${label({ root: best.pc, type: "min" })}</b> (it's called the “harmonic minor” sound).` : ""}
       ${uniqueOutside.length ? `Outside the key: <b>${uniqueOutside.map(label).join(", ")}</b> (a “borrowed” chord: songs do this all the time).` : ""}
       ${alt && !homeHint ? `It could also be <b>${keyName(alt)}</b>: same notes, but a different home chord. Trust your ear: the chord that sounds like “home” is the key.` : ""}
       ${homeHint ? `The song starts and ends on <b>${label(first)}</b>, so that chord may feel like “home”. If it does, the song is really in ${label(first)} and borrows a chord or two.` : ""}</p>
