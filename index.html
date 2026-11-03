@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Note Trainer</title>
+<style>
+  /* Colours live in variables so dark mode only has to swap them */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  /* Most of the page stays narrow; only the piano uses the full width */
+  .narrow { max-width: 520px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+
+  .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  svg { width: 100%; height: auto; display: block; }
+  .staff-line { stroke: var(--line); stroke-width: 1.4; }
+  .clef { fill: var(--line); font-family: "Segoe UI Symbol", "Noto Music", "Bravura", serif; }
+  .note { fill: var(--line); stroke: var(--line); transition: fill .15s, stroke .15s; }
+  .note.good { fill: var(--good); stroke: var(--good); }
+  .note.bad  { fill: var(--bad);  stroke: var(--bad); }
+
+  .feedback { min-height: 1.6em; text-align: center; font-weight: 600; margin: 8px 0 0; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad  { color: var(--bad); }
+
+  .hear {
+    display: none; width: 100%; margin-top: 8px; padding: 10px;
+    font: inherit; font-weight: 600; border: none; border-radius: 10px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .hear:hover { outline: 2px solid var(--accent); }
+
+  /* The piano: 52 white keys side by side, black keys placed on top of them.
+     On small screens it is wider than the page, so you scroll it sideways. */
+  .piano-wrap { max-width: 1400px; margin: 16px auto 0; overflow-x: auto; padding-bottom: 6px; }
+  .piano { position: relative; display: flex; height: 150px; min-width: 1040px; user-select: none; }
+  .key { border: none; padding: 0; cursor: pointer; font: inherit; }
+  .white {
+    flex: 1; background: #fdfdfb; border: 1px solid #555; border-left-width: 0; border-radius: 0 0 4px 4px;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;
+    color: #999; font-size: 0.6rem; font-weight: 600;
+  }
+  .white:first-child { border-left-width: 1px; }
+  .white.c { color: #333; } /* C keys show their octave, e.g. C4, to help you find your way */
+  .black {
+    position: absolute; top: 0; width: 1.15%; height: 60%; z-index: 1;
+    background: #1c1c1c; border-radius: 0 0 3px 3px;
+  }
+  .white:hover { background: #eef1ff; }
+  .black:hover { background: #3a3f5c; }
+  .key.good { background: var(--good); color: #fff; }
+  .key.bad  { background: var(--bad);  color: #fff; }
+  .piano.locked .key { cursor: default; }
+  .piano.labels-c .white:not(.c), .piano.labels-off .white { color: transparent; }
+
+  .stats { display: flex; justify-content: space-around; margin-top: 16px; text-align: center; }
+  .stats b { display: block; font-size: 1.4rem; }
+  .stats span { color: var(--muted); font-size: 0.8rem; }
+  .hint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="narrow">
+  <p><a href="guitar.html">Fretboard trainer →</a> &nbsp; <a href="chords.html">Chord trainer →</a></p>
+  <h1>Note Trainer</h1>
+  <p class="sub">Find the exact note on the piano, in the right octave.</p>
+
+  <div class="settings">
+    <label>Clef
+      <select id="clef">
+        <option value="treble">Treble</option>
+        <option value="bass">Bass</option>
+        <option value="both">Both</option>
+      </select>
+    </label>
+    <label>Mode
+      <select id="mode">
+        <option value="see">See the note</option>
+        <option value="hear">Hear the note</option>
+      </select>
+    </label>
+    <label>Sound
+      <select id="sound">
+        <option value="on">On</option>
+        <option value="off">Off</option>
+      </select>
+    </label>
+    <label>Key labels
+      <select id="labels">
+        <option value="on">All keys</option>
+        <option value="c">Only C</option>
+        <option value="off">None</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="card">
+    <svg id="staff" viewBox="0 0 320 200" aria-label="Music staff"></svg>
+    <button class="hear" id="hearBtn">▶ Play again (middle C first, then the note)</button>
+    <div class="feedback" id="feedback"></div>
+  </div>
+</div>
+
+<div class="piano-wrap" id="pianoWrap">
+  <div class="piano" id="piano"></div>
+</div>
+
+<div class="narrow">
+  <div class="stats">
+    <div><b id="score">0 / 0</b><span>correct</span></div>
+    <div><b id="streak">0</b><span>streak</span></div>
+    <div><b id="best">0</b><span>best streak</span></div>
+  </div>
+  <p class="hint">Middle C is labelled C4. In "Hear" mode middle C plays first as a reference, so you can judge the jump.</p>
+</div>
+
+<script>
+// ---------- Music basics ----------
+// The seven note letters, and how many semitones each sits above C.
+const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+const SEMITONES = [0, 2, 4, 5, 7, 9, 11];
+
+// We number every white key with one "step" number: step = octave * 7 + letterIndex.
+// So C4 (middle C) = 28, D4 = 29, ... This makes drawing on the staff easy,
+// because each step is exactly half a line-gap higher.
+const MIDDLE_C = 4 * 7;
+const LOWEST = 0 * 7 + 5;  // A0, the lowest key on a full piano
+const HIGHEST = 8 * 7;     // C8, the highest key
+
+const CLEFS = {
+  treble: { bottomLine: 4 * 7 + 2, low: 28, high: 40, symbol: "\u{1D11E}", y: 147, size: 82 }, // E4 bottom line, C4..A5
+  bass:   { bottomLine: 2 * 7 + 4, low: 16, high: 28, symbol: "\u{1D122}", y: 117, size: 70 }, // G2 bottom line, E2..C4
+};
+
+function noteName(step) {
+  return LETTERS[step % 7] + Math.floor(step / 7);
+}
+
+// A black key is named after the white key to its left, e.g. "C#4".
+function semitone(step, sharp) {
+  const octave = Math.floor(step / 7);
+  return 12 * (octave + 1) + SEMITONES[step % 7] + (sharp ? 1 : 0); // MIDI number
+}
+
+function frequency(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12); // A4 = 440 Hz
+}
+
+// ---------- Sound (Web Audio) ----------
+let audio = null;
+function playMidi(midi, when = 0) {
+  if (document.getElementById("sound").value === "off") return;
+  audio = audio || new AudioContext();
+  const start = audio.currentTime + when;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = "triangle";
+  osc.frequency.value = frequency(midi);
+  // Quick fade in, slow fade out, so it sounds like a soft pluck instead of a beep
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(0.3, start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(start);
+  osc.stop(start + 1.3);
+}
+
+// ---------- Drawing the staff ----------
+const svg = document.getElementById("staff");
+const BOTTOM_Y = 130; // y position of the bottom staff line
+const GAP = 14;       // distance between two staff lines
+const NOTE_X = 200;
+
+function el(tag, attrs, text) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text) e.textContent = text;
+  return e;
+}
+
+function draw(clefName, step, showNote, cls = "") {
+  const clef = CLEFS[clefName];
+  svg.innerHTML = "";
+
+  for (let i = 0; i < 5; i++) {
+    const y = BOTTOM_Y - i * GAP;
+    svg.appendChild(el("line", { x1: 15, x2: 305, y1: y, y2: y, class: "staff-line" }));
+  }
+  svg.appendChild(el("text", { x: 22, y: clef.y, "font-size": clef.size, class: "clef" }, clef.symbol));
+
+  if (!showNote) return;
+
+  const offset = step - clef.bottomLine; // 0 = bottom line, 8 = top line
+  const y = BOTTOM_Y - offset * GAP / 2;
+
+  // Ledger lines: short extra lines for notes below or above the staff
+  for (let o = -2; o >= offset; o -= 2) ledger(BOTTOM_Y - o * GAP / 2);
+  for (let o = 10; o <= offset; o += 2) ledger(BOTTOM_Y - o * GAP / 2);
+
+  const g = el("g", { class: "note " + cls });
+  g.appendChild(el("ellipse", { cx: NOTE_X, cy: y, rx: 9, ry: 6.5, transform: `rotate(-20 ${NOTE_X} ${y})` }));
+  // Stem goes down for notes on/above the middle line, up for notes below it
+  const stemUp = offset < 4;
+  const sx = stemUp ? NOTE_X + 8.3 : NOTE_X - 8.3;
+  g.appendChild(el("line", { x1: sx, x2: sx, y1: y, y2: stemUp ? y - 3.5 * GAP : y + 3.5 * GAP, "stroke-width": 1.6 }));
+  svg.appendChild(g);
+}
+
+function ledger(y) {
+  svg.appendChild(el("line", { x1: NOTE_X - 16, x2: NOTE_X + 16, y1: y, y2: y, class: "staff-line" }));
+}
+
+// ---------- Game logic ----------
+let current = null;  // { clef, step }
+let locked = false;  // ignore answers while showing feedback
+let correct = 0, total = 0, streak = 0;
+let best = 0;
+try { best = Number(localStorage.getItem("noteTrainerBest")) || 0; } catch (e) {}
+
+const feedback = document.getElementById("feedback");
+const piano = document.getElementById("piano");
+
+function randomInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function nextNote() {
+  const choice = document.getElementById("clef").value;
+  const clefName = choice === "both" ? (Math.random() < 0.5 ? "treble" : "bass") : choice;
+  const clef = CLEFS[clefName];
+  let step;
+  do { step = randomInt(clef.low, clef.high); }
+  while (current && step === current.step && clefName === current.clef); // no repeats in a row
+  current = { clef: clefName, step };
+
+  locked = false;
+  feedback.textContent = "";
+  feedback.className = "feedback";
+  piano.classList.remove("locked");
+  piano.querySelectorAll(".key").forEach(k => k.classList.remove("good", "bad"));
+
+  const hearing = document.getElementById("mode").value === "hear";
+  document.getElementById("hearBtn").style.display = hearing ? "block" : "none";
+  draw(clefName, step, !hearing);
+  if (hearing) playWithReference();
+}
+
+function playWithReference() {
+  playMidi(semitone(MIDDLE_C));
+  playMidi(semitone(current.step), 0.9);
+}
+
+// `step` is the white key the black key belongs to; `sharp` is true for black keys.
+// Black keys are never right, because the trainer only shows notes without sharps or flats.
+function answer(step, sharp, keyEl) {
+  if (locked || !current) return;
+  locked = true;
+  piano.classList.add("locked");
+  total++;
+
+  const right = !sharp && step === current.step;
+  if (right) { correct++; streak++; } else { streak = 0; }
+  if (streak > best) {
+    best = streak;
+    try { localStorage.setItem("noteTrainerBest", best); } catch (e) {}
+  }
+
+  // Light up the correct key, and the wrong one if you missed
+  piano.querySelector(`.white[data-step="${current.step}"]`).classList.add("good");
+  if (!right) keyEl.classList.add("bad");
+
+  // Play what you pressed; if it was wrong, play the right one after it so you hear the difference
+  playMidi(semitone(step, sharp));
+  if (!right) playMidi(semitone(current.step), 0.6);
+
+  draw(current.clef, current.step, true, right ? "good" : "bad");
+  const pressed = sharp ? LETTERS[step % 7] + "#" + Math.floor(step / 7) : noteName(step);
+  feedback.textContent = right ? `Yes! ${noteName(current.step)}` : `You pressed ${pressed}, the note was ${noteName(current.step)}`;
+  feedback.className = "feedback " + (right ? "good" : "bad");
+  updateStats();
+
+  setTimeout(nextNote, right ? 900 : 2000); // wrong answers stay up longer so you can study them
+}
+
+function updateStats() {
+  document.getElementById("score").textContent = `${correct} / ${total}`;
+  document.getElementById("streak").textContent = streak;
+  document.getElementById("best").textContent = best;
+}
+
+// ---------- Building the piano ----------
+// 52 white keys from A0 to C8. After every white key except E and B (and the very
+// last C) there is a black key, centred on the gap between two white keys.
+const WHITE_COUNT = HIGHEST - LOWEST + 1;
+for (let step = LOWEST; step <= HIGHEST; step++) {
+  const i = step - LOWEST;
+  const letter = LETTERS[step % 7];
+
+  const white = document.createElement("button");
+  white.className = "key white" + (letter === "C" ? " c" : "");
+  white.dataset.step = step;
+  white.textContent = letter === "C" ? noteName(step) : letter;
+  white.onclick = () => answer(step, false, white);
+  piano.appendChild(white);
+
+  if (letter !== "E" && letter !== "B" && step !== HIGHEST) {
+    const black = document.createElement("button");
+    black.className = "key black";
+    black.style.left = `calc(${(i + 1) / WHITE_COUNT * 100}% - 0.575%)`;
+    black.onclick = () => answer(step, true, black);
+    piano.appendChild(black);
+  }
+}
+
+// Scroll the piano so the middle of the current clef's range is in view (matters on narrow screens)
+function centrePiano() {
+  const wrap = document.getElementById("pianoWrap");
+  const choice = document.getElementById("clef").value;
+  const centre = choice === "treble" ? 34 : choice === "bass" ? 22 : MIDDLE_C;
+  const keyX = (centre - LOWEST + 0.5) / WHITE_COUNT * piano.offsetWidth;
+  wrap.scrollLeft = keyX - wrap.clientWidth / 2;
+}
+
+document.getElementById("labels").onchange = e => {
+  piano.classList.toggle("labels-c", e.target.value === "c");
+  piano.classList.toggle("labels-off", e.target.value === "off");
+};
+
+document.getElementById("hearBtn").onclick = playWithReference;
+["clef", "mode"].forEach(id => document.getElementById(id).onchange = () => { current = null; centrePiano(); nextNote(); });
+
+updateStats();
+centrePiano();
+nextNote();
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fretboard Trainer</title>
+<style>
+  /* Same colour setup as the piano trainer */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 960px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+
+  .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .prompt { text-align: center; font-size: 1.3rem; font-weight: 600; margin: 0 0 8px; }
+  .feedback { min-height: 1.6em; text-align: center; font-weight: 600; margin: 8px 0 0; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad  { color: var(--bad); }
+
+  /* The fretboard is an SVG. On small screens it scrolls sideways instead of shrinking too much. */
+  .board-wrap { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 680px; height: auto; user-select: none; }
+  .cell rect { fill: transparent; }
+  .cell circle { fill: var(--accent); opacity: 0; }
+  .find .cell:hover circle { opacity: .35; cursor: pointer; }
+  .find .cell { cursor: pointer; }
+  .mark circle { stroke: #fff; stroke-width: 2; }
+  .mark text { fill: #fff; font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; }
+  .fret-num { fill: var(--muted); font-size: 11px; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  /* Answer buttons for "Name it" mode */
+  .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; margin-top: 12px; }
+  .choices button {
+    font: inherit; font-size: 1.05rem; font-weight: 600; line-height: 1.15;
+    padding: 10px 0; border: none; border-radius: 10px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .choices button small { font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+  .choices button:hover { outline: 2px solid var(--accent); }
+  .choices button:disabled { opacity: .5; cursor: default; outline: none; }
+
+  .stats { display: flex; justify-content: space-around; margin-top: 16px; text-align: center; }
+  .stats b { display: block; font-size: 1.4rem; }
+  .stats span { color: var(--muted); font-size: 0.8rem; }
+  .hint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="index.html">← Piano trainer</a> &nbsp; <a href="chords.html">Chord trainer →</a></p>
+  <h1>Fretboard Trainer</h1>
+  <p class="sub">Learn where every note lives on the guitar neck.</p>
+
+  <div class="settings">
+    <label>Mode
+      <select id="mode">
+        <option value="name">Name it (see a fret, pick the note)</option>
+        <option value="find">Find it (see a note, click a fret)</option>
+      </select>
+    </label>
+    <label>Notes
+      <select id="notes">
+        <option value="natural">Only natural (no ♯/♭)</option>
+        <option value="all">All 12</option>
+      </select>
+    </label>
+    <label>Frets
+      <select id="frets">
+        <option value="5">0–5</option>
+        <option value="12" selected>0–12</option>
+      </select>
+    </label>
+    <label>Hand
+      <select id="hand">
+        <option value="right">Right-handed</option>
+        <option value="left">Left-handed</option>
+      </select>
+    </label>
+    <label>Sound
+      <select id="sound">
+        <option value="on">On</option>
+        <option value="off">Off</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="card">
+    <p class="prompt" id="prompt"></p>
+    <div class="board-wrap">
+      <svg id="board" viewBox="0 0 900 232" aria-label="Guitar fretboard"></svg>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="choices" id="choices"></div>
+  </div>
+
+  <div class="stats">
+    <div><b id="score">0 / 0</b><span>correct</span></div>
+    <div><b id="streak">0</b><span>streak</span></div>
+    <div><b id="best">0</b><span>best streak</span></div>
+  </div>
+  <p class="hint">Strings are drawn the way you see them in tabs: thin high E on top, thick low E at the bottom.<br>
+    Tip: the 12th fret is the same note as the open string, one octave higher.</p>
+</main>
+
+<script>
+// ---------- Music basics ----------
+// All 12 notes in an octave. The ones with "#" are the black keys on a piano.
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLATS = { "C#": "D♭", "D#": "E♭", "F#": "G♭", "G#": "A♭", "A#": "B♭" };
+
+// Standard tuning, as MIDI numbers (a number for every key on a piano; middle C = 60).
+// Listed top to bottom as drawn: high E, B, G, D, A, low E.
+const OPEN = [64, 59, 55, 50, 45, 40];
+const MAX_FRET = 12;
+
+// Each fret raises the pitch by one semitone, so a note is just: open string + fret number
+function midiAt(string, fret) { return OPEN[string] + fret; }
+function noteIndex(midi) { return midi % 12; }
+function isNatural(i) { return !NOTES[i].includes("#"); }
+function pretty(i) { return isNatural(i) ? NOTES[i] : NOTES[i].replace("#", "♯") + "/" + FLATS[NOTES[i]]; }
+function withOctave(midi) { return NOTES[noteIndex(midi)].replace("#", "♯") + (Math.floor(midi / 12) - 1); }
+
+// ---------- Sound ----------
+// A sawtooth wave run through a filter that closes quickly sounds a bit like a plucked string
+let audio = null;
+function pluck(midi) {
+  if (document.getElementById("sound").value === "off") return;
+  audio = audio || new AudioContext();
+  const t = audio.currentTime;
+  const osc = audio.createOscillator();
+  const filter = audio.createBiquadFilter();
+  const gain = audio.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(3000, t);
+  filter.frequency.exponentialRampToValueAtTime(300, t + 0.6);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.25, t + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+  osc.connect(filter).connect(gain).connect(audio.destination);
+  osc.start(t);
+  osc.stop(t + 1.6);
+}
+
+// ---------- Drawing the fretboard ----------
+const svg = document.getElementById("board");
+const NUT_X = 60;
+const SCALE = 1640; // pretend string length, chosen so fret 12 lands near the right edge
+
+// Real guitars have frets that get closer together as you go up.
+// Fret n sits at: scale × (1 − 2^(−n/12)). That's why fret 12 is exactly halfway along the string.
+function fretX(n) { return NUT_X + SCALE * (1 - Math.pow(2, -n / 12)); }
+function stringY(s) { return 30 + s * 32; }
+// Where to put a dot for a fret: in the middle of the space before the fret wire (open strings go left of the nut)
+function cellX(f) { return f === 0 ? 32 : (fretX(f - 1) + fretX(f)) / 2; }
+
+function el(tag, attrs, text) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// Left-handed: everything is drawn as usual, but every x position is mirrored
+// (900 is the width of the drawing). Text isn't flipped, so numbers stay readable.
+const WIDTH = 900;
+function lefty() { return document.getElementById("hand").value === "left"; }
+function X(x) { return lefty() ? WIDTH - x : x; }
+// A rectangle's x is its left edge, so after mirroring we have to subtract its width too
+function rectX(x, width) { return lefty() ? WIDTH - x - width : x; }
+
+let marks; // the layer where answer dots go; cleared every round
+
+function drawBoard() {
+  svg.innerHTML = "";
+  const maxFret = Number(document.getElementById("frets").value);
+
+  const woodW = fretX(MAX_FRET) - NUT_X + 10;
+  svg.appendChild(el("rect", { x: rectX(NUT_X, woodW), y: 18, width: woodW, height: 184, fill: "#6b4a2b", rx: 3 }));
+
+  // Inlay dots, the markers that help you find frets 3, 5, 7, 9 and 12
+  [3, 5, 7, 9].forEach(f => svg.appendChild(el("circle", { cx: X(cellX(f)), cy: 110, r: 6, fill: "#e9dcc3" })));
+  [78, 142].forEach(y => svg.appendChild(el("circle", { cx: X(cellX(12)), cy: y, r: 6, fill: "#e9dcc3" })));
+
+  for (let f = 1; f <= MAX_FRET; f++) {
+    svg.appendChild(el("line", { x1: X(fretX(f)), x2: X(fretX(f)), y1: 18, y2: 202, stroke: "#c9c9c9", "stroke-width": 3 }));
+    svg.appendChild(el("text", { x: X(cellX(f)), y: 224, class: "fret-num" }, f));
+  }
+  svg.appendChild(el("text", { x: X(cellX(0)), y: 224, class: "fret-num" }, "open"));
+  svg.appendChild(el("rect", { x: rectX(NUT_X - 4, 7), y: 18, width: 7, height: 184, fill: "#efe8d6" }));
+
+  // Strings get thicker from high E to low E
+  OPEN.forEach((_, s) => {
+    svg.appendChild(el("line", { x1: X(10), x2: X(fretX(MAX_FRET) + 10), y1: stringY(s), y2: stringY(s), stroke: "#e8e8e8", "stroke-width": 1 + s * 0.45 }));
+  });
+
+  // Grey out the frets that aren't part of the quiz
+  if (maxFret < MAX_FRET) {
+    const greyW = fretX(MAX_FRET) - fretX(maxFret) + 8;
+    svg.appendChild(el("rect", { x: rectX(fretX(maxFret) + 2, greyW), y: 18, width: greyW, height: 184, fill: "#000", opacity: 0.45 }));
+  }
+
+  // Invisible clickable areas, one per string and fret
+  for (let s = 0; s < OPEN.length; s++) {
+    for (let f = 0; f <= maxFret; f++) {
+      const left = f === 0 ? 4 : fretX(f - 1);
+      const w = f === 0 ? NUT_X - 8 : fretX(f) - left;
+      const g = el("g", { class: "cell" });
+      g.appendChild(el("rect", { x: rectX(left, w), y: stringY(s) - 16, width: w, height: 32 }));
+      g.appendChild(el("circle", { cx: X(cellX(f)), cy: stringY(s), r: 11 }));
+      g.onclick = () => answerFind(s, f);
+      svg.appendChild(g);
+    }
+  }
+
+  marks = el("g", {});
+  svg.appendChild(marks);
+}
+
+function dot(s, f, colour, label) {
+  const g = el("g", { class: "mark" });
+  g.appendChild(el("circle", { cx: X(cellX(f)), cy: stringY(s), r: 12, fill: colour }));
+  if (label) g.appendChild(el("text", { x: X(cellX(f)), y: stringY(s) }, label));
+  marks.appendChild(g);
+}
+
+// ---------- Game logic ----------
+let target = null;  // name mode: { s, f }   find mode: a note index 0–11
+let locked = false;
+let correct = 0, total = 0, streak = 0;
+let best = 0;
+try { best = Number(localStorage.getItem("fretTrainerBest")) || 0; } catch (e) {}
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const feedback = document.getElementById("feedback");
+const choices = document.getElementById("choices");
+const prompt = document.getElementById("prompt");
+
+function setting(id) { return document.getElementById(id).value; }
+function allowed(i) { return setting("notes") === "all" || isNatural(i); }
+function randomInt(n) { return Math.floor(Math.random() * n); }
+
+function nextRound() {
+  locked = false;
+  marks.innerHTML = "";
+  feedback.textContent = "";
+  feedback.className = "feedback";
+  const maxFret = Number(setting("frets"));
+
+  if (setting("mode") === "name") {
+    let s, f;
+    do { s = randomInt(6); f = randomInt(maxFret + 1); }
+    while (!allowed(noteIndex(midiAt(s, f))) || (target && target.s === s && target.f === f));
+    target = { s, f };
+    prompt.textContent = "What note is this?";
+    dot(s, f, css("--accent"));
+    buildChoices();
+  } else {
+    let i;
+    do { i = randomInt(12); } while (!allowed(i) || i === target);
+    target = i;
+    prompt.textContent = `Find a ${pretty(i)}`;
+  }
+}
+
+function buildChoices() {
+  choices.innerHTML = "";
+  NOTES.forEach((n, i) => {
+    if (!allowed(i)) return;
+    const b = document.createElement("button");
+    b.innerHTML = isNatural(i) ? n : `${n.replace("#", "♯")}<br><small>${FLATS[n]}</small>`;
+    b.onclick = () => answerName(i);
+    choices.appendChild(b);
+  });
+}
+
+function answerName(i) {
+  if (locked) return;
+  locked = true;
+  choices.querySelectorAll("button").forEach(b => b.disabled = true);
+
+  const midi = midiAt(target.s, target.f);
+  const right = noteIndex(midi) === i;
+  marks.innerHTML = "";
+  dot(target.s, target.f, css(right ? "--good" : "--bad"), NOTES[noteIndex(midi)].replace("#", "♯"));
+  pluck(midi);
+  finish(right, right ? `Yes! ${withOctave(midi)}` : `No, that was ${pretty(noteIndex(midi))} (${withOctave(midi)})`);
+}
+
+function answerFind(s, f) {
+  if (locked || setting("mode") !== "find") return;
+  locked = true;
+
+  const midi = midiAt(s, f);
+  const right = noteIndex(midi) === target;
+  pluck(midi);
+
+  // Show every place the target note appears, so you start to see the pattern
+  const maxFret = Number(setting("frets"));
+  for (let ss = 0; ss < 6; ss++)
+    for (let ff = 0; ff <= maxFret; ff++)
+      if (noteIndex(midiAt(ss, ff)) === target) dot(ss, ff, css("--good"), NOTES[target].replace("#", "♯"));
+  if (!right) dot(s, f, css("--bad"), NOTES[noteIndex(midi)].replace("#", "♯"));
+
+  finish(right, right ? `Yes! Here are all the ${pretty(target)}s` : `That was ${pretty(noteIndex(midi))}. The green dots are all the ${pretty(target)}s`);
+}
+
+function finish(right, message) {
+  total++;
+  if (right) { correct++; streak++; } else { streak = 0; }
+  if (streak > best) {
+    best = streak;
+    try { localStorage.setItem("fretTrainerBest", best); } catch (e) {}
+  }
+  feedback.textContent = message;
+  feedback.className = "feedback " + (right ? "good" : "bad");
+  document.getElementById("score").textContent = `${correct} / ${total}`;
+  document.getElementById("streak").textContent = streak;
+  document.getElementById("best").textContent = best;
+  setTimeout(nextRound, right ? 1200 : 2500);
+}
+
+// Rebuild everything when a setting changes
+function restart() {
+  target = null;
+  const finding = setting("mode") === "find";
+  svg.classList.toggle("find", finding);
+  choices.style.display = finding ? "none" : "";
+  drawBoard();
+  // On narrow screens, start scrolled to the nut end (the right side for lefties)
+  const wrap = document.querySelector(".board-wrap");
+  wrap.scrollLeft = lefty() ? wrap.scrollWidth : 0;
+  nextRound();
+}
+["mode", "notes", "frets"].forEach(id => document.getElementById(id).onchange = restart);
+
+// Remember left/right-handed between visits
+const hand = document.getElementById("hand");
+try { hand.value = localStorage.getItem("fretTrainerHand") || "right"; } catch (e) {}
+hand.onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
+  restart();
+};
+
+document.getElementById("best").textContent = best;
+restart();
+</script>
+</body>
+</html>
