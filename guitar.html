@@ -133,7 +133,9 @@
     <div><b id="best">0</b><span>best streak</span></div>
   </div>
   <p class="hint">Strings are drawn the way you see them in tabs: thin high E on top, thick low E at the bottom.<br>
-    Tip: the 12th fret is the same note as the open string, one octave higher.</p>
+    Tip: the 12th fret is the same note as the open string, one octave higher.<br>
+    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
 </main>
 
 <script>
@@ -155,11 +157,55 @@ function pretty(i) { return isNatural(i) ? NOTES[i] : NOTES[i].replace("#", "♯
 function withOctave(midi) { return NOTES[noteIndex(midi)].replace("#", "♯") + (Math.floor(midi / 12) - 1); }
 
 // ---------- Sound ----------
-// A sawtooth wave run through a filter that closes quickly sounds a bit like a plucked string
-let audio = null;
+// Real acoustic guitar recordings, one file per note, from the open-source
+// tonejs-instruments project (CC BY 3.0). File names use "s" for sharp: "Fs2" = F♯2.
+const SAMPLE_URL = "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/guitar-acoustic/";
+const SAMPLE_NOTES = ["E2", "F2", "Fs2", "G2", "A2", "As2", "B2", "C3", "Cs3", "D3", "Ds3", "E3", "F3", "Fs3", "G3",
+  "A3", "As3", "B3", "C4", "Cs4", "D4", "Ds4", "E4", "F4", "Fs4", "G4", "A4", "As4", "B4", "C5", "Cs5", "D5"];
+
+const audio = new AudioContext();
+const samples = new Map(); // MIDI number → decoded recording
+
+function sampleMidi(name) {
+  const note = name[0] + (name[1] === "s" ? "#" : "");
+  return 12 * (Number(name[name.length - 1]) + 1) + NOTES.indexOf(note);
+}
+
+// Download every sample in the background. If one fails (e.g. you're offline) we just skip it.
+SAMPLE_NOTES.forEach(name => {
+  fetch(SAMPLE_URL + name + ".mp3")
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(data => audio.decodeAudioData(data))
+    .then(buffer => samples.set(sampleMidi(name), buffer))
+    .catch(() => {});
+});
+
 function pluck(midi) {
   if (document.getElementById("sound").value === "off") return;
-  audio = audio || new AudioContext();
+  audio.resume(); // browsers only allow sound after you've clicked something
+  if (samples.size === 0) return synthPluck(midi);
+
+  // Use the closest recording we have, and speed it up or slow it down to hit the exact note.
+  // Playing a recording twice as fast makes it one octave higher, so one semitone is 2^(1/12).
+  let nearest = null;
+  for (const m of samples.keys()) if (nearest === null || Math.abs(m - midi) < Math.abs(nearest - midi)) nearest = m;
+
+  const t = audio.currentTime;
+  const source = audio.createBufferSource();
+  const gain = audio.createGain();
+  source.buffer = samples.get(nearest);
+  source.playbackRate.value = Math.pow(2, (midi - nearest) / 12);
+  gain.gain.setValueAtTime(0.7, t);
+  gain.gain.setValueAtTime(0.7, t + 2);
+  gain.gain.linearRampToValueAtTime(0, t + 2.5); // fade out so the next note starts clean
+  source.connect(gain).connect(audio.destination);
+  source.start(t);
+  source.stop(t + 2.5);
+}
+
+// Fallback when the recordings couldn't be loaded:
+// a sawtooth wave run through a filter that closes quickly sounds a bit like a plucked string
+function synthPluck(midi) {
   const t = audio.currentTime;
   const osc = audio.createOscillator();
   const filter = audio.createBiquadFilter();
