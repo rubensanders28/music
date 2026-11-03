@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chords in a Key</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 28px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; max-width: 760px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .mood { margin: 10px 0 0; }
+
+  /* The 7 notes of the scale */
+  .notes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .note { min-width: 48px; padding: 6px 10px; border-radius: 10px; background: var(--btn); text-align: center; font-weight: 700; }
+  .note small { display: block; font-weight: 500; font-size: 0.7rem; color: var(--muted); }
+
+  /* The 7 chords */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; margin-top: 10px; }
+  .chord {
+    background: var(--card); border: 2px solid transparent; border-radius: 12px; padding: 8px 6px 6px;
+    text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.08); transition: border-color .15s, transform .15s;
+  }
+  .chord.playing { border-color: var(--accent); transform: translateY(-3px); }
+  .numeral { font-family: Georgia, serif; font-size: 1.1rem; color: var(--accent); }
+  .name { font-weight: 700; font-size: 1.15rem; }
+  .chord svg { cursor: pointer; }
+  .shape-btn { background: none; border: none; color: var(--accent); font: inherit; font-size: 0.75rem; cursor: pointer; padding: 2px; }
+
+  /* Progressions */
+  .progs { display: grid; gap: 8px; margin-top: 10px; }
+  .prog { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; background: var(--card); border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .prog .play { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 6px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .prog .play:hover { outline: 2px solid var(--accent); }
+  .prog .title { font-weight: 600; min-width: 140px; }
+  .prog .numerals { font-family: Georgia, serif; color: var(--accent); }
+  .prog .names { font-weight: 700; }
+
+  /* Chord diagram colours (the shapes are drawn by chord-data.js) */
+  svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--line); stroke-width: 1.5; }
+  .nut { stroke: var(--line); stroke-width: 6; }
+  .finger { fill: var(--line); }
+  .finger.root { fill: var(--accent); }
+  .marker { fill: none; stroke: var(--line); stroke-width: 2; }
+  .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 28px; line-height: 1.6; max-width: 760px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a></p>
+  <h1>Chords in a Key</h1>
+  <p class="sub">A key is a family of 7 notes (a scale). Build a chord on each note using only notes from that family,
+    and you get 7 chords that sound good together. Most songs use just a few of them.</p>
+
+  <div class="panel">
+    <div class="settings">
+      <label>Key <select id="root"></select></label>
+      <label>Scale <select id="scale"></select></label>
+      <label>Chords
+        <select id="size">
+          <option value="3">Triads (3 notes)</option>
+          <option value="4">7th chords (4 notes)</option>
+        </select>
+      </label>
+      <label>Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+    </div>
+    <p class="mood muted" id="mood"></p>
+    <div class="notes" id="notes"></div>
+  </div>
+
+  <h2 id="chordsTitle"></h2>
+  <p class="muted">Click a diagram to hear it. "Other shape" shows another way to play the same chord.</p>
+  <div class="grid" id="chords"></div>
+
+  <h2>Common progressions</h2>
+  <p class="muted">A progression is the order chords are played in. These are used in countless songs.</p>
+  <div class="progs" id="progs"></div>
+
+  <p class="hint"><b>Reading the Roman numerals:</b> they number the chords 1 to 7 by which note of the scale they start on.
+    Uppercase (IV) means a major chord, lowercase (iv) minor, ° diminished and + augmented.
+    A ♭ in front (♭VII) means that chord sits a semitone lower than in the major scale.
+    Because numerals don't depend on the key, "I – V – vi – IV" is the same progression in every key: that's how musicians
+    talk about songs without naming a key.<br>
+    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- The chord list, diagram drawing and guitar sound are shared with the other chord pages -->
+<script src="chord-data.js"></script>
+<script>
+// ---------- Scales ----------
+// A scale is 7 steps, counted in semitones from the key note.
+// Progressions use scale degrees counted from 0: 0 = the chord on the 1st note, 4 = on the 5th note, etc.
+const SCALES = [
+  { id: "major", name: "Major", steps: [0, 2, 4, 5, 7, 9, 11],
+    mood: "Bright and happy. The sound of most pop, rock and folk songs.",
+    progressions: [
+      { title: "Pop / “Axis”",   degrees: [0, 4, 5, 3] },
+      { title: "Three-chord rock", degrees: [0, 3, 4, 0] },
+      { title: "’50s doo-wop",  degrees: [0, 5, 3, 4] },
+      { title: "Sad pop",        degrees: [5, 3, 0, 4] },
+      { title: "Jazz ii–V–I",    degrees: [1, 4, 0] },
+      { title: "Canon",          degrees: [0, 4, 5, 2, 3, 0, 3, 4] },
+    ] },
+  { id: "minor", name: "Minor (natural)", steps: [0, 2, 3, 5, 7, 8, 10],
+    mood: "Sad, dark or serious. Used a lot in ballads, rock and metal.",
+    progressions: [
+      { title: "Minor basics",   degrees: [0, 3, 4, 0] },
+      { title: "Epic",           degrees: [0, 5, 2, 6] },
+      { title: "Rock descent",   degrees: [0, 6, 5, 6] },
+      { title: "Andalusian",     degrees: [0, 6, 5, 4] },
+    ] },
+  { id: "harmonic", name: "Harmonic minor", steps: [0, 2, 3, 5, 7, 8, 11],
+    mood: "Minor with a strong pull back home, thanks to the major V chord. Classical, flamenco and metal.",
+    progressions: [
+      { title: "Classical cadence", degrees: [0, 3, 4, 0] },
+      { title: "Dramatic",          degrees: [0, 5, 4, 0] },
+    ] },
+  { id: "dorian", name: "Dorian", steps: [0, 2, 3, 5, 7, 9, 10],
+    mood: "Minor, but hopeful instead of sad, because of its major IV chord. Funk, soul and Santana.",
+    progressions: [
+      { title: "Dorian vamp",  degrees: [0, 3] },
+      { title: "Minor groove", degrees: [0, 1, 0, 3] },
+    ] },
+  { id: "mixolydian", name: "Mixolydian", steps: [0, 2, 4, 5, 7, 9, 10],
+    mood: "Major, but bluesy and relaxed, because of its ♭VII chord. Classic rock and Celtic music.",
+    progressions: [
+      { title: "Classic rock", degrees: [0, 6, 3, 0] },
+      { title: "Bluesy",       degrees: [0, 4, 3, 0] },
+    ] },
+];
+
+// ---------- Spelling notes correctly ----------
+// In a scale every letter A–G is used exactly once. That's why the 4th note of F major is
+// B♭ and not A♯: A is already taken. So we give each degree the next letter and work out
+// which ♯ or ♭ it needs to land on the right pitch.
+const LETTERS = "CDEFGAB";
+const NATURAL = [0, 2, 4, 5, 7, 9, 11]; // pitch of C, D, E, F, G, A, B
+const ACCIDENTAL = { "-2": "𝄫", "-1": "♭", "0": "", "1": "♯", "2": "𝄪" };
+const ROOT_OPTIONS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
+
+function spellScale(rootName, steps) {
+  const letter = LETTERS.indexOf(rootName[0]);
+  const rootPc = (NATURAL[letter] + (rootName[1] === "#" ? 1 : rootName[1] === "b" ? -1 : 0) + 12) % 12;
+  return steps.map((step, i) => {
+    const l = (letter + i) % 7;
+    const pc = (rootPc + step) % 12;
+    const acc = ((pc - NATURAL[l] + 18) % 12) - 6; // how far from the plain letter: -1 = ♭, +1 = ♯
+    return { pc, name: LETTERS[l] + ACCIDENTAL[acc] };
+  });
+}
+
+// ---------- Building the chords ----------
+// Stack every other note of the scale: degree i gets notes i, i+2, i+4 (and i+6 for a 7th chord).
+// Then measure the gaps to see what kind of chord came out.
+const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+function diatonicChord(steps, i, size) {
+  const above = n => (steps[(i + n) % 7] - steps[i] + 12) % 12; // semitones from this chord's root
+  const third = above(2), fifth = above(4), seventh = above(6);
+  const triad = third === 4 ? (fifth === 8 ? "aug" : "maj") : (fifth === 6 ? "dim" : "min");
+  let type = triad;
+  if (size === 4) {
+    const sevenths = { maj: { 11: "maj7", 10: "7" }, min: { 10: "m7", 11: "mmaj7" }, dim: { 10: "m7b5", 9: "dim7" }, aug: {} };
+    type = sevenths[triad][seventh] || triad; // no shape for an augmented major 7th, so keep the triad
+  }
+
+  // Roman numeral: uppercase for major, lowercase for minor, plus a ♭/♯ if it differs from the major scale
+  const shift = steps[i] - MAJOR[i];
+  let numeral = (shift < 0 ? "♭" : shift > 0 ? "♯" : "") + (triad === "maj" || triad === "aug" ? ROMAN[i] : ROMAN[i].toLowerCase());
+  numeral += { maj: "", min: "", dim: "°", aug: "+", maj7: "maj7", "7": "7", m7: "7", mmaj7: "(maj7)", m7b5: "ø7", dim7: "°7" }[type];
+  return { type: TYPES.find(t => t.id === type), numeral };
+}
+
+// ---------- The page ----------
+const rootSel = document.getElementById("root");
+const scaleSel = document.getElementById("scale");
+ROOT_OPTIONS.forEach(r => rootSel.add(new Option(r.replace("#", "♯").replace("b", "♭"), r)));
+SCALES.forEach(s => scaleSel.add(new Option(s.name, s.id)));
+
+// Remember the last key between visits
+try {
+  const saved = JSON.parse(localStorage.getItem("keysPage")) || {};
+  if (saved.root) rootSel.value = saved.root;
+  if (saved.scale) scaleSel.value = saved.scale;
+  if (saved.size) document.getElementById("size").value = saved.size;
+} catch (e) {}
+
+let cards = []; // one per scale degree: { chord, shapes, shapeIndex, el }
+
+function render() {
+  try { localStorage.setItem("keysPage", JSON.stringify({ root: rootSel.value, scale: scaleSel.value, size: document.getElementById("size").value })); } catch (e) {}
+  const scale = SCALES.find(s => s.id === scaleSel.value);
+  const size = Number(document.getElementById("size").value);
+  const notes = spellScale(rootSel.value, scale.steps);
+  const keyName = `${notes[0].name} ${scale.name.toLowerCase()}`;
+
+  document.getElementById("mood").textContent = scale.mood;
+  document.getElementById("notes").innerHTML = notes.map((n, i) => `<div class="note">${n.name}<small>${i + 1}</small></div>`).join("");
+  document.getElementById("chordsTitle").textContent = `The 7 chords in ${keyName}`;
+
+  // The chords
+  const grid = document.getElementById("chords");
+  grid.innerHTML = "";
+  cards = notes.map((note, i) => {
+    const { type, numeral } = diatonicChord(scale.steps, i, size);
+    // Every shape for this chord, open shapes first
+    const shapes = CHORDS.filter(c => c.root === note.pc && c.type === type).sort((a, b) => a.barre - b.barre);
+    const card = { name: note.name + type.suffix, numeral, shapes, shapeIndex: 0, el: document.createElement("div") };
+    card.el.className = "chord";
+    grid.appendChild(card.el);
+    drawCard(card);
+    return card;
+  });
+
+  // The progressions
+  document.getElementById("progs").innerHTML = "";
+  scale.progressions.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "prog";
+    row.innerHTML = `<button class="play">▶ Play</button><span class="title">${p.title}</span>
+      <span class="numerals">${p.degrees.map(d => cards[d].numeral).join(" – ")}</span>
+      <span class="names">${p.degrees.map(d => cards[d].name).join(" – ")}</span>`;
+    row.querySelector(".play").onclick = () => playProgression(p.degrees);
+    document.getElementById("progs").appendChild(row);
+  });
+}
+
+function drawCard(card) {
+  const chord = card.shapes[card.shapeIndex];
+  card.el.innerHTML = `<div class="numeral">${card.numeral}</div><div class="name">${card.name}</div>`;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 240 285");
+  drawChord(svg, chord, { lefty: document.getElementById("hand").value === "left", showRoot: true });
+  svg.onclick = () => strum(chord);
+  card.el.appendChild(svg);
+  if (card.shapes.length > 1) {
+    const btn = document.createElement("button");
+    btn.className = "shape-btn";
+    btn.textContent = `Other shape (${card.shapeIndex + 1}/${card.shapes.length}) ›`;
+    btn.onclick = () => { card.shapeIndex = (card.shapeIndex + 1) % card.shapes.length; drawCard(card); };
+    card.el.appendChild(btn);
+  }
+}
+
+// Play the chords one by one, lighting up each chord's card while it sounds
+let timers = [];
+function playProgression(degrees) {
+  timers.forEach(clearTimeout);
+  cards.forEach(c => c.el.classList.remove("playing"));
+  timers = degrees.map((d, n) => setTimeout(() => {
+    cards.forEach(c => c.el.classList.remove("playing"));
+    cards[d].el.classList.add("playing");
+    strum(cards[d].shapes[cards[d].shapeIndex]);
+  }, n * 1200));
+  timers.push(setTimeout(() => cards.forEach(c => c.el.classList.remove("playing")), degrees.length * 1200));
+}
+
+// ---------- Settings ----------
+const hand = document.getElementById("hand");
+try { hand.value = localStorage.getItem("fretTrainerHand") || "right"; } catch (e) {} // shared with the other pages
+hand.onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
+  cards.forEach(drawCard);
+};
+[rootSel, scaleSel, document.getElementById("size")].forEach(s => s.onchange = render);
+
+render();
+</script>
+</body>
+</html>
