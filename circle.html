@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circle of Fifths</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --family: #c9d3f8;
+    --wedge: #ece8df;
+    --wedge-inner: #e2ddd2;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --family: #3a4473;
+      --wedge: #2f2d35;
+      --wedge-inner: #3a3842;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1000px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.4rem; margin: 0; }
+  h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 16px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 20px; max-width: 720px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+
+  /* Circle on the left, details on the right (stacked on narrow screens) */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  svg { display: block; width: 100%; max-width: 480px; height: auto; margin: 0 auto; user-select: none; }
+  .wedge { fill: var(--wedge); stroke: var(--card); stroke-width: 2; cursor: pointer; transition: fill .15s; }
+  .wedge.inner { fill: var(--wedge-inner); }
+  .wedge:hover { fill: var(--family); }
+  .wedge.family { fill: var(--family); }
+  .wedge.selected { fill: var(--accent); }
+  .wedge-label { fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; font-weight: 700; }
+  .wedge-label.selected { fill: #fff; }
+  .wedge-label.small { font-size: 12px; font-weight: 600; }
+  .center-text { fill: var(--muted); text-anchor: middle; dominant-baseline: central; font-size: 12px; }
+  .center-key { fill: var(--ink); text-anchor: middle; dominant-baseline: central; font-size: 22px; font-weight: 700; }
+  .roman { fill: var(--accent); text-anchor: middle; dominant-baseline: central; font-family: Georgia, serif; font-size: 12px; pointer-events: none; }
+  .roman.selected { fill: #fff; }
+
+  .notes, .chord-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .note { min-width: 42px; padding: 5px 8px; border-radius: 8px; background: var(--btn); text-align: center; font-weight: 700; }
+  .chord-btn {
+    font: inherit; font-weight: 700; border: 2px solid transparent; border-radius: 10px; padding: 6px 10px;
+    background: var(--btn); color: var(--ink); cursor: pointer; text-align: center; min-width: 58px;
+  }
+  .chord-btn small { display: block; font-family: Georgia, serif; font-weight: 400; color: var(--accent); }
+  .chord-btn:hover { border-color: var(--accent); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .btn { font: inherit; font-size: 0.9rem; font-weight: 600; border: none; border-radius: 8px; padding: 7px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .btn:hover { outline: 2px solid var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; }
+
+  .explain { margin-top: 24px; line-height: 1.6; max-width: 760px; }
+  .explain li { margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a><a href="keys.html">Chords in a key</a><a href="songs.html">My songs</a></p>
+  <h1>Circle of Fifths</h1>
+  <p class="sub">All 12 keys in a circle. Each step clockwise goes up a fifth (7 semitones) and adds one sharp;
+    each step anticlockwise adds one flat. Click a key to see its family of chords.</p>
+
+  <div class="layout">
+    <div class="panel"><svg id="circle" viewBox="0 0 400 400" aria-label="Circle of fifths"></svg></div>
+    <div class="panel" id="info"></div>
+  </div>
+
+  <div class="explain">
+    <h3>Why it's useful</h3>
+    <ul>
+      <li><b>Neighbours sound good together.</b> Keys next to each other share 6 of their 7 notes, so songs often move between them.</li>
+      <li><b>The family is always a block of 6.</b> A key's three most important chords, I, IV and V, sit side by side:
+        the key itself, the one to its left (IV) and the one to its right (V). Their three minor partners on the inner ring
+        (ii, iii and vi) complete the family. That's why the highlight is always the same shape, whichever key you click.</li>
+      <li><b>Inner and outer belong together.</b> A major key and the minor key inside it (C major and A minor) use exactly the same
+        notes. They're called <i>relative</i> keys. The difference is which chord feels like "home".</li>
+      <li><b>Counting sharps and flats.</b> C has none. Go clockwise and each key adds one sharp (G has 1, D has 2…).
+        Go anticlockwise and each key adds one flat (F has 1, B♭ has 2…). At the bottom the two sides meet:
+        F♯ major and G♭ major sound the same, just written differently.</li>
+    </ul>
+    <p class="hint">Sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+      <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+  </div>
+</main>
+
+<!-- Shared code: chords, keys and guitar sound -->
+<script src="chord-data.js"></script>
+<script>
+// ---------- The 12 keys, in circle order ----------
+// Going clockwise, each key is a fifth (7 semitones) above the last: C, G, D, A, ...
+// Position 0 is at the top. The minor key inside each major key starts 3 semitones lower (9 up).
+const MAJOR_NAMES = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F"];
+const MINOR_NAMES = ["A", "E", "B", "F#", "C#", "G#", "D#", "Bb", "F", "C", "G", "D"];
+const ORDER_OF_SHARPS = ["F♯", "C♯", "G♯", "D♯", "A♯", "E♯", "B♯"];
+const ORDER_OF_FLATS = ["B♭", "E♭", "A♭", "D♭", "G♭", "C♭", "F♭"];
+const nice = name => name.replace("#", "♯").replace("b", "♭");
+
+// What's selected: position 0–11 on the circle, and whether it's the minor key (inner ring)
+let selected = { pos: 0, minor: false };
+try { selected = JSON.parse(localStorage.getItem("circleKey")) || selected; } catch (e) {}
+
+// ---------- Drawing the circle ----------
+const svg = document.getElementById("circle");
+const C = 200;                                   // centre of the drawing (x and y)
+const OUTER = [192, 132], INNER = [132, 84];     // outer and inner radius of each ring
+
+// Position on a circle: angle 0° points up, angles go clockwise.
+// cos and sin turn an angle into x/y, the same maths as on a clock face.
+function point(angle, r) {
+  const rad = (angle - 90) * Math.PI / 180;
+  return [C + r * Math.cos(rad), C + r * Math.sin(rad)];
+}
+
+// One slice of a ring ("annular sector"): an arc along the outside, a line in, an arc back along the inside
+function wedgePath(pos, [rOut, rIn]) {
+  const a1 = pos * 30 - 15, a2 = pos * 30 + 15;  // each of the 12 slices is 30° wide
+  const [x1, y1] = point(a1, rOut), [x2, y2] = point(a2, rOut);
+  const [x3, y3] = point(a2, rIn), [x4, y4] = point(a1, rIn);
+  return `M${x1} ${y1} A${rOut} ${rOut} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${rIn} ${rIn} 0 0 0 ${x4} ${y4} Z`;
+}
+
+// The family: the selected key's slice plus one slice either side, on both rings.
+// For each one we also note its Roman numeral in the selected key.
+function family() {
+  const p = selected.pos;
+  const at = d => (p + d + 12) % 12;
+  const f = [
+    { pos: at(0),  minor: false, roman: "I" },  { pos: at(-1), minor: false, roman: "IV" }, { pos: at(1), minor: false, roman: "V" },
+    { pos: at(0),  minor: true,  roman: "vi" }, { pos: at(-1), minor: true,  roman: "ii" }, { pos: at(1), minor: true,  roman: "iii" },
+  ];
+  // In a minor key the same chords get different numbers, counted from the minor chord
+  if (selected.minor) {
+    const minorRoman = { I: "♭III", IV: "♭VI", V: "♭VII", vi: "i", ii: "iv", iii: "v" };
+    f.forEach(w => w.roman = minorRoman[w.roman]);
+  }
+  return f;
+}
+
+function drawCircle() {
+  svg.innerHTML = "";
+  const fam = family();
+  const inFamily = (pos, minor) => fam.find(w => w.pos === pos && w.minor === minor);
+
+  for (let pos = 0; pos < 12; pos++) {
+    for (const minor of [false, true]) {
+      const isSelected = pos === selected.pos && minor === selected.minor;
+      const ring = minor ? INNER : OUTER;
+      const cls = "wedge" + (minor ? " inner" : "") + (isSelected ? " selected" : inFamily(pos, minor) ? " family" : "");
+      const wedge = el("path", { d: wedgePath(pos, ring), class: cls });
+      wedge.onclick = () => select(pos, minor);
+      svg.appendChild(wedge);
+
+      // The key's name in the middle of its slice; at the bottom both spellings (F♯/G♭).
+      // Family members get their Roman numeral underneath, so the name moves up a little.
+      const member = inFamily(pos, minor);
+      const [mx, my] = point(pos * 30, (ring[0] + ring[1]) / 2);
+      const lx = mx, ly = my - (member ? (minor ? 6 : 7) : 0);
+      let name = minor ? nice(MINOR_NAMES[pos]) + "m" : nice(MAJOR_NAMES[pos]);
+      if (pos === 6) name = minor ? "D♯m/E♭m" : "F♯/G♭";
+      const small = pos === 6 ? " small" : "";
+      svg.appendChild(el("text", { x: lx, y: ly, class: "wedge-label" + small + (isSelected ? " selected" : ""), "font-size": minor ? 14 : 18 }, name));
+
+      if (member) {
+        svg.appendChild(el("text", { x: mx, y: my + (minor ? 9 : 11), class: "roman" + (isSelected ? " selected" : "") }, member.roman));
+      }
+    }
+  }
+
+  // The selected key in the middle
+  svg.appendChild(el("text", { x: C, y: C - 10, class: "center-key" }, keyTitle()));
+  svg.appendChild(el("text", { x: C, y: C + 16, class: "center-text" }, signature().short));
+}
+
+// ---------- Information about the selected key ----------
+function keyAscii() { return (selected.minor ? MINOR_NAMES : MAJOR_NAMES)[selected.pos]; }
+function keyTitle() { return nice(keyAscii()) + (selected.minor ? " minor" : " major"); }
+
+// Number of sharps or flats: clockwise from the top adds sharps, anticlockwise adds flats
+function signature() {
+  const p = selected.pos;
+  if (p === 0) return { short: "no ♯ or ♭", list: "None: only the white piano keys." };
+  if (p <= 6) {
+    const s = ORDER_OF_SHARPS.slice(0, p);
+    return { short: `${p} sharp${p > 1 ? "s" : ""}`, list: s.join(" ") + (p === 6 ? " (or write it as G♭ with 6 flats)" : "") };
+  }
+  const f = ORDER_OF_FLATS.slice(0, 12 - p);
+  return { short: `${12 - p} flat${12 - p > 1 ? "s" : ""}`, list: f.join(" ") };
+}
+
+// The 7 chords of the key, built the same way as on the Chords in a Key page
+function keyChords() {
+  const steps = selected.minor ? MINOR : MAJOR;
+  const notes = spellScale(keyAscii(), steps);
+  const types = selected.minor ? ["min", "dim", "maj", "min", "min", "maj", "maj"] : ["maj", "min", "min", "maj", "maj", "min", "dim"];
+  const romans = selected.minor ? ["i", "ii°", "♭III", "iv", "v", "♭VI", "♭VII"] : ["I", "ii", "iii", "IV", "V", "vi", "vii°"];
+  return notes.map((n, i) => {
+    const type = TYPES.find(t => t.id === types[i]);
+    // The easiest guitar shape: open chords first, then the barre closest to the nut
+    const shape = CHORDS.filter(c => c.root === n.pc && c.type === type).sort((a, b) => a.barre - b.barre)[0];
+    return { name: n.name + type.suffix, roman: romans[i], shape };
+  });
+}
+
+function drawInfo() {
+  const notes = spellScale(keyAscii(), selected.minor ? MINOR : MAJOR);
+  const relPos = selected.pos;
+  const relative = selected.minor ? nice(MAJOR_NAMES[relPos]) + " major" : nice(MINOR_NAMES[relPos]) + " minor";
+  const sig = signature();
+  const chords = keyChords();
+  const info = document.getElementById("info");
+
+  info.innerHTML = `<h2>${keyTitle()}</h2>
+    <p class="muted">Relative ${selected.minor ? "major" : "minor"}: <b>${relative}</b> (same notes, different home)</p>
+    <h3>Key signature</h3><p>${sig.short}: ${sig.list}</p>
+    <h3>Notes of the scale</h3><div class="notes">${notes.map(n => `<span class="note">${n.name}</span>`).join("")}</div>
+    <h3>Chords (click to hear)</h3><div class="chord-list" id="chordList"></div>
+    <div class="actions">
+      <button class="btn" id="playScale">▶ Play the scale</button>
+      <button class="btn" id="playProg">▶ Play ${selected.minor ? "i – iv – v – i" : "I – IV – V – I"}</button>
+      <button class="btn primary" id="openKey">Open in Chords in a Key →</button>
+    </div>`;
+
+  chords.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "chord-btn";
+    b.innerHTML = `${c.name}<small>${c.roman}</small>`;
+    b.onclick = () => strum(c.shape);
+    document.getElementById("chordList").appendChild(b);
+  });
+
+  // The scale, one note at a time, going up from the key note (in the guitar's middle range)
+  document.getElementById("playScale").onclick = () => {
+    const start = 48 + notes[0].pc;
+    const steps = [...(selected.minor ? MINOR : MAJOR), 12];
+    steps.forEach((s, i) => pluck(start + s, i * 0.35));
+  };
+  // Chords 1, 4, 5 and back to 1: the most basic "home – away – home" movement
+  let timers = [];
+  document.getElementById("playProg").onclick = () => {
+    timers.forEach(clearTimeout);
+    timers = [0, 3, 4, 0].map((d, i) => setTimeout(() => strum(chords[d].shape), i * 1100));
+  };
+  // Open the Chords in a Key page with this key already chosen
+  document.getElementById("openKey").onclick = () => {
+    try { localStorage.setItem("keysPage", JSON.stringify({ root: keyAscii(), scale: selected.minor ? "minor" : "major", size: "3" })); } catch (e) {}
+    location.href = "keys.html";
+  };
+}
+
+function select(pos, minor) {
+  selected = { pos, minor };
+  try { localStorage.setItem("circleKey", JSON.stringify(selected)); } catch (e) {}
+  drawCircle();
+  drawInfo();
+}
+
+select(selected.pos, selected.minor);
+</script>
+</body>
+</html>
