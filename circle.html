@@ -280,7 +280,12 @@ function drawInfo() {
 
 function select(pos, minor) {
   selected = { pos, minor };
-  try { localStorage.setItem("circleKey", JSON.stringify(selected)); } catch (e) {}
+  // Remember the key, and share it with the Chords in a Key page so both show the same key
+  try {
+    localStorage.setItem("circleKey", JSON.stringify(selected));
+    const keysPage = JSON.parse(localStorage.getItem("keysPage")) || {};
+    localStorage.setItem("keysPage", JSON.stringify({ ...keysPage, root: keyAscii(), scale: minor ? "minor" : "major" }));
+  } catch (e) {}
   drawCircle();
   drawInfo();
 }

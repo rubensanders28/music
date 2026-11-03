@@ -217,10 +217,18 @@ try {
 let cards = []; // one per scale degree: { chord, shapes, shapeIndex, el }
 
 function render() {
-  try { localStorage.setItem("keysPage", JSON.stringify({ root: rootSel.value, scale: scaleSel.value, size: document.getElementById("size").value })); } catch (e) {}
   const scale = SCALES.find(s => s.id === scaleSel.value);
   const size = Number(document.getElementById("size").value);
   const notes = spellScale(rootSel.value, scale.steps);
+
+  // Remember the key. For major and minor keys, also select it on the Circle of Fifths page.
+  // On the circle, key number n (from the top, clockwise) is n fifths up from C, and 7 × 7 = 49 = 1 more than 4 × 12,
+  // so going the other way, a key's place on the circle is its note number × 7 (counting round in 12s).
+  try {
+    localStorage.setItem("keysPage", JSON.stringify({ root: rootSel.value, scale: scaleSel.value, size: document.getElementById("size").value }));
+    if (scale.id === "major") localStorage.setItem("circleKey", JSON.stringify({ pos: (notes[0].pc * 7) % 12, minor: false }));
+    if (scale.id === "minor") localStorage.setItem("circleKey", JSON.stringify({ pos: ((notes[0].pc + 3) * 7) % 12, minor: true })); // a minor key sits inside the major key 3 semitones up
+  } catch (e) {}
   const keyName = `${notes[0].name} ${scale.name.toLowerCase()}`;
 
   document.getElementById("mood").textContent = scale.mood;
