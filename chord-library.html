@@ -13,6 +13,7 @@
     --muted: #6b665e;
     --line: #2a2723;
     --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
     --btn: #ece8df;
   }
   @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
       --muted: #a29d94;
       --line: #e6e2da;
       --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
       --btn: #2f2d35;
     }
   }
@@ -37,7 +39,13 @@
   main { max-width: 1100px; margin: 0 auto; }
   a { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+
+  /* Guitar / Piano and Shapes / Formulas switches */
+  .switches { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--btn); }
+  .seg button { font: inherit; font-weight: 700; padding: 8px 16px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 
   /* Filters: rows of toggle buttons ("chips") */
   .filters { background: var(--card); border-radius: 14px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
@@ -64,6 +72,7 @@
   /* One section per root note, each with a grid of chord cards */
   .root-section h3 { font-size: 1.3rem; margin: 24px 0 8px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .grid.piano { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
   .chord {
     background: var(--card); border: 2px solid transparent; border-radius: 12px; padding: 8px 6px 6px;
     cursor: pointer; text-align: center; font: inherit; color: var(--ink);
@@ -71,7 +80,7 @@
   }
   .chord:hover { border-color: var(--accent); }
   .chord .name { font-weight: 700; font-size: 1.05rem; }
-  .chord .where { color: var(--muted); font-size: 0.75rem; }
+  .chord .where { color: var(--muted); font-size: 0.75rem; margin-bottom: 4px; }
 
   /* Chord diagram colours (the shapes are drawn by chord-data.js) */
   svg { display: block; width: 100%; height: auto; }
@@ -82,6 +91,34 @@
   .marker { fill: none; stroke: var(--line); stroke-width: 2; }
   .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
   .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+  /* Piano keys (also drawn by chord-data.js) */
+  .pk-white { fill: #fdfdfb; stroke: #555; stroke-width: 1; }
+  .pk-black { fill: #1c1c1c; }
+  .pk-on { fill: var(--accent-soft); }
+  .pk-root { fill: var(--accent); }
+  .pk-label { fill: #888; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  /* The formulas overview */
+  .formulas { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .formulas p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin: 0 0 12px; max-width: 760px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; padding: 8px 8px; border-bottom: 2px solid var(--btn); white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid var(--btn); vertical-align: middle; }
+  tr.group td { background: var(--bg); font-weight: 700; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; }
+  .t-name { font-weight: 700; white-space: nowrap; }
+  .t-name small { display: block; font-weight: 500; color: var(--muted); }
+  .degrees { font-family: Georgia, serif; font-size: 1rem; white-space: nowrap; }
+  .notes-c { font-weight: 600; white-space: nowrap; }
+  /* The steps between notes: the notes as dots, with the gap written between each pair */
+  .steps { display: flex; align-items: center; flex-wrap: nowrap; gap: 4px; white-space: nowrap; }
+  .steps .n { min-width: 30px; text-align: center; padding: 2px 6px; border-radius: 8px; background: var(--btn); font-weight: 700; font-size: 0.85rem; }
+  .steps .n.root { background: var(--accent); color: var(--card); }
+  .steps .gap { text-align: center; font-size: 0.72rem; color: var(--muted); line-height: 1.15; min-width: 44px; }
+  .steps .gap b { display: block; color: var(--ink); font-size: 0.8rem; }
+  .play { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 6px 10px; background: var(--btn); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .play:hover { outline: 2px solid var(--accent); }
+  .formula-root { margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
 
   .hint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 24px; line-height: 1.5; }
 </style>
@@ -90,51 +127,73 @@
 <script src="nav.js"></script>
 <main>
   <h1>Chord Library</h1>
-  <p class="sub">Every chord shape in the trainer. Choose what to show, and click a chord to hear it.</p>
+  <p class="sub">Every chord in the trainer, on guitar or piano. Choose what to show, and click a chord to hear it.
+    Under "Formulas" you can see how every chord type is built.</p>
 
-  <div class="filters">
-    <div class="filter">
-      <div class="filter-head"><h2>Chord types</h2>
-        <button class="link-btn" data-all="types">All</button><button class="link-btn" data-none="types">None</button></div>
-      <div class="chips" id="types"></div>
+  <div class="switches">
+    <div class="seg" role="group" aria-label="Instrument">
+      <button data-instrument="guitar">Guitar</button>
+      <button data-instrument="piano">Piano</button>
     </div>
-    <div class="filter">
-      <div class="filter-head"><h2>Root notes</h2>
-        <button class="link-btn" data-all="roots">All</button><button class="link-btn" data-none="roots">None</button></div>
-      <div class="chips" id="roots"></div>
-    </div>
-    <div class="filter">
-      <div class="filter-head"><h2>Where on the neck</h2></div>
-      <div class="chips" id="positions"></div>
-    </div>
-    <div class="filter options">
-      <label>Root dot
-        <select id="rootDot">
-          <option value="on">Highlight</option>
-          <option value="off">Hide</option>
-        </select>
-      </label>
-      <label>Hand
-        <select id="hand">
-          <option value="right">Right-handed</option>
-          <option value="left">Left-handed</option>
-        </select>
-      </label>
+    <div class="seg" role="group" aria-label="View">
+      <button data-view="shapes">Chords</button>
+      <button data-view="formulas">Formulas</button>
     </div>
   </div>
 
-  <p class="count" id="count"></p>
-  <div id="library"></div>
+  <div id="shapesView">
+    <div class="filters">
+      <div class="filter">
+        <div class="filter-head"><h2>Chord types</h2>
+          <button class="link-btn" data-all="types">All</button><button class="link-btn" data-none="types">None</button></div>
+        <div class="chips" id="types"></div>
+      </div>
+      <div class="filter">
+        <div class="filter-head"><h2>Root notes</h2>
+          <button class="link-btn" data-all="roots">All</button><button class="link-btn" data-none="roots">None</button></div>
+        <div class="chips" id="roots"></div>
+      </div>
+      <div class="filter guitar-only">
+        <div class="filter-head"><h2>Where on the neck</h2></div>
+        <div class="chips" id="positions"></div>
+      </div>
+      <div class="filter options">
+        <label>Root note
+          <select id="rootDot">
+            <option value="on">Highlight</option>
+            <option value="off">Don't highlight</option>
+          </select>
+        </label>
+        <label class="guitar-only">Hand
+          <select id="hand">
+            <option value="right">Right-handed</option>
+            <option value="left">Left-handed</option>
+          </select>
+        </label>
+      </div>
+    </div>
 
-  <p class="hint">○ means play the string open, × means don't play it, and "5fr" means the diagram starts at the 5th fret.
-    The blue dot is the root note.<br>
-    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
-    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+    <p class="count" id="count"></p>
+    <div id="library"></div>
+  </div>
+
+  <div id="formulasView" class="formulas">
+    <p>Every chord is built from its <b>root</b> by stacking notes at fixed distances. Those distances are the chord's formula,
+      and they're the same whatever the root: learn the formula once and you can build the chord on any note.
+      A <b>half step</b> (H) is one semitone: the very next key on a piano, or one fret on a guitar. A <b>whole step</b> (W) is two.
+      The numbers (1, 3, 5…) say which note of the root's major scale each chord note is; a ♭ makes it a half step lower, a ♯ a half step higher.</p>
+    <div class="formula-root"><label>Show the notes on <select id="formulaRoot"></select></label></div>
+    <div class="table-wrap"><table id="formulaTable"></table></div>
+  </div>
+
+  <p class="hint" id="hint"></p>
 </main>
 
-<!-- The chord list, diagram drawing and guitar sound are shared with the chord trainer -->
+<!-- The chord list, diagram drawing and guitar sound are shared with the chord trainer; piano-sound.js is the piano -->
 <script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
 <script>
+const $ = id => document.getElementById(id);
 const POSITIONS = [
   { id: "open", label: "Open chords" },
   { id: "low",  label: "Barre, frets 1–4" },
@@ -148,20 +207,74 @@ const selected = {
   roots:     new Set(NOTES.map((_, i) => String(i))),
   positions: new Set(["open", "low"]),
 };
+let settings = { instrument: "guitar", view: "shapes", formulaRoot: "0" };
 try {
   const saved = JSON.parse(localStorage.getItem("chordLibrary"));
-  if (saved) for (const k in selected) selected[k] = new Set(saved[k]);
+  if (saved) {
+    for (const k in selected) if (saved[k]) selected[k] = new Set(saved[k]);
+    for (const k in settings) if (saved[k]) settings[k] = saved[k];
+  }
 } catch (e) {}
 
 function save() {
-  const plain = {};
+  const plain = { ...settings };
   for (const k in selected) plain[k] = [...selected[k]];
   try { localStorage.setItem("chordLibrary", JSON.stringify(plain)); } catch (e) {}
+}
+const piano = () => settings.instrument === "piano";
+
+// ---------- Spelling chord notes ----------
+// Each chord note gets the right letter: a 3rd is always two letters above the root (C to E♭, never D♯),
+// a 5th four letters, and so on. Indexed by semitones above the root, as played (9ths and 13ths above the octave).
+const LETTERS_UP = { 0: 0, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6, 14: 1, 15: 1, 21: 5 };
+// And what that note is called in the formula
+const DEGREE = { 0: "1", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7", 14: "9", 15: "♯9", 21: "13" };
+
+// Semitones above the root for a chord type, in the order a pianist plays them (see pianoChord in chord-data.js)
+const intervalsOf = typeId => pianoChord(0, typeId).map(m => m - 48);
+
+// One way to spell a chord, given how to write its root (e.g. "D♭"). The diminished 7th's top note is a
+// "double-flat 7th" rather than a 6th: C E♭ G♭ B𝄫.
+function spellWithRoot(rootName, typeId) {
+  const letter = LETTERS.indexOf(rootName[0]);
+  const rootPc = (NATURAL[letter] + (rootName[1] === "♯" ? 1 : rootName[1] === "♭" ? -1 : 0) + 12) % 12;
+  return intervalsOf(typeId).map(semis => {
+    const l = (letter + (typeId === "dim7" && semis === 9 ? 6 : LETTERS_UP[semis])) % 7;
+    const acc = (((rootPc + semis) % 12 - NATURAL[l] + 18) % 12) - 6;
+    return LETTERS[l] + ACCIDENTAL[acc];
+  });
+}
+const accidentals = names => names.join("").replace(/[A-G]/g, "").length;
+
+// For black-key roots, use whichever name (C♯ or D♭) gives the chord fewer sharps and flats: D♭ major, but C♯ minor
+function spellChord(root, typeId) {
+  const sharp = NOTES[root].replace("#", "♯");
+  if (!FLATS[NOTES[root]]) return spellWithRoot(sharp, typeId);
+  const a = spellWithRoot(sharp, typeId), b = spellWithRoot(FLATS[NOTES[root]], typeId);
+  return accidentals(b) < accidentals(a) ? b : a;
+}
+
+function degreeOf(typeId, semis) {
+  return typeId === "dim7" && semis === 9 ? "𝄫7" : DEGREE[semis];
+}
+
+// A gap of n semitones as whole and half steps: 4 → "W W", 3 → "W H", 1 → "H"
+function stepWords(n) {
+  return [...Array(Math.floor(n / 2)).fill("W"), ...(n % 2 ? ["H"] : [])].join(" ");
+}
+
+// ---------- Sound ----------
+function playChordNotes(root, typeId, guitarShape) {
+  if (piano()) pianoChord(root, typeId).forEach((m, i) => playPiano(m, i * 0.03));
+  else if (guitarShape) strum(guitarShape);
+  else { // no guitar shape given: strum the piano voicing on the guitar sound
+    pianoChord(root, typeId).forEach((m, i) => pluck(m, i * 0.03));
+  }
 }
 
 // ---------- Filter chips ----------
 function makeChips(group, items) {
-  const box = document.getElementById(group);
+  const box = $(group);
   box.innerHTML = "";
   items.forEach(({ id, label }) => {
     const b = document.createElement("button");
@@ -203,15 +316,31 @@ function where(c) {
 }
 
 function render() {
-  const lefty = document.getElementById("hand").value === "left";
-  const showRoot = document.getElementById("rootDot").value === "on";
-  const library = document.getElementById("library");
+  document.querySelectorAll("[data-instrument]").forEach(b => b.setAttribute("aria-pressed", b.dataset.instrument === settings.instrument));
+  document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === settings.view));
+  $("shapesView").style.display = settings.view === "shapes" ? "" : "none";
+  $("formulasView").style.display = settings.view === "formulas" ? "" : "none";
+  document.querySelectorAll(".guitar-only").forEach(e => e.style.display = piano() ? "none" : "");
+  $("hint").innerHTML = (piano()
+    ? "The dark blue key is the root note; the light blue keys are the other notes of the chord. Notes like the 9th sit above the octave, the way pianists usually play them."
+    : "○ means play the string open, × means don't play it, and \"5fr\" means the diagram starts at the 5th fret. The blue dot is the root note.")
+    + `<br>${piano() ? "Piano" : "Guitar"} sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
+
+  if (settings.view === "formulas") return renderFormulas();
+  if (piano()) renderPiano(); else renderGuitar();
+}
+
+function renderGuitar() {
+  const lefty = $("hand").value === "left";
+  const showRoot = $("rootDot").value === "on";
+  const library = $("library");
   library.innerHTML = "";
 
   const shown = CHORDS.filter(c =>
     selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)));
 
-  document.getElementById("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
+  $("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
   if (shown.length === 0) {
     library.innerHTML = `<p class="empty">Nothing selected. Pick at least one chord type, root note and neck position.</p>`;
     return;
@@ -223,12 +352,7 @@ function render() {
       .sort((a, b) => TYPES.indexOf(a.type) - TYPES.indexOf(b.type) || a.barre - b.barre);
     if (here.length === 0) return;
 
-    const section = document.createElement("section");
-    section.className = "root-section";
-    section.innerHTML = `<h3>${pretty(root)}${FLATS[NOTES[root]] ? " / " + FLATS[NOTES[root]] : ""}</h3>`;
-    const grid = document.createElement("div");
-    grid.className = "grid";
-
+    const { section, grid } = rootSection(root);
     here.forEach(c => {
       const card = document.createElement("button");
       card.className = "chord";
@@ -241,20 +365,105 @@ function render() {
       card.onclick = () => strum(c);
       grid.appendChild(card);
     });
-
-    section.appendChild(grid);
     library.appendChild(section);
   });
 }
 
+// Piano: one card per chord (no neck positions), with its notes spelled out
+function renderPiano() {
+  const showRoot = $("rootDot").value === "on";
+  const library = $("library");
+  library.innerHTML = "";
+  const types = TYPES.filter(t => selected.types.has(t.id));
+  const roots = NOTES.map((_, i) => i).filter(i => selected.roots.has(String(i)));
+  const total = types.length * roots.length;
+  $("count").textContent = `Showing ${total} chord${total === 1 ? "" : "s"}`;
+  if (total === 0) {
+    library.innerHTML = `<p class="empty">Nothing selected. Pick at least one chord type and root note.</p>`;
+    return;
+  }
+
+  roots.forEach(root => {
+    const { section, grid } = rootSection(root);
+    grid.classList.add("piano");
+    types.forEach(t => {
+      const names = spellChord(root, t.id);
+      const card = document.createElement("button");
+      card.className = "chord";
+      card.title = "Click to hear it";
+      card.innerHTML = `<div class="name">${names[0]}${t.suffix}</div><div class="where">${names.join(" · ")}</div>`;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      drawPianoChord(svg, pianoChord(root, t.id), showRoot ? 48 + root : null);
+      card.appendChild(svg);
+      card.onclick = () => playChordNotes(root, t.id);
+      grid.appendChild(card);
+    });
+    library.appendChild(section);
+  });
+}
+
+function rootSection(root) {
+  const section = document.createElement("section");
+  section.className = "root-section";
+  section.innerHTML = `<h3>${pretty(root)}${FLATS[NOTES[root]] ? " / " + FLATS[NOTES[root]] : ""}</h3>`;
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  section.appendChild(grid);
+  return { section, grid };
+}
+
+// ---------- The formulas overview ----------
+// Grouped the same way as the "level" of each chord type in chord-data.js
+const GROUPS = { 1: "Triads: the basic 3-note chords", 2: "Seventh chords", 3: "More colours", 4: "Power chords and extended chords" };
+const TYPE_NAMES = { maj: "Major", min: "Minor", "7": "Dominant 7th", maj7: "Major 7th", m7: "Minor 7th", sus2: "Suspended 2nd",
+  sus4: "Suspended 4th", dim: "Diminished", aug: "Augmented", dim7: "Diminished 7th", m7b5: "Half-diminished", "6": "Major 6th",
+  "5": "Power chord", add9: "Added 9th", "7sus4": "7th, suspended 4th", m6: "Minor 6th", mmaj7: "Minor-major 7th",
+  "9": "Dominant 9th", m9: "Minor 9th", maj9: "Major 9th", "7s9": "7♯9 (\"Hendrix chord\")", "13": "Dominant 13th" };
+
+function renderFormulas() {
+  const root = Number(settings.formulaRoot);
+  const table = $("formulaTable");
+  let html = `<tr><th>Chord</th><th>Formula</th><th>Notes on ${spellChord(root, "maj")[0]}</th><th>Steps between the notes</th><th></th></tr>`;
+  let group = null;
+  TYPES.forEach(t => {
+    if (t.level !== group) { group = t.level; html += `<tr class="group"><td colspan="5">${GROUPS[group]}</td></tr>`; }
+    const semis = intervalsOf(t.id);
+    const names = spellChord(root, t.id);
+    const degrees = semis.map(s => degreeOf(t.id, s));
+    // The notes as little boxes, with the whole/half steps between each neighbouring pair
+    let steps = `<span class="n root">${degrees[0]}</span>`;
+    for (let i = 1; i < semis.length; i++) {
+      const gap = semis[i] - semis[i - 1];
+      steps += `<span class="gap"><b>${stepWords(gap)}</b>${gap} half step${gap === 1 ? "" : "s"}</span><span class="n">${degrees[i]}</span>`;
+    }
+    html += `<tr>
+      <td class="t-name">${TYPE_NAMES[t.id] || t.label}<small>${names[0]}${t.suffix}</small></td>
+      <td class="degrees">${degrees.join(" – ")}</td>
+      <td class="notes-c">${names.join(" ")}</td>
+      <td><div class="steps">${steps}</div></td>
+      <td><button class="play" data-type="${t.id}">▶ Play</button></td>
+    </tr>`;
+  });
+  table.innerHTML = html;
+  table.querySelectorAll(".play").forEach(b => b.onclick = () => playChordNotes(root, b.dataset.type));
+}
+
+// Root note for the formulas table (C by default)
+NOTES.forEach((n, i) => $("formulaRoot").add(new Option(FLATS[n] ? `${pretty(i)} / ${FLATS[n]}` : n, i)));
+$("formulaRoot").value = settings.formulaRoot;
+$("formulaRoot").onchange = e => { settings.formulaRoot = e.target.value; save(); render(); };
+
 // ---------- Settings ----------
-const hand = document.getElementById("hand");
+document.querySelectorAll("[data-instrument]").forEach(b => b.onclick = () => { settings.instrument = b.dataset.instrument; save(); render(); });
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => { settings.view = b.dataset.view; save(); render(); });
+
+const hand = $("hand");
 try { hand.value = localStorage.getItem("fretTrainerHand") || "right"; } catch (e) {} // shared with the trainers
 hand.onchange = () => {
   try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
   render();
 };
-document.getElementById("rootDot").onchange = render;
+$("rootDot").onchange = render;
 
 render();
 </script>

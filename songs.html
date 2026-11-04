@@ -483,44 +483,8 @@ function renderKey() {
 // ---------- 4. Chord cards: guitar diagrams or piano keys ----------
 let cards = []; // one per different chord in the song: { chord, shapes, shapeIndex, el }
 
-// Piano: the chord's notes, starting from the root in the octave below middle C.
-// Notes like the 9th (2 semitones) go an octave up when the chord also has a 3rd.
-function pianoNotes(c) {
-  const notes = typeOf(c.type).notes;
-  const hasThird = notes.includes(3) || notes.includes(4);
-  const hasSeventh = notes.includes(10) || notes.includes(11);
-  const up = notes.map(n => {
-    if (n === 2 && hasThird) return 14;                      // 9th
-    if (n === 3 && notes.includes(4)) return 15;             // ♯9th (in 7♯9)
-    if (n === 9 && hasSeventh) return 21;                    // 13th
-    return n;
-  });
-  return up.sort((a, b) => a - b).map(n => 48 + c.root + n);
-}
-
-function drawPiano(svg, midis, rootMidi) {
-  const isWhite = m => NATURAL.includes(m % 12);
-  let low = midis[0], high = midis[midis.length - 1];
-  if (!isWhite(low)) low--;
-  if (!isWhite(high)) high++;
-  const whites = () => { const w = []; for (let m = low; m <= high; m++) if (isWhite(m)) w.push(m); return w; };
-  while (whites().length < 10) { high++; if (!isWhite(high)) high++; } // show at least 10 white keys
-  const W = 20, H = 90, list = whites();
-
-  svg.innerHTML = "";
-  svg.setAttribute("viewBox", `0 0 ${list.length * W} ${H}`);
-  const cls = m => (m === rootMidi ? " pk-root" : midis.includes(m) ? " pk-on" : "");
-  list.forEach((m, i) => {
-    svg.appendChild(el("rect", { x: i * W, y: 0, width: W, height: H, class: "pk-white" + cls(m) }));
-    if (m % 12 === 0) svg.appendChild(el("text", { x: i * W + W / 2, y: H - 5, class: "pk-label" }, "C" + (Math.floor(m / 12) - 1)));
-  });
-  // Black keys sit after C, D, F, G and A
-  list.forEach((m, i) => {
-    if (i < list.length - 1 && [0, 2, 5, 7, 9].includes(m % 12)) {
-      svg.appendChild(el("rect", { x: (i + 1) * W - 6, y: 0, width: 12, height: 55, rx: 2, class: "pk-black" + cls(m + 1) }));
-    }
-  });
-}
+// Piano: the chord's notes (pianoChord and drawPianoChord are in chord-data.js, shared with the Chord library)
+function pianoNotes(c) { return pianoChord(c.root, c.type); }
 
 const instrument = () => $("instrument").value;
 const lefty = () => $("hand").value === "left";
@@ -556,7 +520,7 @@ function drawCard(card) {
     drawChord(svg, card.shapes[card.shapeIndex], { lefty: lefty(), showRoot: true });
   } else {
     const notes = pianoNotes(card.chord);
-    drawPiano(svg, notes, 48 + card.chord.root); // colour the root key
+    drawPianoChord(svg, notes, 48 + card.chord.root); // colour the root key
   }
   svg.onclick = () => playChord(card);
   card.el.appendChild(svg);
@@ -639,7 +603,7 @@ function nextQuestion() {
     svg.setAttribute("viewBox", "0 0 240 285");
     drawChord(svg, pool[Math.floor(Math.random() * pool.length)], { lefty: lefty(), showRoot: false });
   } else {
-    drawPiano(svg, pianoNotes(card.chord), null); // no root colour: that would give the answer away
+    drawPianoChord(svg, pianoNotes(card.chord), null); // no root colour: that would give the answer away
   }
   question.className = "question" + (instrument() === "piano" ? " piano" : "");
   question.appendChild(svg);

@@ -221,6 +221,50 @@ function el(tag, attrs, text) {
   return e;
 }
 
+// ---------- Chords on the piano ----------
+// The notes of a chord as MIDI numbers, starting from the root in the octave below middle C.
+// Notes like the 9th (2 semitones) go an octave up when the chord also has a 3rd, because that's how
+// they're played: C9 is C E G B♭ D, with the D above the B♭.
+//   typeId: a chord type id from TYPES, e.g. "m7"
+function pianoChord(root, typeId) {
+  const notes = TYPES.find(t => t.id === typeId).notes;
+  const hasThird = notes.includes(3) || notes.includes(4);
+  const hasSeventh = notes.includes(10) || notes.includes(11);
+  const up = notes.map(n => {
+    if (n === 2 && hasThird) return 14;                      // 9th
+    if (n === 3 && notes.includes(4)) return 15;             // ♯9th (in 7♯9)
+    if (n === 9 && hasSeventh) return 21;                    // 13th
+    return n;
+  });
+  return up.sort((a, b) => a - b).map(n => 48 + root + n);
+}
+
+// Draws a small keyboard into `svg` with the keys in `midis` lit up, and `rootMidi` (if given) in the root colour.
+// The page's CSS decides the colours, using the classes pk-white, pk-black, pk-on, pk-root and pk-label.
+function drawPianoChord(svg, midis, rootMidi) {
+  const isWhite = m => NATURAL.includes(m % 12);
+  let low = midis[0], high = midis[midis.length - 1];
+  if (!isWhite(low)) low--;
+  if (!isWhite(high)) high++;
+  const whites = () => { const w = []; for (let m = low; m <= high; m++) if (isWhite(m)) w.push(m); return w; };
+  while (whites().length < 10) { high++; if (!isWhite(high)) high++; } // show at least 10 white keys
+  const W = 20, H = 90, list = whites();
+
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", `0 0 ${list.length * W} ${H}`);
+  const cls = m => (m === rootMidi ? " pk-root" : midis.includes(m) ? " pk-on" : "");
+  list.forEach((m, i) => {
+    svg.appendChild(el("rect", { x: i * W, y: 0, width: W, height: H, class: "pk-white" + cls(m) }));
+    if (m % 12 === 0) svg.appendChild(el("text", { x: i * W + W / 2, y: H - 5, class: "pk-label" }, "C" + (Math.floor(m / 12) - 1)));
+  });
+  // Black keys sit after C, D, F, G and A
+  list.forEach((m, i) => {
+    if (i < list.length - 1 && [0, 2, 5, 7, 9].includes(m % 12)) {
+      svg.appendChild(el("rect", { x: (i + 1) * W - 6, y: 0, width: 12, height: 55, rx: 2, class: "pk-black" + cls(m + 1) }));
+    }
+  });
+}
+
 function drawChord(svg, chord, { lefty = false, showRoot = false } = {}) {
   svg.innerHTML = "";
   // Left-handed players see the diagram mirrored: low E on the right
