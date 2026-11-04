@@ -11,6 +11,7 @@
     --card: #ffffff;
     --ink: #1f1d1a;
     --muted: #6b665e;
+    --line: #2a2723;
     --accent: #3b5bdb;
     --good: #2b8a3e;
     --bad: #c92a2a;
@@ -23,6 +24,7 @@
       --card: #222127;
       --ink: #f1efe9;
       --muted: #a29d94;
+      --line: #e6e2da;
       --accent: #8ea2ff;
       --good: #69db7c;
       --bad: #ff8787;
@@ -38,16 +40,33 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 24px 16px;
   }
-  main { max-width: 640px; margin: 0 auto; }
+  main { max-width: 720px; margin: 0 auto; }
   a { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: 0 0 4px; }
   .sub { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
 
   .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
-  .settings { display: flex; flex-wrap: wrap; gap: 12px; }
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
   select, input { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
   input[type=number] { width: 70px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .row + .row { margin-top: 10px; }
+  .row > label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  .row select { min-width: 190px; }
+  .small { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 5px 10px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .small:hover { outline: 2px solid var(--accent); }
+  .small:disabled { opacity: .4; cursor: default; outline: none; }
+
+  /* The forms for adding your own chord switches and strumming patterns */
+  .editor { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--bg); display: grid; gap: 8px; }
+  .editor[hidden] { display: none; }
+  .editor label { display: grid; gap: 3px; font-size: 0.85rem; color: var(--muted); }
+  .editor input { width: 100%; }
+  .editor .buttons-row { display: flex; gap: 8px; }
+  .editor .save { background: var(--accent); color: var(--card); }
+  .form-msg { margin: 0; font-size: 0.85rem; min-height: 1.2em; }
+  .form-msg.bad { color: var(--bad); }
 
   /* The big tempo display */
   .tempo { text-align: center; }
@@ -57,6 +76,33 @@
   .message { min-height: 1.5em; font-weight: 600; margin-top: 8px; }
   .message.good { color: var(--good); }
   .message.bad { color: var(--bad); }
+
+  /* The chords of the exercise; the one to play now is highlighted */
+  .chords { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 14px; }
+  .chords:empty { display: none; }
+  .chord { width: 96px; border: 2px solid transparent; border-radius: 12px; padding: 4px 4px 2px; background: var(--bg); transition: border-color .1s, transform .1s; }
+  .chord b { display: block; font-size: 1.1rem; }
+  .chord.now { border-color: var(--accent); transform: translateY(-3px); }
+  .chord.next b::after { content: " · next"; font-size: 0.7rem; font-weight: 500; color: var(--muted); }
+  .chord .none { font-size: 0.7rem; color: var(--muted); padding: 20px 0; }
+  .chord svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--line); stroke-width: 1.5; }
+  .nut { stroke: var(--line); stroke-width: 6; }
+  .finger { fill: var(--line); }
+  .finger.root { fill: var(--accent); }
+  .marker { fill: none; stroke: var(--line); stroke-width: 2; }
+  .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  /* The strumming pattern: one box per eighth note */
+  .strums { display: flex; justify-content: center; gap: 4px; margin: 14px 0 0; }
+  .strums:empty { display: none; }
+  .strum { width: 36px; text-align: center; border-radius: 8px; padding: 4px 0 2px; background: var(--bg); transition: background .05s; }
+  .strum b { display: block; font-size: 1.3rem; line-height: 1.2; }
+  .strum small { font-size: 0.7rem; color: var(--muted); }
+  .strum.rest b { color: var(--muted); opacity: .5; }
+  .strum.on { background: var(--hl); }
+  .strum.on small, .strum.on b { color: #17161a; opacity: 1; }
 
   /* One dot per beat; the first beat of the bar is bigger */
   .beats { display: flex; justify-content: center; gap: 12px; margin: 18px 0 6px; }
@@ -87,6 +133,19 @@
   .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stats span { color: var(--muted); font-size: 0.8rem; }
 
+  /* History: a chart of your best tempo per day, and a table */
+  .chart { width: 100%; height: auto; display: block; margin-bottom: 8px; }
+  .chart .axis { stroke: var(--btn); stroke-width: 1; }
+  .chart .line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+  .chart .goal { stroke: var(--good); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .chart circle { fill: var(--accent); }
+  .chart text { fill: var(--muted); font-size: 11px; font-family: system-ui, sans-serif; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--btn); }
+  td { padding: 5px 6px; border-bottom: 1px solid var(--btn); font-variant-numeric: tabular-nums; }
+  td.num, th.num { text-align: right; }
+  .table-wrap { max-height: 260px; overflow-y: auto; }
+
   .log { list-style: none; padding: 0; margin: 0; max-height: 180px; overflow-y: auto; font-size: 0.85rem; }
   .log li { padding: 4px 0; border-bottom: 1px solid var(--btn); display: flex; justify-content: space-between; gap: 8px; }
   .log li:last-child { border-bottom: none; }
@@ -94,7 +153,7 @@
   .log .down { color: var(--bad); }
   .log time { color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
-  h2 { font-size: 1rem; margin: 0 0 8px; }
+  h2 { font-size: 1rem; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
 </style>
 </head>
@@ -104,6 +163,43 @@
   <h1>Tempo Ladder</h1>
   <p class="sub">Start slow, and climb to your goal tempo a few beats per minute at a time.
     Played it cleanly? Step up. Made a mistake? Step back down until it's clean again.</p>
+
+  <!-- What to practise: a chord switch from your library, and a strumming pattern -->
+  <div class="panel">
+    <div class="row">
+      <label>Chord switches <select id="exercise"></select></label>
+      <button class="small" id="newEx">+ New</button>
+      <button class="small" id="editEx">Edit</button>
+      <button class="small" id="delEx">Delete</button>
+    </div>
+    <form class="editor" id="exForm" hidden>
+      <label>Name (optional) <input id="exName" placeholder="e.g. G to C"></label>
+      <label>Chords, in order, separated by spaces <input id="exChords" placeholder="e.g. G C   or   Am F C G" autocomplete="off"></label>
+      <label>Change chord every
+        <select id="exBars">
+          <option value="1">1 bar</option>
+          <option value="2">2 bars</option>
+          <option value="4">4 bars</option>
+        </select>
+      </label>
+      <p class="form-msg" id="exMsg"></p>
+      <div class="buttons-row"><button class="small save" type="submit">Save</button><button class="small" type="button" id="exCancel">Cancel</button></div>
+    </form>
+
+    <div class="row">
+      <label>Strumming <select id="strumSel"></select></label>
+      <button class="small" id="newStrum">+ New</button>
+      <button class="small" id="editStrum">Edit</button>
+      <button class="small" id="delStrum">Delete</button>
+    </div>
+    <form class="editor" id="strumForm" hidden>
+      <label>Name <input id="strumName" placeholder="e.g. Folk"></label>
+      <label>Pattern: one letter per eighth note: D = down, U = up, - = miss the strings
+        <input id="strumPattern" placeholder="e.g. D-DU-UDU" autocomplete="off" style="font-family: ui-monospace, monospace; letter-spacing: 2px"></label>
+      <p class="form-msg" id="strumMsg"></p>
+      <div class="buttons-row"><button class="small save" type="submit">Save</button><button class="small" type="button" id="strumCancel">Cancel</button></div>
+    </form>
+  </div>
 
   <div class="panel">
     <div class="settings">
@@ -134,8 +230,10 @@
   </div>
 
   <div class="panel tempo">
+    <div class="chords" id="chordStrip"></div>
     <div class="bpm"><span id="bpm">60</span> <small>BPM</small></div>
     <div class="marking" id="marking"></div>
+    <div class="strums" id="strumStrip"></div>
     <div class="beats" id="beatDots"></div>
     <div class="message" id="message"></div>
 
@@ -154,11 +252,16 @@
 
   <div class="panel">
     <div class="stats">
-      <div><b id="best">–</b><span>best tempo</span></div>
+      <div><b id="best">–</b><span id="bestLabel">best clean tempo</span></div>
       <div><b id="cleanCount">0</b><span>clean</span></div>
       <div><b id="mistakeCount">0</b><span>mistakes</span></div>
       <div><b id="time">0:00</b><span>practising</span></div>
     </div>
+  </div>
+
+  <div class="panel" id="historyPanel">
+    <h2><span id="historyTitle">History</span> <button class="small" id="clearHistory">Clear history</button></h2>
+    <div id="history"></div>
   </div>
 
   <div class="panel">
@@ -167,13 +270,16 @@
     <p class="empty" id="logEmpty">Your tempo changes will show up here.</p>
   </div>
 
-  <p class="hint"><b>How to use it:</b> pick something short you're learning: a scale, a riff, a few bars of a song.
+  <p class="hint"><b>How to use it:</b> pick a chord switch (or "Just the metronome" for anything else, like a scale or a riff).
     Set the start tempo where you can play it perfectly, and the goal where you want to end up.
     Play it once through, then press Clean or Mistake. Be honest: practising mistakes at speed only makes them stick.<br>
+    Each chord switch remembers its own start and goal, and keeps a history: one line per day, with the fastest tempo you played it cleanly.<br>
     In automatic mode the tempo rises on its own every few bars; press Mistake whenever it gets messy.<br>
-    Good habit: once you reach the goal, finish with a few slow, relaxed run-throughs.</p>
+    Everything is saved in this browser only, so use the same browser each time.</p>
 </main>
 
+<!-- chord-data.js gives us the chord shapes, the diagram drawing and the audio clock -->
+<script src="chord-data.js"></script>
 <script>
 // ---------- Settings ----------
 const $ = id => document.getElementById(id);
@@ -197,10 +303,58 @@ function marking(bpm) {
   return found ? found[1] : "Prestissimo";
 }
 
+// ---------- Your library: chord switches, strumming patterns and history ----------
+// Starting set. Once you change anything, your own version is saved and used instead.
+//   chords: chord names in the order you play them; the last one switches back to the first
+const DEFAULT_EXERCISES = [
+  { id: "pop-g", name: "Pop in G", chords: ["G", "D", "Em", "C"], bars: 1, start: 60, goal: 100 },
+  { id: "pop-c", name: "Pop in C", chords: ["C", "G", "Am", "F"], bars: 1, start: 50, goal: 90 },
+  { id: "three-g", name: "Three-chord song", chords: ["G", "C", "D"], bars: 1, start: 60, goal: 110 },
+  { id: "sad-pop", name: "Sad pop", chords: ["Am", "F", "C", "G"], bars: 1, start: 50, goal: 90 },
+  { id: "pop-d", name: "Pop in D", chords: ["D", "A", "Bm", "G"], bars: 1, start: 50, goal: 90 },
+];
+// pattern: one character per eighth note: D = down, U = up, - = miss the strings (keep your hand moving)
+const DEFAULT_STRUMS = [
+  { id: "quarters", name: "Downstrokes on the beat", pattern: "D-D-D-D-" },
+  { id: "eighths", name: "Down-up eighths", pattern: "DUDUDUDU" },
+  { id: "folk", name: "Folk (D, DU, UDU)", pattern: "D-DU-UDU" },
+  { id: "pop", name: "Pop (D, D, DUDU)", pattern: "D-D-DUDU" },
+  { id: "waltz", name: "Waltz (3 beats)", pattern: "D-DUDU" },
+];
+
+let lib = { exercises: DEFAULT_EXERCISES, strums: DEFAULT_STRUMS, history: {}, exerciseId: "pop-g", strumId: "quarters" };
+try {
+  const saved = JSON.parse(localStorage.getItem("tempoLadder"));
+  if (saved) lib = { ...lib, ...saved };
+} catch (e) {}
+function saveLib() {
+  try { localStorage.setItem("tempoLadder", JSON.stringify(lib)); } catch (e) {}
+}
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+const exercise = () => lib.exercises.find(e => e.id === lib.exerciseId) || null;
+const strumPattern = () => lib.strums.find(s => s.id === lib.strumId) || null;
+
+// "C#m7" → { root: 1, type: (the m7 type), name: "C♯m7" }, or null if we don't know that chord.
+// Chord types come from chord-data.js; a few common ways of writing them are accepted too.
+const ALIASES = { min: "m", "-": "m", maj: "", M: "", M7: "maj7", "Δ": "maj7", "Δ7": "maj7", "°": "dim", "+": "aug", m7b5: "m7♭5", "7#9": "7♯9" };
+function parseChord(text) {
+  const m = text.match(/^([A-Ga-g])([#b♯♭]?)(.*)$/);
+  if (!m) return null;
+  const letter = m[1].toUpperCase();
+  const acc = "#♯".includes(m[2]) && m[2] ? 1 : "b♭".includes(m[2]) && m[2] ? -1 : 0;
+  const rest = ALIASES[m[3]] !== undefined ? ALIASES[m[3]] : m[3].replace(/#/g, "♯").replace(/b/g, "♭");
+  const type = TYPES.find(t => t.suffix === rest);
+  if (!type) return null;
+  const root = (NATURAL[LETTERS.indexOf(letter)] + acc + 12) % 12;
+  return { root, type, name: letter + (acc === 1 ? "♯" : acc === -1 ? "♭" : "") + type.suffix };
+}
+function exerciseName(ex) { return ex.name ? `${ex.name}: ${ex.chords.join(" – ")}` : ex.chords.join(" – "); }
+
 // ---------- Sound ----------
 // The browser's audio clock is far more precise than setTimeout, so we don't play clicks "now":
 // every 25 ms we look a little way ahead and book every click due in the next 0.1 s at its exact time.
-const audio = new AudioContext();
+// (`audio`, the browser's sound system, comes from chord-data.js.)
 const LOOKAHEAD = 0.1;
 
 function click(time, first) {
@@ -218,18 +372,28 @@ let bpm = 60;
 let running = false;
 let nextTime = 0;       // when the next click is due, on the audio clock
 let beat = 0;           // which beat of the bar the next click is
+let bar = 0;            // how many bars since you pressed Start, to know which chord is up
 let barsSinceStep = 0;  // for automatic mode
 let timer = null;
-const due = [];         // booked clicks the beat dots haven't shown yet: { time, beat }
+const due = [];         // booked moments the display hasn't shown yet: { time, beat, half, chord }
+
+function chordAt(barNumber) {
+  const ex = exercise();
+  return ex ? Math.floor(barNumber / ex.bars) % ex.chords.length : -1;
+}
 
 function scheduler() {
   while (nextTime < audio.currentTime + LOOKAHEAD) {
+    const length = 60 / bpm;
     click(nextTime, beat === 0 && $("accent").value === "on");
-    due.push({ time: nextTime, beat });
-    nextTime += 60 / bpm;
+    // Two display moments per beat: the beat itself and the "&" halfway, for the strumming pattern
+    due.push({ time: nextTime, beat, half: 0, chord: chordAt(bar) });
+    due.push({ time: nextTime + length / 2, beat, half: 1, chord: chordAt(bar) });
+    nextTime += length;
     beat++;
     if (beat >= beatsPerBar()) {
       beat = 0;
+      bar++;
       barEnded();
     }
   }
@@ -248,6 +412,7 @@ function start() {
   audio.resume(); // browsers only allow sound after you've clicked something
   running = true;
   beat = 0;
+  bar = 0;
   barsSinceStep = 0;
   nextTime = audio.currentTime + 0.05;
   timer = setInterval(scheduler, 25);
@@ -260,16 +425,24 @@ function stop() {
   running = false;
   clearInterval(timer);
   due.length = 0;
-  practised += performance.now() - startedAt;
-  document.querySelectorAll(".beat").forEach(d => d.classList.remove("on"));
+  const ms = performance.now() - startedAt;
+  practised += ms;
+  record({ seconds: ms / 1000 });
+  document.querySelectorAll(".beat.on, .strum.on").forEach(d => d.classList.remove("on"));
   $("startBtn").firstChild.textContent = "▶ Start ";
 }
 
-// Light up each beat dot exactly when its click is heard
+// Light up each beat dot, strum and chord exactly when its click is heard
 function animate() {
   while (due.length && due[0].time <= audio.currentTime) {
-    const b = due.shift().beat;
-    document.querySelectorAll(".beat").forEach((d, i) => d.classList.toggle("on", i === b));
+    const d = due.shift();
+    if (d.half === 0) document.querySelectorAll(".beat").forEach((dot, i) => dot.classList.toggle("on", i === d.beat));
+    const strums = document.querySelectorAll(".strum");
+    if (strums.length) {
+      const slot = (d.beat * 2 + d.half) % strums.length;
+      strums.forEach((s, i) => s.classList.toggle("on", i === slot));
+    }
+    if (d.chord >= 0) showChord(d.chord);
   }
   updateTime();
   requestAnimationFrame(animate);
@@ -277,7 +450,7 @@ function animate() {
 
 // ---------- The ladder ----------
 let cleanCount = 0, mistakeCount = 0;
-let best = 0;
+let best = 0; // best clean tempo in "Just the metronome" mode; chord switches keep theirs in their history
 try { best = Number(localStorage.getItem("metronomeBest")) || 0; } catch (e) {}
 
 function setMessage(text, kind = "") {
@@ -285,21 +458,23 @@ function setMessage(text, kind = "") {
   $("message").className = "message " + kind;
 }
 
-// reason: "clean" (you pressed Clean) or "auto" (automatic mode)
+// reason: "clean" (you pressed Clean) or "auto" (automatic mode).
+// Either way, the tempo you just finished counts as played cleanly.
 function stepUp(reason) {
   if (reason === "clean") cleanCount++;
   const goal = goalBpm();
+  const old = bpm;
   if (bpm >= goal) {
     setMessage(`You're at your goal of ${goal} BPM! 🎉 Keep it clean, or raise the goal.`, "good");
   } else {
-    const old = bpm;
     bpm = Math.min(goal, bpm + stepBpm());
     log(old, bpm, reason === "auto" ? "automatic step" : "clean");
     setMessage(bpm === goal ? `Goal reached: ${goal} BPM! 🎉` : `Up to ${bpm}`, "good");
-    if (bpm > best) {
-      best = bpm;
-      try { localStorage.setItem("metronomeBest", best); } catch (e) {}
-    }
+  }
+  record({ best: old, clean: reason === "clean" ? 1 : 0 });
+  if (!exercise() && old > best) {
+    best = old;
+    try { localStorage.setItem("metronomeBest", best); } catch (e) {}
   }
   render();
 }
@@ -311,6 +486,7 @@ function stepDown() {
   bpm = Math.max(MIN_BPM, bpm - stepBpm());
   if (bpm !== old) log(old, bpm, "mistake");
   setMessage(`Back to ${bpm}. Slow and clean wins.`, "bad");
+  record({ mistakes: 1 });
   render();
 }
 
@@ -330,6 +506,99 @@ function log(from, to, reason) {
   $("logEmpty").style.display = "none";
 }
 
+// ---------- History ----------
+// One entry per chord switch per day: { date: "2026-11-04", best, clean, mistakes, seconds, strums: [names] }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function record({ best: b = 0, clean = 0, mistakes = 0, seconds = 0 }) {
+  const ex = exercise();
+  if (!ex) return;
+  const list = lib.history[ex.id] = lib.history[ex.id] || [];
+  let entry = list.find(h => h.date === today());
+  if (!entry) {
+    entry = { date: today(), best: 0, clean: 0, mistakes: 0, seconds: 0, strums: [] };
+    list.push(entry);
+  }
+  entry.best = Math.max(entry.best, b);
+  entry.clean += clean;
+  entry.mistakes += mistakes;
+  entry.seconds += seconds;
+  const strum = strumPattern();
+  if (strum && (b || clean || mistakes || seconds) && !entry.strums.includes(strum.name)) entry.strums.push(strum.name);
+  saveLib();
+  renderHistory();
+}
+
+function allTimeBest(ex) { return Math.max(0, ...(lib.history[ex.id] || []).map(h => h.best)); }
+
+function niceDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: y === new Date().getFullYear() ? undefined : "numeric" });
+}
+function niceTime(seconds) {
+  const m = Math.round(seconds / 60);
+  return seconds < 60 ? `${Math.round(seconds)} s` : `${m} min`;
+}
+
+function renderHistory() {
+  const ex = exercise();
+  $("historyPanel").style.display = ex ? "" : "none";
+  if (!ex) return;
+  $("historyTitle").textContent = `History: ${ex.chords.join(" – ")}`;
+  const list = (lib.history[ex.id] || []).filter(h => h.best || h.clean || h.mistakes || h.seconds >= 5)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+  $("clearHistory").disabled = list.length === 0;
+  if (!list.length) {
+    $("history").innerHTML = `<p class="empty">Nothing yet. Practise this chord switch and every day you play it shows up here,
+      with the fastest tempo you played it cleanly.</p>`;
+    return;
+  }
+
+  // Chart of the best clean tempo per day (the last 30 days you practised), with the goal as a dashed line
+  let chart = "";
+  const points = list.filter(h => h.best).slice(-30);
+  if (points.length) {
+    const W = 600, H = 150, L = 34, R = 10, T = 12, B = 24;
+    const lo = Math.min(...points.map(p => p.best), ex.goal) - 5, hi = Math.max(...points.map(p => p.best), ex.goal) + 5;
+    const px = i => points.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (points.length - 1);
+    const py = v => T + (hi - v) * (H - T - B) / (hi - lo);
+    chart = `<svg class="chart" viewBox="0 0 ${W} ${H}" aria-label="Best clean tempo per day">
+      <line class="axis" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>
+      <line class="goal" x1="${L}" x2="${W - R}" y1="${py(ex.goal)}" y2="${py(ex.goal)}"/>
+      <text x="${W - R}" y="${py(ex.goal) - 5}" text-anchor="end">goal ${ex.goal}</text>
+      <text x="${L - 6}" y="${py(hi - 5) + 4}" text-anchor="end">${hi - 5}</text>
+      <text x="${L - 6}" y="${py(lo + 5) + 4}" text-anchor="end">${lo + 5}</text>
+      <polyline class="line" points="${points.map((p, i) => `${px(i)},${py(p.best)}`).join(" ")}"/>
+      ${points.map((p, i) => `<circle cx="${px(i)}" cy="${py(p.best)}" r="4"><title>${niceDate(p.date)}: ${p.best} BPM</title></circle>`).join("")}
+      <text x="${px(0)}" y="${H - 6}" text-anchor="${points.length === 1 ? "middle" : "start"}">${niceDate(points[0].date)}</text>
+      ${points.length > 1 ? `<text x="${px(points.length - 1)}" y="${H - 6}" text-anchor="end">${niceDate(points[points.length - 1].date)}</text>` : ""}
+    </svg>`;
+  }
+
+  const rows = [...list].reverse().map(h => `<tr>
+      <td>${niceDate(h.date)}</td>
+      <td class="num"><b>${h.best || "–"}</b></td>
+      <td class="num">${niceTime(h.seconds)}</td>
+      <td class="num">${h.clean} / ${h.mistakes}</td>
+      <td>${h.strums.join(", ") || "–"}</td>
+    </tr>`).join("");
+  $("history").innerHTML = chart + `<div class="table-wrap"><table>
+    <tr><th>Day</th><th class="num">Best BPM</th><th class="num">Time</th><th class="num">Clean / mistakes</th><th>Strumming</th></tr>
+    ${rows}</table></div>`;
+}
+
+$("clearHistory").onclick = () => {
+  const ex = exercise();
+  if (!ex || !confirm(`Delete all history for ${ex.chords.join(" – ")}? This can't be undone.`)) return;
+  delete lib.history[ex.id];
+  saveLib();
+  renderHistory();
+  render();
+};
+
 // ---------- Practice time ----------
 let practised = 0;  // ms of finished runs
 let startedAt = 0;
@@ -338,6 +607,196 @@ function updateTime() {
   const s = Math.floor(ms / 1000);
   $("time").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+// ---------- Chord and strum display ----------
+const lefty = () => { try { return localStorage.getItem("fretTrainerHand") === "left"; } catch (e) { return false; } };
+
+function buildChordStrip() {
+  const strip = $("chordStrip");
+  strip.innerHTML = "";
+  const ex = exercise();
+  if (!ex) return;
+  ex.chords.forEach(name => {
+    const box = document.createElement("div");
+    box.className = "chord";
+    const chord = parseChord(name);
+    box.innerHTML = `<b>${chord ? chord.name : name}</b>`;
+    // Use the simplest shape: open chords first, then the lowest barre
+    const shape = chord && CHORDS.filter(c => c.root === chord.root && c.type.id === chord.type.id).sort((a, b) => a.barre - b.barre)[0];
+    if (shape) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 240 285");
+      drawChord(svg, shape, { lefty: lefty(), showRoot: true });
+      box.appendChild(svg);
+    } else {
+      box.insertAdjacentHTML("beforeend", `<div class="none">no diagram</div>`);
+    }
+    strip.appendChild(box);
+  });
+  showChord(0);
+}
+
+function showChord(i) {
+  const boxes = $("chordStrip").children;
+  [...boxes].forEach((b, j) => {
+    b.classList.toggle("now", j === i);
+    b.classList.toggle("next", boxes.length > 1 && j === (i + 1) % boxes.length);
+  });
+}
+
+function buildStrumStrip() {
+  const strip = $("strumStrip");
+  strip.innerHTML = "";
+  const s = strumPattern();
+  if (!s) return;
+  [...s.pattern].forEach((c, i) => {
+    const box = document.createElement("div");
+    box.className = "strum" + (c === "-" ? " rest" : "");
+    box.innerHTML = `<b>${{ D: "↓", U: "↑", "-": "·" }[c]}</b><small>${i % 2 ? "&" : i / 2 + 1}</small>`;
+    strip.appendChild(box);
+  });
+}
+
+// ---------- Choosing and editing exercises ----------
+function fillExerciseSelect() {
+  const sel = $("exercise");
+  sel.innerHTML = "";
+  sel.add(new Option("Just the metronome", ""));
+  lib.exercises.forEach(ex => sel.add(new Option(exerciseName(ex), ex.id)));
+  sel.value = exercise() ? lib.exerciseId : "";
+  $("editEx").disabled = $("delEx").disabled = !exercise();
+}
+
+function fillStrumSelect() {
+  const sel = $("strumSel");
+  sel.innerHTML = "";
+  sel.add(new Option("None", ""));
+  lib.strums.forEach(s => sel.add(new Option(`${s.name}   ${s.pattern}`, s.id)));
+  sel.value = strumPattern() ? lib.strumId : "";
+  $("editStrum").disabled = $("delStrum").disabled = !strumPattern();
+}
+
+// Each chord switch has its own start and goal tempo, shown in the settings while it's selected
+function chooseExercise(id) {
+  if (running) stop();
+  lib.exerciseId = id;
+  saveLib();
+  const ex = exercise();
+  if (ex) {
+    $("start").value = ex.start;
+    $("goal").value = ex.goal;
+  }
+  fillExerciseSelect();
+  buildChordStrip();
+  reset();
+  renderHistory();
+}
+
+function chooseStrum(id) {
+  lib.strumId = id;
+  saveLib();
+  const s = strumPattern();
+  // A pattern of 8 eighth notes is 4 beats, so set beats per bar to match
+  if (s && s.pattern.length % 2 === 0 && s.pattern.length / 2 >= 2 && s.pattern.length / 2 <= 7) {
+    $("beats").value = s.pattern.length / 2;
+    buildBeats();
+    save();
+  }
+  fillStrumSelect();
+  buildStrumStrip();
+}
+
+let editingEx = null; // the exercise being edited, or null when adding a new one
+function openExForm(ex) {
+  editingEx = ex;
+  $("exName").value = ex ? ex.name : "";
+  $("exChords").value = ex ? ex.chords.join(" ") : "";
+  $("exBars").value = ex ? ex.bars : 1;
+  $("exMsg").textContent = "";
+  $("exForm").hidden = false;
+  $("exChords").focus();
+}
+$("newEx").onclick = () => openExForm(null);
+$("editEx").onclick = () => openExForm(exercise());
+$("exCancel").onclick = () => { $("exForm").hidden = true; };
+
+$("exForm").onsubmit = e => {
+  e.preventDefault();
+  const words = $("exChords").value.split(/[\s,–—→>|]+/).filter(Boolean);
+  const parsed = words.map(parseChord);
+  const bad = words.filter((w, i) => !parsed[i]);
+  const msg = $("exMsg");
+  msg.className = "form-msg bad";
+  if (words.length < 2) { msg.textContent = "Add at least two chords to switch between."; return; }
+  if (bad.length) { msg.textContent = `I don't know these chords: ${bad.join(", ")}. Try names like G, Am, D7, Cmaj7, F#m.`; return; }
+  const chords = parsed.map(c => c.name);
+  const fields = { name: $("exName").value.trim(), chords, bars: Number($("exBars").value) };
+  if (editingEx) {
+    Object.assign(editingEx, fields);
+  } else {
+    const ex = { id: newId(), ...fields, start: startBpm(), goal: goalBpm() };
+    lib.exercises.push(ex);
+    lib.exerciseId = ex.id;
+  }
+  saveLib();
+  $("exForm").hidden = true;
+  chooseExercise(lib.exerciseId);
+};
+
+$("delEx").onclick = () => {
+  const ex = exercise();
+  if (!ex || !confirm(`Delete "${exerciseName(ex)}" and its history?`)) return;
+  lib.exercises = lib.exercises.filter(e => e !== ex);
+  delete lib.history[ex.id];
+  chooseExercise("");
+};
+
+let editingStrum = null;
+function openStrumForm(s) {
+  editingStrum = s;
+  $("strumName").value = s ? s.name : "";
+  $("strumPattern").value = s ? s.pattern : "";
+  $("strumMsg").textContent = "";
+  $("strumForm").hidden = false;
+  $("strumPattern").focus();
+}
+$("newStrum").onclick = () => openStrumForm(null);
+$("editStrum").onclick = () => openStrumForm(strumPattern());
+$("strumCancel").onclick = () => { $("strumForm").hidden = true; };
+
+$("strumForm").onsubmit = e => {
+  e.preventDefault();
+  // Accept lowercase and spaces ("d du udu"), and x or . for a missed strum
+  const pattern = $("strumPattern").value.toUpperCase().replace(/[X.·_ ]/g, "-");
+  const msg = $("strumMsg");
+  msg.className = "form-msg bad";
+  if (!/^[DU-]+$/.test(pattern)) { msg.textContent = "Use only D, U and -."; return; }
+  if (pattern.length < 2 || pattern.length > 14 || pattern.length % 2) {
+    msg.textContent = `That's ${pattern.length} eighth notes. Use two per beat: 8 for a bar of 4, 6 for a bar of 3.`;
+    return;
+  }
+  const fields = { name: $("strumName").value.trim() || pattern, pattern };
+  if (editingStrum) {
+    Object.assign(editingStrum, fields);
+  } else {
+    const s = { id: newId(), ...fields };
+    lib.strums.push(s);
+    lib.strumId = s.id;
+  }
+  saveLib();
+  $("strumForm").hidden = true;
+  chooseStrum(lib.strumId);
+};
+
+$("delStrum").onclick = () => {
+  const s = strumPattern();
+  if (!s || !confirm(`Delete the strumming pattern "${s.name}"?`)) return;
+  lib.strums = lib.strums.filter(x => x !== s);
+  chooseStrum("");
+};
+
+$("exercise").onchange = e => chooseExercise(e.target.value);
+$("strumSel").onchange = e => chooseStrum(e.target.value);
 
 // ---------- The page ----------
 function buildBeats() {
@@ -352,12 +811,15 @@ function buildBeats() {
 
 function render() {
   const s = startBpm(), g = goalBpm();
+  const ex = exercise();
   $("bpm").textContent = bpm;
   $("marking").textContent = marking(bpm);
   $("fill").style.width = (g > s ? clamp((bpm - s) / (g - s), 0, 1) * 100 : 100) + "%";
   $("startLabel").textContent = `start ${s}`;
   $("goalLabel").textContent = `goal ${g}`;
-  $("best").textContent = best || "–";
+  const shownBest = ex ? allTimeBest(ex) : best;
+  $("best").textContent = shownBest || "–";
+  $("bestLabel").textContent = ex ? "best clean (ever)" : "best clean tempo";
   $("cleanCount").textContent = cleanCount;
   $("mistakeCount").textContent = mistakeCount;
 }
@@ -371,9 +833,16 @@ try {
   SETTINGS.forEach(id => { if (saved[id] !== undefined) $(id).value = saved[id]; });
 } catch (e) {}
 
+// Start and goal belong to the selected chord switch, if there is one
+function saveTempos() {
+  const ex = exercise();
+  if (ex) { ex.start = startBpm(); ex.goal = goalBpm(); saveLib(); renderHistory(); }
+  save();
+}
 // Changing the start tempo while stopped moves you to it; other settings just take effect
-$("start").onchange = () => { if (!running) bpm = startBpm(); save(); render(); };
-["goal", "step", "auto"].forEach(id => $(id).onchange = () => { save(); render(); });
+$("start").onchange = () => { if (!running) bpm = startBpm(); saveTempos(); render(); };
+$("goal").onchange = () => { saveTempos(); render(); };
+["step", "auto"].forEach(id => $(id).onchange = () => { save(); render(); });
 ["beats", "accent"].forEach(id => $(id).onchange = () => { save(); buildBeats(); });
 
 $("startBtn").onclick = () => running ? stop() : start();
@@ -383,14 +852,17 @@ $("resetBtn").onclick = reset;
 
 // Keyboard shortcuts, so you don't have to let go of your instrument for long
 document.addEventListener("keydown", e => {
-  if (e.target.matches("input, select")) return;
+  if (e.target.matches("input, select, textarea")) return;
   if (e.key === " ") { e.preventDefault(); running ? stop() : start(); }
   else if (e.key === "ArrowUp") { e.preventDefault(); stepUp("clean"); }
   else if (e.key === "ArrowDown") { e.preventDefault(); stepDown(); }
 });
 
-bpm = startBpm();
+fillExerciseSelect();
+fillStrumSelect();
 buildBeats();
+chooseExercise(lib.exerciseId);
+chooseStrum(lib.strumId);
 render();
 animate();
 </script>
