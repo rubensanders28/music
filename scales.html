@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scale Shapes</title>
+<style>
+  /* Same colour setup as the other pages, plus a colour for scale notes and one for "now playing" */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --scale: #0c8599;
+    --hl: #f08c00;
+    --on-dot: #ffffff;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --scale: #3bc9db;
+      --hl: #ffc078;
+      --on-dot: #17161a;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1000px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .sub { color: var(--muted); margin: 0 0 20px; max-width: 760px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .mood { margin: 10px 0 0; }
+
+  /* The notes of the scale, with the steps between them */
+  .notes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 10px; }
+  .note {
+    min-width: 48px; padding: 6px 10px; border-radius: 10px; border: none; background: var(--btn);
+    color: var(--ink); font: inherit; font-weight: 700; text-align: center; cursor: pointer;
+  }
+  .note.root { background: var(--accent); color: var(--on-dot); }
+  .note:hover { outline: 2px solid var(--accent); }
+  .note small { display: block; font-weight: 500; font-size: 0.7rem; opacity: .75; }
+  .step { color: var(--muted); font-size: 0.75rem; font-weight: 600; min-width: 22px; text-align: center; }
+
+  .play { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 6px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .play:hover { outline: 2px solid var(--accent); }
+  h2 select { font-size: 0.85rem; font-weight: 400; }
+
+  /* The piano: white keys side by side, black keys placed on top. Scrolls sideways on small screens. */
+  .piano-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .piano { position: relative; display: flex; height: 170px; min-width: 560px; user-select: none; }
+  .key { border: none; padding: 0; cursor: pointer; font: inherit; display: flex; align-items: flex-end; justify-content: center; }
+  .white { flex: 1; background: #fdfdfb; border: 1px solid #555; border-left-width: 0; border-radius: 0 0 5px 5px; padding-bottom: 10px; }
+  .white:first-child { border-left-width: 1px; }
+  .black { position: absolute; top: 0; width: 4%; height: 60%; z-index: 1; background: #1c1c1c; border-radius: 0 0 4px 4px; padding-bottom: 8px; }
+  .white:hover { background: #eef1ff; }
+  .black:hover { background: #3a3f5c; }
+  .key .dot {
+    display: none; width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; color: #fff; background: #0c8599;
+  }
+  .black .dot { width: 24px; height: 24px; font-size: 0.65rem; }
+  .key.in .dot { display: flex; }
+  .key.root .dot { background: #3b5bdb; }
+  .key.playing .dot { display: flex; background: #f08c00; transform: scale(1.15); }
+  .key .dot { transition: transform .1s; }
+
+  /* The fretboard */
+  .board-wrap { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 720px; height: auto; user-select: none; }
+  .fret-num { fill: var(--muted); font-size: 11px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .spot { cursor: pointer; transition: opacity .15s; }
+  .spot circle { fill: var(--scale); stroke: #fff; stroke-width: 2; }
+  .spot.root circle { fill: var(--accent); }
+  .spot.dim { opacity: .18; }
+  .spot.playing circle { fill: var(--hl); stroke-width: 3; }
+  .spot text { fill: var(--on-dot); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; pointer-events: none; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.8rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 4px; }
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 20px; line-height: 1.6; max-width: 760px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a><a href="keys.html">Chords in a key</a><a href="songs.html">My songs</a><a href="circle.html">Circle of fifths</a></p>
+  <h1>Scale Shapes</h1>
+  <p class="sub">See one scale on the piano and the guitar at the same time. The notes are the same; only the shape your hand
+    makes is different. Click any note to hear it.</p>
+
+  <div class="panel">
+    <div class="settings">
+      <label>Key <select id="root"></select></label>
+      <label>Scale <select id="scale"></select></label>
+      <label>Labels
+        <select id="labels">
+          <option value="names">Note names</option>
+          <option value="degrees">Scale degrees (1, ♭3…)</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+      <label>Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+      <label>Sound
+        <select id="sound">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+    </div>
+    <p class="mood muted" id="mood"></p>
+    <div class="notes" id="notes"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Piano <button class="play" id="playPiano">▶ Play scale</button></h2>
+    <div class="piano-wrap"><div class="piano" id="piano"></div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Guitar
+      <select id="pos" aria-label="Position"></select>
+      <button class="play" id="playGuitar">▶ Play position</button>
+    </h2>
+    <div class="board-wrap">
+      <svg id="board" viewBox="0 0 900 240" aria-label="Guitar fretboard"></svg>
+    </div>
+    <div class="legend">
+      <span><i style="background: var(--accent)"></i>Root (the key note)</span>
+      <span><i style="background: var(--scale)"></i>Other scale notes</span>
+      <span><i style="background: var(--hl)"></i>Playing now</span>
+    </div>
+  </div>
+
+  <p class="hint"><b>Positions:</b> guitarists learn a scale as a few shapes that each fit under your hand without moving it much.
+    Seven-note scales use three notes on each string; pentatonic and blues scales use two (the famous "boxes").
+    Learn one position, then the next one up the neck: together they cover the whole fretboard.<br>
+    <b>Scale degrees</b> number the notes from the root. A ♭ means one semitone lower than in the major scale, so ♭3 is what makes a scale sound minor.<br>
+    Sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- chord-data.js gives us correct note spelling and the guitar sound; piano-sound.js the piano sound -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script>
+// ---------- Scales ----------
+// Each scale lists which letter it uses (0 = the root's letter, 1 = the next letter, ...) and
+// how many semitones above the root each note is. Pentatonic and blues scales skip some letters,
+// and the blues scale uses the 5th letter twice (♭5 and 5).
+//   core: for the blues scale, the notes the guitar positions are built from (the minor pentatonic);
+//         the extra "blue" note is then added wherever it falls inside the position.
+const SEVEN = [0, 1, 2, 3, 4, 5, 6];
+const SCALE_TYPES = [
+  { group: "Major and minor", id: "major", name: "Major", degs: SEVEN, semis: [0, 2, 4, 5, 7, 9, 11],
+    mood: "Bright and happy. The scale most songs and most music lessons start from." },
+  { group: "Major and minor", id: "minor", name: "Natural minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 8, 10],
+    mood: "Sad, dark or serious. Same notes as the major scale three semitones up (its relative major)." },
+  { group: "Major and minor", id: "harmonic", name: "Harmonic minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 8, 11],
+    mood: "Minor with a raised 7th. The big 3-semitone jump gives it a classical, exotic sound." },
+  { group: "Major and minor", id: "melodic", name: "Melodic minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 9, 11],
+    mood: "Minor at the bottom, major at the top. Used a lot in jazz." },
+  { group: "Pentatonic and blues", id: "majpent", name: "Major pentatonic", degs: [0, 1, 2, 4, 5], semis: [0, 2, 4, 7, 9],
+    mood: "The major scale without its 4th and 7th. Only 5 notes and no semitone clashes, so it's hard to play a wrong note." },
+  { group: "Pentatonic and blues", id: "minpent", name: "Minor pentatonic", degs: [0, 2, 3, 4, 6], semis: [0, 3, 5, 7, 10],
+    mood: "The rock and blues guitar solo scale. Usually the first scale guitarists learn." },
+  { group: "Pentatonic and blues", id: "blues", name: "Blues", degs: [0, 2, 3, 4, 4, 6], semis: [0, 3, 5, 6, 7, 10], core: [0, 1, 2, 4, 5],
+    mood: "Minor pentatonic plus the ♭5, the \"blue note\". Slide through it rather than stopping on it." },
+  { group: "Modes", id: "dorian", name: "Dorian", degs: SEVEN, semis: [0, 2, 3, 5, 7, 9, 10],
+    mood: "Minor with a raised 6th: hopeful rather than sad. Funk, soul and Santana." },
+  { group: "Modes", id: "phrygian", name: "Phrygian", degs: SEVEN, semis: [0, 1, 3, 5, 7, 8, 10],
+    mood: "Minor with a ♭2 right next to the root. Dark, Spanish and metal-sounding." },
+  { group: "Modes", id: "lydian", name: "Lydian", degs: SEVEN, semis: [0, 2, 4, 6, 7, 9, 11],
+    mood: "Major with a raised 4th. Dreamy and floating; loved by film composers." },
+  { group: "Modes", id: "mixolydian", name: "Mixolydian", degs: SEVEN, semis: [0, 2, 4, 5, 7, 9, 10],
+    mood: "Major with a ♭7. Bluesy and relaxed: classic rock and Celtic music." },
+  { group: "Modes", id: "locrian", name: "Locrian", degs: SEVEN, semis: [0, 1, 3, 5, 6, 8, 10],
+    mood: "The unstable one: its ♭5 means the root chord is diminished. Rare, but good to know." },
+];
+
+const ROOTS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
+
+// Spell the scale so every note gets the right letter (B♭ in F major, not A♯).
+// Same idea as spellScale in chord-data.js, but letters can be skipped or repeated.
+function spellNotes(rootName, scale) {
+  const letter = LETTERS.indexOf(rootName[0]);
+  const rootPc = (NATURAL[letter] + (rootName[1] === "#" ? 1 : rootName[1] === "b" ? -1 : 0) + 12) % 12;
+  return scale.semis.map((semi, i) => {
+    const l = (letter + scale.degs[i]) % 7;
+    const pc = (rootPc + semi) % 12;
+    const acc = ((pc - NATURAL[l] + 18) % 12) - 6;
+    // Degree name: compare with the major scale, so 3 semitones on the 3rd letter is "♭3"
+    const shift = semi - MAJOR[scale.degs[i]];
+    return { pc, name: LETTERS[l] + ACCIDENTAL[acc], degree: ACCIDENTAL[shift] + (scale.degs[i] + 1) };
+  });
+}
+
+// The gap between two notes: H = half step (1 semitone), W = whole step (2), W+H = 3 semitones
+function stepName(semis) { return { 1: "H", 2: "W", 3: "W+H", 4: "2W" }[semis] || semis; }
+
+// ---------- Settings ----------
+const rootSel = document.getElementById("root");
+const scaleSel = document.getElementById("scale");
+const posSel = document.getElementById("pos");
+ROOTS.forEach(r => rootSel.add(new Option(r.replace("#", "♯").replace("b", "♭"), r)));
+SCALE_TYPES.forEach(s => {
+  let group = [...scaleSel.children].find(g => g.label === s.group);
+  if (!group) { group = document.createElement("optgroup"); group.label = s.group; scaleSel.appendChild(group); }
+  group.appendChild(new Option(s.name, s.id));
+});
+rootSel.value = "A";
+scaleSel.value = "minpent";
+
+const setting = id => document.getElementById(id).value;
+const soundOn = () => setting("sound") === "on";
+
+let notes = [];        // the spelled scale: [{ pc, name, degree }]
+let byPc = new Map();  // pitch class → that note, for quick lookups when drawing
+let timers = [];       // pending "now playing" highlights, so a new playback can cancel the old one
+
+function label(note) {
+  const mode = setting("labels");
+  return mode === "names" ? note.name : mode === "degrees" ? note.degree : "";
+}
+
+// ---------- Piano ----------
+// Two octaves from C3 to C5: enough to play any scale up one octave from its root in octave 3.
+const PIANO_LOW = 48, PIANO_HIGH = 72;
+const pianoEl = document.getElementById("piano");
+const BLACK_PCS = [1, 3, 6, 8, 10];
+
+function buildPiano() {
+  const whiteCount = [...Array(PIANO_HIGH - PIANO_LOW + 1).keys()].filter(i => !BLACK_PCS.includes((PIANO_LOW + i) % 12)).length;
+  let whiteIndex = 0;
+  for (let midi = PIANO_LOW; midi <= PIANO_HIGH; midi++) {
+    const black = BLACK_PCS.includes(midi % 12);
+    const key = document.createElement("button");
+    key.className = "key " + (black ? "black" : "white");
+    key.dataset.midi = midi;
+    key.innerHTML = '<span class="dot"></span>';
+    // A black key sits over the line between the white key before it and the one after it
+    if (black) key.style.left = `calc(${whiteIndex / whiteCount * 100}% - 2%)`;
+    else whiteIndex++;
+    key.onclick = () => { if (soundOn()) playPiano(midi); flash([key]); };
+    pianoEl.appendChild(key);
+  }
+}
+
+function drawPiano() {
+  pianoEl.querySelectorAll(".key").forEach(key => {
+    const note = byPc.get(Number(key.dataset.midi) % 12);
+    key.classList.toggle("in", !!note);
+    key.classList.toggle("root", !!note && note === notes[0]);
+    key.querySelector(".dot").textContent = note ? label(note) : "";
+    key.title = note ? `${note.name} (${note.degree})` : "";
+  });
+}
+
+// ---------- Guitar ----------
+// Drawn the way tabs show it: thin high E on top, thick low E at the bottom.
+const BOARD_OPEN = [64, 59, 55, 50, 45, 40];
+const BOARD_FRETS = 17;
+const BOARD_W = 900, NUT = 60, LENGTH = 1312; // LENGTH is chosen so fret 17 lands near the right edge
+const boardSvg = document.getElementById("board");
+
+// Frets get closer together up the neck: fret n sits at length × (1 − 2^(−n/12))
+function fretPos(n) { return NUT + LENGTH * (1 - Math.pow(2, -n / 12)); }
+function stringPos(s) { return 30 + s * 32; }
+function spotPos(f) { return f === 0 ? 32 : (fretPos(f - 1) + fretPos(f)) / 2; }
+// Left-handed: mirror every x position (text stays readable)
+const lefty = () => setting("hand") === "left";
+const X = v => lefty() ? BOARD_W - v : v;
+const rectX = (v, w) => lefty() ? BOARD_W - v - w : v;
+
+// Work out the positions (hand shapes) for the current scale.
+// Position p starts on the p-th scale note found on the low E string. From there we walk up the
+// scale, putting 3 notes on each string (2 for pentatonic scales), moving to the next string each time.
+function findPositions(scale) {
+  const core = scale.core || scale.semis.map((_, i) => i);
+  const perString = core.length >= 7 ? 3 : 2;
+  const list = [];
+
+  core.forEach((_, p) => {
+    const pcs = core.map(i => notes[i].pc);
+    let midi = 40 + (pcs[p] - 40 % 12 + 12) % 12; // that note's lowest fret on the low E string
+    let k = p;
+    let cells = [];
+    for (let s = 5; s >= 0; s--) {
+      for (let n = 0; n < perString; n++) {
+        cells.push({ s, f: midi - BOARD_OPEN[s], midi });
+        const next = (k + 1) % pcs.length;
+        midi += (pcs[next] - pcs[k] + 12) % 12;
+        k = next;
+      }
+    }
+    // Keep the whole shape on the board, moving it an octave if needed
+    if (Math.min(...cells.map(c => c.f)) < 0) cells.forEach(c => { c.f += 12; c.midi += 12; });
+    if (Math.max(...cells.map(c => c.f)) > BOARD_FRETS) return;
+
+    // Add any other scale notes (the blues "blue note") that fall inside the shape on each string
+    for (let s = 0; s < 6; s++) {
+      const frets = cells.filter(c => c.s === s).map(c => c.f);
+      for (let f = Math.min(...frets); f <= Math.max(...frets); f++) {
+        const midiHere = BOARD_OPEN[s] + f;
+        if (byPc.has(midiHere % 12) && !frets.includes(f)) cells.push({ s, f, midi: midiHere });
+      }
+    }
+    const all = cells.map(c => c.f);
+    list.push({ cells, low: Math.min(...all), high: Math.max(...all) });
+  });
+  // Not sorted by fret: position 1 is the one starting on the root, as guitarists usually count them
+  return list;
+}
+
+let positions = [];
+let spots = new Map(); // "string,fret" → its <g> on the fretboard
+
+function drawBoard() {
+  boardSvg.innerHTML = "";
+  spots.clear();
+  const woodW = fretPos(BOARD_FRETS) - NUT + 10;
+  boardSvg.appendChild(el("rect", { x: rectX(NUT, woodW), y: 18, width: woodW, height: 184, fill: "#6b4a2b", rx: 3 }));
+
+  // Inlay dots at frets 3, 5, 7, 9, 15, 17 and a double dot at 12
+  [3, 5, 7, 9, 15, 17].forEach(f => boardSvg.appendChild(el("circle", { cx: X(spotPos(f)), cy: 110, r: 6, fill: "#e9dcc3" })));
+  [78, 142].forEach(y => boardSvg.appendChild(el("circle", { cx: X(spotPos(12)), cy: y, r: 6, fill: "#e9dcc3" })));
+
+  for (let f = 1; f <= BOARD_FRETS; f++) {
+    boardSvg.appendChild(el("line", { x1: X(fretPos(f)), x2: X(fretPos(f)), y1: 18, y2: 202, stroke: "#c9c9c9", "stroke-width": 3 }));
+    boardSvg.appendChild(el("text", { x: X(spotPos(f)), y: 224, class: "fret-num" }, f));
+  }
+  boardSvg.appendChild(el("text", { x: X(spotPos(0)), y: 224, class: "fret-num" }, "open"));
+  boardSvg.appendChild(el("rect", { x: rectX(NUT - 4, 7), y: 18, width: 7, height: 184, fill: "#efe8d6" }));
+  BOARD_OPEN.forEach((_, s) => boardSvg.appendChild(el("line", {
+    x1: X(10), x2: X(fretPos(BOARD_FRETS) + 10), y1: stringPos(s), y2: stringPos(s), stroke: "#e8e8e8", "stroke-width": 1 + s * 0.45 })));
+
+  // A dot on every scale note
+  const pos = positions[Number(posSel.value)];
+  for (let s = 0; s < 6; s++) {
+    for (let f = 0; f <= BOARD_FRETS; f++) {
+      const midi = BOARD_OPEN[s] + f;
+      const note = byPc.get(midi % 12);
+      if (!note) continue;
+      const inPos = !pos || pos.cells.some(c => c.s === s && c.f === f);
+      const g = el("g", { class: "spot" + (note === notes[0] ? " root" : "") + (inPos ? "" : " dim") });
+      g.appendChild(el("title", {}, `${note.name} (${note.degree}), fret ${f}`));
+      g.appendChild(el("circle", { cx: X(spotPos(f)), cy: stringPos(s), r: 12 }));
+      g.appendChild(el("text", { x: X(spotPos(f)), y: stringPos(s) }, label(note)));
+      g.onclick = () => { if (soundOn()) pluck(midi, 0); flash([g]); };
+      boardSvg.appendChild(g);
+      spots.set(s + "," + f, g);
+    }
+  }
+}
+
+function fillPositions(scale) {
+  const keep = posSel.value;
+  positions = findPositions(scale);
+  posSel.innerHTML = "";
+  posSel.add(new Option("Whole neck", ""));
+  positions.forEach((p, i) => posSel.add(new Option(`Position ${i + 1} (frets ${p.low}–${p.high})`, i)));
+  if (keep !== "" && Number(keep) < positions.length) posSel.value = keep;
+}
+
+// ---------- Playback ----------
+function stopPlaying() {
+  timers.forEach(clearTimeout);
+  timers = [];
+  document.querySelectorAll(".playing").forEach(e => e.classList.remove("playing"));
+}
+
+function flash(els, delay = 0, length = 350) {
+  timers.push(setTimeout(() => els.forEach(e => e.classList.add("playing")), delay));
+  timers.push(setTimeout(() => els.forEach(e => e.classList.remove("playing")), delay + length));
+}
+
+// Up and back down again, without repeating the top note
+function upAndDown(list) { return [...list, ...list.slice(0, -1).reverse()]; }
+
+const GAP = 0.3; // seconds between notes
+
+document.getElementById("playPiano").onclick = () => {
+  stopPlaying();
+  const root = PIANO_LOW + notes[0].pc;
+  const run = upAndDown([...notes.map((_, i) => root + SCALE().semis[i]), root + 12]);
+  run.forEach((midi, i) => {
+    if (soundOn()) playPiano(midi, i * GAP);
+    flash([pianoEl.querySelector(`[data-midi="${midi}"]`)], i * GAP * 1000);
+  });
+};
+
+document.getElementById("playGuitar").onclick = () => {
+  stopPlaying();
+  // "Whole neck" plays the first position
+  const pos = positions[posSel.value === "" ? 0 : Number(posSel.value)];
+  if (!pos) return;
+  // Lowest note first; if two strings share a pitch, play it only once
+  const seen = new Set();
+  const cells = [...pos.cells].sort((a, b) => a.midi - b.midi).filter(c => !seen.has(c.midi) && seen.add(c.midi));
+  upAndDown(cells).forEach((c, i) => {
+    if (soundOn()) pluck(c.midi, i * GAP);
+    flash([spots.get(c.s + "," + c.f)], i * GAP * 1000);
+  });
+};
+
+// ---------- The page ----------
+const SCALE = () => SCALE_TYPES.find(s => s.id === scaleSel.value);
+
+// Clicking a note in the list plays it and lights it up everywhere on both instruments
+function showNote(note) {
+  stopPlaying();
+  if (soundOn()) playPiano(PIANO_LOW + note.pc);
+  const keys = [...pianoEl.querySelectorAll(".key")].filter(k => Number(k.dataset.midi) % 12 === note.pc);
+  const dots = [...spots.entries()].filter(([at]) => {
+    const [s, f] = at.split(",").map(Number);
+    return (BOARD_OPEN[s] + f) % 12 === note.pc;
+  }).map(([, g]) => g);
+  flash([...keys, ...dots], 0, 900);
+}
+
+function render(newScale) {
+  stopPlaying();
+  const scale = SCALE();
+  notes = spellNotes(rootSel.value, scale);
+  byPc = new Map(notes.map(n => [n.pc, n]));
+  if (newScale) fillPositions(scale);
+
+  document.getElementById("mood").textContent = scale.mood;
+  const list = document.getElementById("notes");
+  list.innerHTML = "";
+  notes.forEach((note, i) => {
+    const b = document.createElement("button");
+    b.className = "note" + (i === 0 ? " root" : "");
+    b.innerHTML = `${note.name}<small>${note.degree}</small>`;
+    b.onclick = () => showNote(note);
+    list.appendChild(b);
+    // The step to the next note (the last one steps back up to the root)
+    const next = i + 1 < notes.length ? scale.semis[i + 1] : 12;
+    const gap = document.createElement("span");
+    gap.className = "step";
+    gap.textContent = stepName(next - scale.semis[i]);
+    list.appendChild(gap);
+  });
+
+  drawPiano();
+  drawBoard();
+
+  try {
+    localStorage.setItem("scalesPage", JSON.stringify({ root: rootSel.value, scale: scaleSel.value, labels: setting("labels"), pos: posSel.value }));
+  } catch (e) {}
+}
+
+// Restore the last settings between visits (hand is shared with the other guitar pages)
+try {
+  const saved = JSON.parse(localStorage.getItem("scalesPage")) || {};
+  if (saved.root) rootSel.value = saved.root;
+  if (saved.scale) scaleSel.value = saved.scale;
+  if (saved.labels) document.getElementById("labels").value = saved.labels;
+  document.getElementById("hand").value = localStorage.getItem("fretTrainerHand") || "right";
+  buildPiano();
+  render(true);
+  if (saved.pos !== undefined && saved.pos !== "" && Number(saved.pos) < positions.length) { posSel.value = saved.pos; render(false); }
+} catch (e) {
+  if (!pianoEl.children.length) buildPiano();
+  render(true);
+}
+
+rootSel.onchange = () => render(true);   // a new key moves the positions
+scaleSel.onchange = () => { posSel.value = ""; render(true); };
+posSel.onchange = () => render(false);
+document.getElementById("labels").onchange = () => render(false);
+document.getElementById("hand").onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", setting("hand")); } catch (e) {}
+  render(false);
+};
+</script>
+</body>
+</html>
