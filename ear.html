@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ear Trainer</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 680px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+
+  /* Intervals / Chords switch */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
+  .modes button { font: inherit; font-size: 1.05rem; font-weight: 700; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .modes button small { display: block; font-size: 0.78rem; font-weight: 500; }
+  .modes button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+
+  /* Which sounds are in the quiz */
+  .pick-head { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  .pick-head button { background: none; border: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: inherit; font-size: 0.85rem; font-weight: 600; border: 2px solid var(--btn); border-radius: 16px; padding: 3px 11px; background: transparent; color: var(--muted); cursor: pointer; }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--card); }
+
+  /* The question */
+  .quiz { text-align: center; }
+  .play {
+    font: inherit; font-size: 1.15rem; font-weight: 700; border: none; border-radius: 14px; padding: 18px 28px;
+    background: var(--accent); color: var(--card); cursor: pointer; margin: 6px 0 4px;
+  }
+  .play:hover { filter: brightness(1.08); }
+  .question { color: var(--muted); font-size: 0.9rem; min-height: 1.3em; }
+  .feedback { min-height: 1.6em; font-weight: 700; font-size: 1.05rem; margin: 10px 0 2px; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad { color: var(--bad); }
+  .song-hint { color: var(--muted); font-size: 0.85rem; min-height: 1.3em; }
+  /* The notes that were played, shown after you answer; click one to hear it alone */
+  .played { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 34px; margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
+  .played button { font: inherit; font-weight: 700; font-size: 0.95rem; border: none; border-radius: 8px; padding: 4px 10px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .played button:hover { outline: 2px solid var(--accent); }
+  .compare { display: none; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .compare.show { display: flex; }
+  .small { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 6px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .small:hover { outline: 2px solid var(--accent); }
+  .next { background: var(--accent); color: var(--card); }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-top: 14px; }
+  .answers button {
+    font: inherit; font-weight: 700; font-size: 1rem; line-height: 1.2; padding: 12px 6px; border: none; border-radius: 12px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .answers button small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+  .answers button:hover:not(:disabled) { outline: 2px solid var(--accent); }
+  .answers button:disabled { cursor: default; opacity: .45; }
+  .answers button.right { background: var(--good); color: var(--card); opacity: 1; }
+  .answers button.wrong { background: var(--bad); color: var(--card); opacity: 1; }
+  .answers button.right small, .answers button.wrong small { color: inherit; }
+
+  .stats { display: flex; justify-content: space-around; margin-top: 16px; text-align: center; }
+  .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stats span { color: var(--muted); font-size: 0.8rem; }
+
+  /* How well you know each sound, over all your sessions */
+  .acc { display: grid; grid-template-columns: minmax(110px, auto) 1fr 70px; gap: 6px 10px; align-items: center; font-size: 0.85rem; }
+  .acc .bar { height: 10px; border-radius: 5px; background: var(--btn); overflow: hidden; }
+  .acc .bar div { height: 100%; border-radius: 5px; }
+  .acc .pct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  .reset { background: none; border: none; color: var(--muted); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0; margin-top: 10px; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script>
+<main>
+  <h1>Ear Trainer</h1>
+  <p class="sub">Listen, then name what you heard. Start with a few very different sounds and add more as they get easy.
+    The ones you miss come back more often.</p>
+
+  <div class="modes" role="group" aria-label="What to train">
+    <button data-mode="intervals">Intervals<small>the distance between two notes</small></button>
+    <button data-mode="chords">Chords<small>major, minor, 7th…</small></button>
+  </div>
+
+  <div class="panel">
+    <div class="settings">
+      <label id="directionLabel">Notes
+        <select id="direction">
+          <option value="up">One after the other, going up</option>
+          <option value="down">One after the other, going down</option>
+          <option value="together">Together</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </label>
+      <label id="styleLabel">Play chords
+        <select id="style">
+          <option value="together">All notes together</option>
+          <option value="broken">Note by note, then together</option>
+        </select>
+      </label>
+      <label>Base note
+        <select id="base">
+          <option value="random">Random</option>
+        </select>
+      </label>
+      <label>Sound
+        <select id="instrument">
+          <option value="piano">Piano</option>
+          <option value="guitar">Guitar</option>
+        </select>
+      </label>
+      <label>Song hints
+        <select id="hints">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+    </div>
+    <div class="pick-head">In the quiz: <button id="pickEasy">easy set</button> · <button id="pickAll">all</button></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="panel quiz">
+    <button class="play" id="playBtn">▶ Play again</button>
+    <div class="question" id="question"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="song-hint" id="songHint"></div>
+    <div class="played" id="played"></div>
+    <div class="compare" id="compare">
+      <button class="small" id="hearMine"></button>
+      <button class="small" id="hearRight"></button>
+      <button class="small next" id="nextBtn">Next →</button>
+    </div>
+    <div class="answers" id="answers"></div>
+
+    <div class="stats">
+      <div><b id="score">0 / 0</b><span>correct</span></div>
+      <div><b id="streak">0</b><span>streak</span></div>
+      <div><b id="best">0</b><span>best streak</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>How well you know each one</h2>
+    <div class="acc" id="accuracy"></div>
+    <button class="reset" id="resetStats">Reset these numbers</button>
+  </div>
+
+  <p class="hint"><b>Tips:</b> sing or hum the notes back before you answer. For intervals, the song hints help a lot:
+    if it sounds like the start of that song, that's the interval. For chords, major sounds bright, minor sad,
+    diminished tense, augmented dreamy and unresolved, and sus chords "want" to move somewhere.<br>
+    Keys: <b>Space</b> plays again (or goes to the next question once you've answered).<br>
+    Sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- chord-data.js gives us the chord types and the guitar sound; piano-sound.js the piano sound -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- What can be asked ----------
+// Intervals, by size in semitones. The song is a well-known tune that starts with that jump going up.
+const INTERVALS = [
+  { id: "1",  short: "m2", name: "minor 2nd", song: "the Jaws theme" },
+  { id: "2",  short: "M2", name: "major 2nd", song: "Happy Birthday" },
+  { id: "3",  short: "m3", name: "minor 3rd", song: "Greensleeves" },
+  { id: "4",  short: "M3", name: "major 3rd", song: "When the Saints Go Marching In" },
+  { id: "5",  short: "P4", name: "perfect 4th", song: "Here Comes the Bride" },
+  { id: "6",  short: "TT", name: "tritone", song: "The Simpsons theme" },
+  { id: "7",  short: "P5", name: "perfect 5th", song: "Twinkle Twinkle Little Star" },
+  { id: "8",  short: "m6", name: "minor 6th", song: "the Love Story theme" },
+  { id: "9",  short: "M6", name: "major 6th", song: "My Bonnie Lies Over the Ocean" },
+  { id: "10", short: "m7", name: "minor 7th", song: "Somewhere (West Side Story)" },
+  { id: "11", short: "M7", name: "major 7th", song: "Take On Me (the chorus)" },
+  { id: "12", short: "P8", name: "octave", song: "Somewhere Over the Rainbow" },
+];
+const EASY_INTERVALS = ["4", "7", "12"]; // major 3rd, 5th and octave: very different from each other
+
+// Chords, using the chord types from chord-data.js
+const CHORD_IDS = ["maj", "min", "dim", "aug", "sus2", "sus4", "7", "maj7", "m7", "m7b5", "dim7", "6"];
+const CHORD_QUALITIES = CHORD_IDS.map(id => {
+  const t = TYPES.find(t => t.id === id);
+  const names = { maj: "Major", min: "Minor", dim: "Diminished", aug: "Augmented", sus2: "sus2", sus4: "sus4", "7": "Dominant 7",
+    maj7: "Major 7", m7: "Minor 7", m7b5: "Half-diminished", dim7: "Diminished 7", "6": "Major 6" };
+  return { id, short: names[id], name: names[id].toLowerCase(), notes: t.notes, example: "C" + t.suffix };
+});
+const EASY_CHORDS = ["maj", "min"];
+
+const MODES = {
+  intervals: { items: INTERVALS, easy: EASY_INTERVALS, bestKey: "earIntervalsBest" },
+  chords: { items: CHORD_QUALITIES, easy: EASY_CHORDS, bestKey: "earChordsBest" },
+};
+
+// ---------- Note names ----------
+// The usual name for each of the 12 notes when it's the base note: flats for the black keys, except F♯
+const BASE_NAMES = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+BASE_NAMES.forEach((name, pc) => $("base").add(new Option(name, pc)));
+
+// How many letters up each note is from the base. A minor 3rd is always 2 letters up (C to E♭, never D♯),
+// a tritone 3 letters (C to F♯), and so on. For chords the same, except the diminished 7th's top note,
+// which is a 7th (6 letters up, C to B𝄫) rather than a 6th.
+const INTERVAL_LETTERS = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6, 12: 7 };
+const CHORD_LETTERS = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6 };
+
+// The name of the note `semis` semitones and `letters` letters away from the base note, with its octave: "E♭3"
+function spell(baseMidi, semis, letters) {
+  const baseLetter = LETTERS.indexOf(BASE_NAMES[baseMidi % 12][0]);
+  const l = ((baseLetter + letters) % 7 + 7) % 7;
+  const midi = baseMidi + semis;
+  const acc = ((midi % 12 - NATURAL[l] + 18) % 12) - 6; // -1 = ♭, +1 = ♯
+  return LETTERS[l] + ACCIDENTAL[acc] + (Math.floor((midi - acc) / 12) - 1); // B♯3 is the same key as C4
+}
+
+// ---------- Saved settings and statistics ----------
+// stats[mode][item id] = { right, wrong } over all sessions
+let saved = { mode: "intervals", on: { intervals: EASY_INTERVALS, chords: EASY_CHORDS }, stats: { intervals: {}, chords: {} } };
+try { saved = { ...saved, ...JSON.parse(localStorage.getItem("earTrainer")) }; } catch (e) {}
+saved.on = { intervals: EASY_INTERVALS, chords: EASY_CHORDS, ...saved.on };
+saved.stats = { intervals: {}, chords: {}, ...saved.stats };
+const SETTINGS = ["direction", "style", "base", "instrument", "hints"];
+SETTINGS.forEach(id => { if (saved[id]) $(id).value = saved[id]; });
+
+function save() {
+  SETTINGS.forEach(id => saved[id] = $(id).value);
+  try { localStorage.setItem("earTrainer", JSON.stringify(saved)); } catch (e) {}
+}
+
+const mode = () => MODES[saved.mode];
+const enabled = () => mode().items.filter(it => saved.on[saved.mode].includes(it.id));
+
+// ---------- Sound ----------
+function note(midi, when) {
+  if ($("instrument").value === "guitar") pluck(midi, when);
+  else playPiano(midi, when);
+}
+
+// A question: { item, base, notes: [{ midi, name }...] lowest first, order: "up" | "down" | "together" | "broken" }
+function playQuestion(q) {
+  const midis = q.notes.map(n => n.midi);
+  if (q.order === "together") midis.forEach(m => note(m, 0));
+  else if (q.order === "up") midis.forEach((m, i) => note(m, i * 0.8));
+  else if (q.order === "down") [...midis].reverse().forEach((m, i) => note(m, i * 0.8));
+  else { // broken: each note, then all together
+    midis.forEach((m, i) => note(m, i * 0.45));
+    midis.forEach(m => note(m, midis.length * 0.45 + 0.3));
+  }
+}
+
+// After answering: the notes in the order you heard them, each one clickable
+function showPlayed(q) {
+  const box = $("played");
+  const heard = q.order === "down" ? [...q.notes].reverse() : q.notes;
+  const joiner = q.order === "up" || q.order === "down" ? "→" : saved.mode === "chords" ? "·" : "+";
+  box.innerHTML = "Notes: ";
+  heard.forEach((n, i) => {
+    if (i) box.insertAdjacentHTML("beforeend", `<span>${joiner}</span>`);
+    const b = document.createElement("button");
+    b.textContent = n.name;
+    b.title = "Play this note";
+    b.onclick = () => note(n.midi, 0);
+    box.appendChild(b);
+  });
+}
+
+// The notes for an item from the base note, lowest first, each with its name.
+// Intervals going down start on the base note and go below it; otherwise the base note is the lowest.
+// Chords are stacked on the base note; the notes in TYPES are all within one octave for these chords.
+function notesFor(item, base, order) {
+  if (saved.mode === "intervals") {
+    const n = Number(item.id), letters = INTERVAL_LETTERS[n];
+    // Going down, a tritone is written as a diminished 5th (E♭ down to A, not to B𝄫)
+    return order === "down"
+      ? [{ midi: base - n, name: spell(base, -n, n === 6 ? -4 : -letters) }, { midi: base, name: spell(base, 0, 0) }]
+      : [{ midi: base, name: spell(base, 0, 0) }, { midi: base + n, name: spell(base, n, letters) }];
+  }
+  return item.notes.map(n => ({ midi: base + n, name: spell(base, n, item.id === "dim7" && n === 9 ? 6 : CHORD_LETTERS[n]) }));
+}
+
+// ---------- Picking questions ----------
+// Sounds you've missed recently get picked more often. Each miss adds weight, each right answer takes some away.
+const weight = {}; // "mode:id" → extra weight, for this visit
+function pick() {
+  const items = enabled();
+  const w = items.map(it => 1 + (weight[saved.mode + ":" + it.id] || 0));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < items.length; i++) { if ((r -= w[i]) < 0) return items[i]; }
+  return items[items.length - 1];
+}
+
+let current = null;
+let answered = false;
+let correct = 0, total = 0, streak = 0;
+const bestOf = () => { try { return Number(localStorage.getItem(mode().bestKey)) || 0; } catch (e) { return 0; } };
+
+function nextQuestion() {
+  const items = enabled();
+  answered = false;
+  $("feedback").textContent = "";
+  $("feedback").className = "feedback";
+  $("songHint").textContent = "";
+  $("played").innerHTML = "";
+  $("compare").classList.remove("show");
+  buildAnswers();
+  if (items.length < 2) {
+    current = null;
+    $("question").textContent = "Choose at least two to tell apart.";
+    return;
+  }
+
+  let item;
+  do { item = pick(); } while (current && items.length > 2 && item.id === current.item.id && Math.random() < 0.7); // fewer repeats in a row
+  let order;
+  if (saved.mode === "intervals") {
+    order = $("direction").value;
+    if (order === "mixed") order = ["up", "down", "together"][Math.floor(Math.random() * 3)];
+  } else {
+    order = $("style").value;
+  }
+  // The base note: the one you chose, or a random one. Kept in a range that's not too low or shrill:
+  // around C3–B3, or C4–B4 when an interval goes down from it.
+  const fixed = $("base").value !== "random";
+  const pc = fixed ? Number($("base").value) : Math.floor(Math.random() * 12);
+  const base = (order === "down" ? 60 : 48) + pc;
+  current = { item, base, notes: notesFor(item, base, order), order };
+  const from = fixed ? ` from ${BASE_NAMES[pc]}` : "";
+  $("question").textContent = saved.mode === "intervals"
+    ? { up: `Which interval? (going up${from})`, down: `Which interval? (going down${from})`, together: `Which interval? (played together${from ? ", lowest note " + BASE_NAMES[pc] : ""})` }[order]
+    : `Which kind of chord?${fixed ? ` (on ${BASE_NAMES[pc]})` : ""}`;
+  if (started) playQuestion(current);
+}
+
+// Browsers only allow sound after you've clicked or pressed a key, so nothing plays until then
+let started = false;
+document.addEventListener("pointerdown", () => { started = true; }, { capture: true, once: true });
+document.addEventListener("keydown", () => { started = true; }, { capture: true, once: true });
+
+function buildAnswers() {
+  const box = $("answers");
+  box.innerHTML = "";
+  enabled().forEach(it => {
+    const b = document.createElement("button");
+    b.dataset.id = it.id;
+    b.innerHTML = saved.mode === "intervals" ? `${it.short}<small>${it.name}</small>` : `${it.short}<small>like ${it.example.replace("#", "♯")}</small>`;
+    b.onclick = () => answer(it, b);
+    box.appendChild(b);
+  });
+}
+
+function answer(item, button) {
+  if (!current || answered) return;
+  answered = true;
+  const right = item.id === current.item.id;
+  const key = saved.mode + ":" + current.item.id;
+  const stat = saved.stats[saved.mode][current.item.id] = saved.stats[saved.mode][current.item.id] || { right: 0, wrong: 0 };
+  total++;
+  if (right) {
+    correct++; streak++; stat.right++;
+    weight[key] = Math.max(0, (weight[key] || 0) - 1);
+  } else {
+    streak = 0; stat.wrong++;
+    weight[key] = Math.min(6, (weight[key] || 0) + 3);
+    // Also count it against the one you picked, so it gets practised against this one
+    weight[saved.mode + ":" + item.id] = Math.min(6, (weight[saved.mode + ":" + item.id] || 0) + 1);
+  }
+  if (streak > bestOf()) { try { localStorage.setItem(mode().bestKey, streak); } catch (e) {} }
+
+  document.querySelectorAll("#answers button").forEach(b => {
+    b.disabled = true;
+    if (b.dataset.id === current.item.id) b.classList.add("right");
+  });
+  if (!right) button.classList.add("wrong");
+
+  const it = current.item;
+  $("feedback").textContent = right ? `Yes! ${it.name[0].toUpperCase() + it.name.slice(1)}` : `It was ${/^[aeiou]/.test(it.name) ? "an" : "a"} ${it.name}`;
+  $("feedback").className = "feedback " + (right ? "good" : "bad");
+  if (saved.mode === "intervals" && $("hints").value === "on") $("songHint").textContent = `Going up, it sounds like the start of ${it.song}.`;
+  showPlayed(current);
+
+  save();
+  updateStats();
+  renderAccuracy();
+
+  if (right) {
+    setTimeout(() => { if (answered) nextQuestion(); }, 1300);
+  } else {
+    // Let you compare what you picked with what it was, then go on when you're ready
+    picked = item;
+    $("hearMine").textContent = `▶ Your answer: ${item.short}`;
+    $("hearRight").textContent = `▶ The answer: ${it.short}`;
+    $("compare").classList.add("show");
+  }
+}
+
+let picked = null;
+$("hearMine").onclick = () => playQuestion({ ...current, notes: notesFor(picked, current.base, current.order) });
+$("hearRight").onclick = () => playQuestion(current);
+$("nextBtn").onclick = nextQuestion;
+$("playBtn").onclick = () => { if (current) playQuestion(current); else nextQuestion(); };
+
+function updateStats() {
+  $("score").textContent = `${correct} / ${total}`;
+  $("streak").textContent = streak;
+  $("best").textContent = bestOf();
+}
+
+function renderAccuracy() {
+  const box = $("accuracy");
+  const rows = mode().items.map(it => ({ it, s: saved.stats[saved.mode][it.id] })).filter(r => r.s && r.s.right + r.s.wrong > 0);
+  if (!rows.length) { box.innerHTML = `<p class="empty" style="grid-column: 1 / -1">Answer a few questions and your results per ${saved.mode === "intervals" ? "interval" : "chord"} show up here.</p>`; return; }
+  box.innerHTML = rows.map(({ it, s }) => {
+    const n = s.right + s.wrong, pct = Math.round(s.right / n * 100);
+    const colour = pct >= 80 ? "var(--good)" : pct >= 50 ? "var(--accent)" : "var(--bad)";
+    return `<span>${saved.mode === "intervals" ? `${it.short} · ${it.name}` : it.short}</span>
+      <span class="bar"><div style="width:${pct}%; background:${colour}"></div></span>
+      <span class="pct">${pct}% <small>(${n})</small></span>`;
+  }).join("");
+}
+
+$("resetStats").onclick = () => {
+  if (!confirm(`Reset your ${saved.mode} results? Your best streak stays.`)) return;
+  saved.stats[saved.mode] = {};
+  save();
+  renderAccuracy();
+};
+
+// ---------- Settings ----------
+function buildChips() {
+  const box = $("chips");
+  box.innerHTML = "";
+  mode().items.forEach(it => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = it.short;
+    b.title = it.name;
+    b.setAttribute("aria-pressed", saved.on[saved.mode].includes(it.id));
+    b.onclick = () => {
+      const on = saved.on[saved.mode];
+      saved.on[saved.mode] = on.includes(it.id) ? on.filter(x => x !== it.id) : [...on, it.id];
+      save();
+      buildChips();
+      nextQuestion();
+    };
+    box.appendChild(b);
+  });
+}
+$("pickEasy").onclick = () => { saved.on[saved.mode] = [...mode().easy]; save(); buildChips(); nextQuestion(); };
+$("pickAll").onclick = () => { saved.on[saved.mode] = mode().items.map(it => it.id); save(); buildChips(); nextQuestion(); };
+
+function setMode(m) {
+  saved.mode = m;
+  save();
+  document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+  $("directionLabel").style.display = m === "intervals" ? "" : "none";
+  $("styleLabel").style.display = m === "chords" ? "" : "none";
+  correct = total = streak = 0;
+  current = null;
+  buildChips();
+  updateStats();
+  renderAccuracy();
+  nextQuestion();
+}
+document.querySelectorAll(".modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+["direction", "style", "base"].forEach(id => $(id).onchange = () => { save(); nextQuestion(); });
+["instrument", "hints"].forEach(id => $(id).onchange = save);
+
+// Space: play again, or go on to the next question after a wrong answer
+document.addEventListener("keydown", e => {
+  if (e.key !== " " || e.target.matches("select, input")) return;
+  e.preventDefault();
+  if (answered) nextQuestion();
+  else if (current) playQuestion(current);
+});
+
+// The first question waits for you to press Play (see `started` above)
+setMode(saved.mode);
+$("question").textContent = "Press ▶ to hear the first question.";
+$("playBtn").textContent = "▶ Play";
+$("playBtn").addEventListener("click", () => { $("playBtn").textContent = "▶ Play again"; }, { once: true });
+</script>
+</body>
+</html>

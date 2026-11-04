@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Journey</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --hl: #f08c00;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --hl: #ffc078;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+
+  /* Guitar / Piano switch */
+  .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
+  .tracks button {
+    font: inherit; font-size: 1.05rem; font-weight: 700; padding: 10px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .tracks button small { display: block; font-size: 0.78rem; font-weight: 500; }
+  .tracks button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+
+  /* Overview: where you are now */
+  .overview { display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; align-items: center; }
+  .ring { width: 110px; height: 110px; grid-row: span 2; }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: var(--btn); }
+  .ring .done { stroke: var(--good); stroke-linecap: round; transition: stroke-dashoffset .5s; }
+  .ring text { fill: var(--ink); font-size: 22px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; }
+  .level-now { font-size: 1.25rem; font-weight: 800; }
+  .level-now small { display: block; font-size: 0.85rem; font-weight: 500; color: var(--muted); }
+  .numbers { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--muted); }
+  .numbers b { color: var(--ink); }
+
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .next-list { display: grid; gap: 8px; }
+  .next-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+  .next-item b { display: block; }
+  .next-item small { color: var(--muted); }
+  .recent { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+  .recent li { padding: 4px 0; display: flex; justify-content: space-between; gap: 10px; }
+  .recent time { color: var(--muted); white-space: nowrap; }
+
+  /* The levels */
+  details.level { background: var(--card); border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 12px; overflow: hidden; }
+  details.level > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; }
+  details.level > summary::-webkit-details-marker { display: none; }
+  .badge { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; background: var(--btn); color: var(--muted); }
+  .level.current .badge { background: var(--accent); color: var(--card); }
+  .level.complete .badge { background: var(--good); color: var(--card); }
+  .level-name { font-weight: 700; font-size: 1.05rem; }
+  .level-name small { display: block; font-weight: 500; font-size: 0.82rem; color: var(--muted); }
+  .level-count { font-size: 0.85rem; color: var(--muted); text-align: right; min-width: 90px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--btn); overflow: hidden; margin-top: 4px; }
+  .bar div { height: 100%; background: var(--good); transition: width .3s; }
+
+  .milestones { list-style: none; margin: 0; padding: 0 16px 10px; }
+  .milestone { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--btn); }
+  .milestone input[type=checkbox] { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--good); cursor: pointer; }
+  .auto-mark { width: 20px; height: 20px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--btn); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .milestone.done .auto-mark { background: var(--good); border-color: var(--good); color: var(--card); }
+  .m-title { font-weight: 600; }
+  .milestone.done .m-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--good); }
+  .m-how { color: var(--muted); font-size: 0.85rem; line-height: 1.45; margin-top: 2px; }
+  .m-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; font-size: 0.78rem; }
+  .tag { padding: 1px 8px; border-radius: 10px; background: var(--btn); color: var(--muted); font-weight: 600; }
+  .m-progress { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .m-progress .bar { width: 90px; margin: 0; }
+  .m-done { color: var(--good); font-weight: 600; }
+  .m-link { font-size: 0.85rem; white-space: nowrap; }
+
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+  .reset { background: none; border: none; color: var(--muted); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0; }
+
+  @media (max-width: 520px) {
+    .overview { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .ring { grid-row: auto; }
+    .numbers { justify-content: center; }
+    .milestone { grid-template-columns: 28px 1fr; }
+    .m-link { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<script src="nav.js"></script>
+<main>
+  <h1>My Journey</h1>
+  <p class="sub">Milestones to work towards, from your very first notes to playing like a musician. Go roughly in order:
+    each level builds on the one before. Tick a milestone off when you can honestly do it. The ones with a ● tick
+    themselves off from your progress on the other pages.</p>
+
+  <div class="tracks" role="group" aria-label="Instrument">
+    <button id="guitarBtn" data-track="guitar">Guitar<small id="guitarSmall"></small></button>
+    <button id="pianoBtn" data-track="piano">Piano<small id="pianoSmall"></small></button>
+  </div>
+
+  <div class="panel">
+    <div class="overview">
+      <svg class="ring" viewBox="0 0 110 110" aria-hidden="true">
+        <circle class="track" cx="55" cy="55" r="45"/>
+        <circle class="done" id="ring" cx="55" cy="55" r="45" transform="rotate(-90 55 55)"/>
+        <text x="55" y="55" id="ringText">0%</text>
+      </svg>
+      <div class="level-now" id="levelNow"></div>
+      <div class="numbers" id="numbers"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Up next</h2>
+    <div class="next-list" id="next"></div>
+  </div>
+
+  <div id="levels"></div>
+
+  <div class="panel">
+    <h2>Recently achieved</h2>
+    <ul class="recent" id="recent"></ul>
+  </div>
+
+  <p class="hint">Some milestones, like knowing the chords in a key, belong to both instruments: ticking one off on the guitar
+    journey ticks it on the piano journey too.<br>
+    The automatic milestones read your best streaks from the trainers, your Tempo ladder history and your songs in My songs.
+    Once a milestone is achieved it stays ticked, with the date, even if you later reset a trainer.
+    Everything is saved in this browser only.<br>
+    <button class="reset" id="resetBtn">Start this journey over</button></p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- What the other pages have saved ----------
+function stored(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function storedJson(key, fallback) {
+  try { return JSON.parse(stored(key)) || fallback; } catch (e) { return fallback; }
+}
+const streak = key => Number(stored(key)) || 0;
+const ladder = storedJson("tempoLadder", { history: {} });
+const ladderEntries = () => Object.values(ladder.history || {}).flat();
+
+// Best clean tempo for one chord switch in the Tempo ladder (by its id there), or on any of them
+const ladderBest = id => Math.max(0, ...((ladder.history || {})[id] || []).map(h => h.best || 0));
+const anyLadderBest = () => Math.max(0, ...ladderEntries().map(h => h.best || 0));
+function practiceDays() {
+  return new Set(ladderEntries().filter(h => h.seconds >= 30 || h.clean || h.mistakes).map(h => h.date)).size;
+}
+const practiceMinutes = () => Math.round(ladderEntries().reduce((sum, h) => sum + (h.seconds || 0), 0) / 60);
+// Songs in My songs that have a title or some chords (it makes an empty one for you to start with)
+const songCount = () => storedJson("mySongs", []).filter(s => s.title || (s.chords && s.chords.length >= 2)).length;
+
+// ---------- The journeys ----------
+// Milestones are about playing, not about this website. When there's a page that helps, `page` links to it,
+// and `auto` (a function returning [how far you are, the target]) lets the milestone tick itself off.
+// Milestones without a page are good ideas for tools to build next.
+// Each id is how your ticks are saved: never change one. Milestones in SHARED appear in both journeys.
+const SHARED = {
+  numerals: { id: "key-c-numerals", tag: "Theory", title: "Name the 7 chords in a major key and their Roman numerals",
+    how: "In C: C Dm Em F G Am B° = I ii iii IV V vi vii°. The pattern is the same in every key.", page: "keys.html" },
+  signatures: { id: "key-signatures", tag: "Theory", title: "Know the key signatures up to 3 sharps and 3 flats",
+    how: "G 1♯, D 2♯, A 3♯, F 1♭, B♭ 2♭, E♭ 3♭, and their relative minors.", page: "circle.html" },
+  intervals: { id: "hear-intervals", tag: "Ear", title: "Hear the difference between major and minor, and name common intervals",
+    how: "Get a streak of 10 in the Ear trainer, in both Intervals and Chords.", page: "ear.html",
+    auto: () => [Math.min(streak("earIntervalsBest"), streak("earChordsBest")), 10] },
+  firstSong: { id: "first-song", tag: "Songs", title: "Choose a song you really want to learn",
+    how: "Something you love is the best motivation. Write down its chords or get the sheet music.", page: "songs.html", auto: () => [songCount(), 1] },
+  fullSong: { id: "full-song", tag: "Songs", title: "Play one song from start to finish without stopping",
+    how: "Mistakes are fine, stopping isn't. Record yourself and listen back.", page: "songs.html" },
+  record: { id: "record-yourself", tag: "Habit", title: "Record yourself playing and listen back honestly",
+    how: "You hear timing and tone problems on a recording that you miss while playing." },
+  byEar: { id: "by-ear", tag: "Ear", title: "Work out the chords of a song by ear",
+    how: "Find the key first (the chord it keeps returning to), then try the I, IV, V and vi chords.", page: "keys.html" },
+  transpose: { id: "transpose", tag: "Theory", title: "Transpose a song into another key",
+    how: "Write its chords as Roman numerals, then turn them back into letters in the new key.", page: "keys.html" },
+  write: { id: "write", tag: "Creating", title: "Write your own song: a chord progression with a melody",
+    how: "Start from chords in one key; a melody that lands on chord notes on the strong beats sounds settled." },
+  perform: { id: "play-with-others", tag: "Performing", title: "Play for an audience, or play with other musicians",
+    how: "Friends, family, an open mic or a jam: performing is a skill of its own." },
+  habitWeek: { id: "habit-week", tag: "Habit", title: "Practise at least 5 days a week for a month",
+    how: "Short and often beats long and rare: 15 focused minutes a day is plenty to start." },
+};
+
+const JOURNEYS = {
+  guitar: [
+    { name: "First steps", about: "Get comfortable holding the guitar and making your first sounds.", milestones: [
+      { id: "g-tune", tag: "Basics", title: "Tune your guitar to standard tuning (E A D G B E)",
+        how: "With a tuner at first. Bonus: tune the other strings to the low E by ear, using the 5th fret." },
+      { id: "g-strings", tag: "Basics", title: "Name the open strings and hold the guitar and pick comfortably",
+        how: "Low to high: E A D G B E. Relaxed shoulders, thumb behind the neck, fingertips on the strings." },
+      { id: "open-chords", tag: "Chords", title: "Play Em, Am, E, A, D, G and C with every string ringing",
+        how: "Strum each chord, then pick each string on its own: no buzzes, no accidentally muted strings.", page: "chord-library.html" },
+      { id: "g-two-chord", tag: "Switching", title: "Switch between two chords without stopping the beat",
+        how: "Em to G, then A to D: four strums on each, keep strumming through the change.", page: "metronome.html" },
+      { id: "steady-down", tag: "Rhythm", title: "Strum steady downstrokes in time for a whole minute",
+        how: "Play along with a metronome at 70 BPM without drifting ahead or behind.", page: "metronome.html" },
+      { id: "g-one-string", tag: "Melody", title: "Play a simple melody on one or two strings",
+        how: "Pick out a tune you know by ear on the high E and B strings, one note at a time." },
+      SHARED.firstSong,
+    ] },
+    { name: "Beginner", about: "The open chords, strumming patterns and skills behind most songs.", milestones: [
+      { id: "g-more-open", tag: "Chords", title: "Add Dm, E7, A7, D7, G7 and Cadd9 to your open chords",
+        how: "The 7th chords are essential for blues; Cadd9 makes G–C changes much easier.", page: "chord-library.html" },
+      { id: "three-60", tag: "Switching", title: "Switch G – C – D cleanly at 60 BPM",
+        how: "Tempo ladder → Three-chord song. Reach 60 BPM without a mistake.", page: "metronome.html", auto: () => [ladderBest("three-g"), 60] },
+      { id: "pop-g-80", tag: "Switching", title: "Play G – D – Em – C cleanly at 80 BPM",
+        how: "Tempo ladder → Pop in G. The progression behind countless pop songs.", page: "metronome.html", auto: () => [ladderBest("pop-g"), 80] },
+      { id: "folk-strum", tag: "Rhythm", title: "Strum D – DU – UDU through a progression",
+        how: "Keep your hand moving down and up all the time, and just miss the strings on the gaps.", page: "metronome.html" },
+      { id: "g-tab", tag: "Reading", title: "Read guitar tab and play a riff from it",
+        how: "Each line is a string (high E at the top), each number is a fret." },
+      { id: "g-power", tag: "Chords", title: "Play power chords on the low E and A strings and move them around",
+        how: "Root plus the note two frets up on the next string. Try palm muting them for a rock sound." },
+      { id: "g-spider", tag: "Technique", title: "Play the 1-2-3-4 finger exercise across all strings at 80 BPM",
+        how: "One finger per fret, alternate picking (down-up). Builds strength, stretch and coordination." },
+      { id: "frets-10", tag: "Fretboard", title: "Know the notes on the low E and A strings up to fret 12",
+        how: "You'll need them for barre and power chords. Get a streak of 10 in the Fretboard trainer.", page: "guitar.html", auto: () => [streak("fretTrainerBest"), 10] },
+      { id: "chords-10", tag: "Chords", title: "Recognise chord shapes at a glance",
+        how: "Get a streak of 10 in the Chord trainer.", page: "chords.html", auto: () => [streak("chordTrainerBest"), 10] },
+      { id: "g-three-songs", tag: "Songs", title: "Play 3 songs with open chords from start to finish",
+        how: "Singing along, or with a recording. Your first small repertoire.", page: "songs.html", auto: () => [songCount(), 3] },
+    ] },
+    { name: "Improver", about: "Barre chords, the blues and your first lead playing.", milestones: [
+      { id: "f-barre", tag: "Chords", title: "Play a full F barre chord with every string ringing",
+        how: "The big hurdle for every guitarist. Thumb behind the neck, roll your first finger slightly onto its side.", page: "chord-library.html" },
+      { id: "g-movable", tag: "Chords", title: "Play major and minor barre chords anywhere on the neck",
+        how: "E shape (root on the 6th string) and A shape (root on the 5th). Name the chord from the root note.", page: "chord-library.html" },
+      { id: "pop-c-80", tag: "Switching", title: "Play C – G – Am – F cleanly at 80 BPM, with a full F barre",
+        how: "Tempo ladder → Pop in C.", page: "metronome.html", auto: () => [ladderBest("pop-c"), 80] },
+      { id: "pop-d-80", tag: "Switching", title: "Play D – A – Bm – G cleanly at 80 BPM",
+        how: "Tempo ladder → Pop in D. Bm is a barre on the A string.", page: "metronome.html", auto: () => [ladderBest("pop-d"), 80] },
+      { id: "g-blues-shuffle", tag: "Songs", title: "Play a 12-bar blues shuffle in A and E",
+        how: "The classic rock'n'roll rhythm: the power chord rocking between the 5th and the 6th." },
+      { id: "pentatonic-1", tag: "Scales", title: "Play the minor pentatonic scale in position 1 from memory",
+        how: "A minor: frets 5–8. Up and down, evenly, alternate picking.", page: "scales.html" },
+      { id: "g-legato", tag: "Technique", title: "Play clean hammer-ons and pull-offs",
+        how: "Every note as loud as a picked one. Practise them inside the pentatonic scale." },
+      { id: "g-fingerpick", tag: "Technique", title: "Fingerpick a pattern over a chord progression",
+        how: "Thumb on the bass strings, fingers on the top three. Try a simple arpeggio, then a Travis pattern." },
+      { id: "g-capo", tag: "Basics", title: "Use a capo to play a song in a different key",
+        how: "Same chord shapes, higher pitch: handy to suit your voice." },
+      SHARED.numerals,
+      SHARED.fullSong,
+    ] },
+    { name: "Intermediate", about: "Lead guitar, the whole fretboard and playing with feel.", milestones: [
+      { id: "all-pentatonic", tag: "Scales", title: "Play all 5 pentatonic positions and link them up",
+        how: "Slide from one position into the next without stopping, all the way up the neck.", page: "scales.html" },
+      { id: "g-bends", tag: "Technique", title: "Bend strings in tune and add vibrato",
+        how: "Check a whole-step bend against the fretted note two frets up. Vibrato makes notes sing." },
+      { id: "improvise", tag: "Improvising", title: "Improvise a solo over a 12-bar blues backing track",
+        how: "Use the pentatonic or blues scale. Leave space: short phrases, like sentences.", page: "scales.html" },
+      { id: "g-learn-solo", tag: "Lead", title: "Learn a famous guitar solo note for note",
+        how: "Copying great players teaches phrasing you won't find in exercises." },
+      { id: "g-major-scale", tag: "Scales", title: "Play the major scale in at least 2 positions",
+        how: "Hear how it relates to the chords you already know.", page: "scales.html" },
+      { id: "frets-25", tag: "Fretboard", title: "Know every note on the fretboard up to fret 12",
+        how: "All strings, including sharps and flats. Fretboard trainer streak of 25.", page: "guitar.html", auto: () => [streak("fretTrainerBest"), 25] },
+      { id: "switch-120", tag: "Switching", title: "Switch between barre chords cleanly at 120 BPM",
+        how: "Pick a progression in the Tempo ladder and climb all the way up.", page: "metronome.html", auto: () => [anyLadderBest(), 120] },
+      { id: "g-16ths", tag: "Rhythm", title: "Strum funky 16th-note rhythms with muted strums",
+        how: "Hand moves in 16ths all the time; mute the strings with your fretting hand for the percussive 'chk'." },
+      { id: "g-ten-songs", tag: "Songs", title: "Have 10 songs you can play from memory",
+        how: "Your repertoire for when someone hands you a guitar.", page: "songs.html", auto: () => [songCount(), 10] },
+      SHARED.signatures,
+      SHARED.intervals,
+      SHARED.record,
+    ] },
+    { name: "Advanced", about: "Understand the neck completely and make music your own way.", milestones: [
+      { id: "g-caged", tag: "Fretboard", title: "Find any chord in 5 places with the CAGED system",
+        how: "The C, A, G, E and D shapes link up along the neck for every chord." },
+      { id: "g-triads", tag: "Chords", title: "Play major and minor triads on every group of 3 strings",
+        how: "Small 3-note shapes that make your parts fit in a band." },
+      { id: "g-jazz", tag: "Chords", title: "Play maj7, m7 and 7 chords and a ii – V – I in several keys",
+        how: "The building block of jazz and soul harmony." },
+      { id: "g-chord-tones", tag: "Improvising", title: "Solo over chord changes, targeting the notes of each chord",
+        how: "Instead of one scale over everything, aim for the 3rd of each new chord as it arrives." },
+      { id: "modes", tag: "Scales", title: "Hear and use Dorian and Mixolydian",
+        how: "Play each over one chord or a drone, and listen for the note that changes the mood.", page: "scales.html" },
+      SHARED.byEar,
+      SHARED.transpose,
+      SHARED.write,
+      SHARED.perform,
+      SHARED.habitWeek,
+    ] },
+  ],
+
+  piano: [
+    { name: "First steps", about: "Find your way around the keyboard and play your first notes.", milestones: [
+      { id: "p-posture", tag: "Basics", title: "Sit at the right height with a relaxed, curved hand shape",
+        how: "Forearms level with the keys, fingers curved as if holding a ball, wrists loose." },
+      { id: "p-white-keys", tag: "Basics", title: "Name every white key, using the groups of black keys",
+        how: "C is just left of every group of two black keys. Find all the Cs, then all the Fs.", page: "index.html" },
+      { id: "p-five-finger", tag: "Technique", title: "Play C – D – E – F – G with each hand, one finger per key",
+        how: "Thumb on C. Evenly, slowly, up and down, every note the same loudness." },
+      { id: "p-melody", tag: "Melody", title: "Play a simple melody with your right hand",
+        how: "A nursery rhyme or folk tune that sits in the five-finger position." },
+      { id: "steady-down", tag: "Rhythm", title: "Play steady quarter notes in time for a whole minute",
+        how: "Play along with a metronome at 70 BPM without drifting ahead or behind.", page: "metronome.html" },
+      { id: "notes-10", tag: "Reading", title: "Read treble clef notes from middle C to G above",
+        how: "Get a streak of 10 in the Note trainer, treble clef.", page: "index.html", auto: () => [streak("noteTrainerBest"), 10] },
+      SHARED.firstSong,
+    ] },
+    { name: "Beginner", about: "Scales, chords and your first pieces with both hands.", milestones: [
+      { id: "c-scale-hands", tag: "Scales", title: "Play the C major scale with each hand, with the right fingering",
+        how: "Right hand: thumb tucks under after E. Left hand: finger 3 crosses over after G.", page: "scales.html" },
+      { id: "piano-triads", tag: "Chords", title: "Play C, F, G and Am and switch between them",
+        how: "Right hand plays the chord, left hand the root note. Try C – G – Am – F.", page: "chord-library.html" },
+      { id: "p-bass-clef", tag: "Reading", title: "Read bass clef notes too",
+        how: "The left hand lives here. Note trainer, bass clef.", page: "index.html" },
+      { id: "p-hands-together", tag: "Technique", title: "Play a simple piece hands together",
+        how: "Practise each hand alone first, then together very slowly." },
+      { id: "p-rhythms", tag: "Rhythm", title: "Read and count quarters, halves, eighths and dotted notes",
+        how: "Count out loud: \"1 & 2 & 3 & 4 &\". Clap the rhythm before you play it." },
+      { id: "p-sharps-flats", tag: "Basics", title: "Find any sharp or flat on the keyboard",
+        how: "Every black key has two names: C♯ is also D♭." },
+      { id: "p-g-scale", tag: "Scales", title: "Play G major and F major, each hand on its own",
+        how: "Your first scales with a sharp (F♯) and a flat (B♭).", page: "scales.html" },
+      { id: "p-three-pieces", tag: "Songs", title: "Play 3 pieces or songs from start to finish",
+        how: "Your first small repertoire.", page: "songs.html", auto: () => [songCount(), 3] },
+    ] },
+    { name: "Improver", about: "Hands together with confidence, and playing from chords.", milestones: [
+      { id: "c-scale-together", tag: "Scales", title: "Play C, G and F major hands together over 2 octaves",
+        how: "The hands cross in different places, which is the tricky part.", page: "scales.html" },
+      { id: "p-inversions", tag: "Chords", title: "Play triads in all three inversions",
+        how: "C E G, E G C, G C E. Inversions let you move between chords with tiny hand movements." },
+      { id: "p-lead-sheet", tag: "Chords", title: "Play a song from just its chord symbols",
+        how: "Right hand chords in inversions, left hand roots or octaves.", page: "songs.html" },
+      { id: "p-accompaniment", tag: "Technique", title: "Play a broken-chord accompaniment in the left hand",
+        how: "Arpeggios or the classic 'Alberti bass' (C G E G) under a right-hand melody." },
+      { id: "notes-25", tag: "Reading", title: "Read notes fluently in both clefs",
+        how: "Note trainer streak of 25, clef set to Both.", page: "index.html", auto: () => [streak("noteTrainerBest"), 25] },
+      { id: "p-pedal", tag: "Technique", title: "Use the sustain pedal cleanly",
+        how: "Lift and press again just after each chord change, so the harmonies don't blur together." },
+      { id: "p-dynamics", tag: "Expression", title: "Play with dynamics: soft, loud, getting louder and softer",
+        how: "The same piece played with dynamics sounds twice as musical." },
+      SHARED.numerals,
+      SHARED.fullSong,
+    ] },
+    { name: "Intermediate", about: "All the keys, more harmony and reading new music.", milestones: [
+      { id: "p-all-major", tag: "Scales", title: "Play all 12 major scales hands together",
+        how: "Two octaves each, correct fingering. Go round the circle of fifths.", page: "circle.html" },
+      { id: "p-minor-scales", tag: "Scales", title: "Play natural and harmonic minor scales in A, E and D",
+        how: "Hear how the raised 7th of harmonic minor pulls back to the root.", page: "scales.html" },
+      { id: "p-sevenths", tag: "Chords", title: "Play maj7, m7 and 7 chords in every key",
+        how: "The sound of jazz, soul and a lot of pop.", page: "chord-library.html" },
+      { id: "p-arpeggios", tag: "Technique", title: "Play arpeggios of major and minor chords hands together",
+        how: "Over 2 octaves, smooth thumb crossings." },
+      { id: "p-sight-read", tag: "Reading", title: "Sight-read a simple piece you've never seen, without stopping",
+        how: "Look ahead, keep the beat going, and let small mistakes go." },
+      { id: "p-blues", tag: "Songs", title: "Play a 12-bar blues with a boogie-woogie left hand",
+        how: "A rolling left-hand pattern under blues chords, right hand adds riffs." },
+      { id: "improvise", tag: "Improvising", title: "Improvise a melody over a chord progression",
+        how: "Left hand plays the chords; right hand makes up a melody with the pentatonic scale.", page: "scales.html" },
+      { id: "p-memorise", tag: "Songs", title: "Memorise a whole piece",
+        how: "Learn it in sections and understand its chords: that's what makes memory reliable." },
+      SHARED.signatures,
+      SHARED.intervals,
+      SHARED.record,
+    ] },
+    { name: "Advanced", about: "Fluent harmony, playing by ear and your own style.", milestones: [
+      { id: "notes-50", tag: "Reading", title: "Read notes instantly anywhere on the grand staff",
+        how: "Note trainer streak of 50, both clefs.", page: "index.html", auto: () => [streak("noteTrainerBest"), 50] },
+      { id: "p-voicings", tag: "Chords", title: "Play a ii – V – I with smooth voice leading in several keys",
+        how: "Move each note of one chord to the closest note of the next. Try rootless voicings." },
+      { id: "p-accompany", tag: "Performing", title: "Accompany a singer or another instrument",
+        how: "Follow them, leave room for the melody, and keep the time steady." },
+      { id: "p-transpose-live", tag: "Theory", title: "Play a song you know in a different key, on the spot",
+        how: "Think in Roman numerals instead of letter names." },
+      { id: "modes", tag: "Scales", title: "Hear and use Dorian and Mixolydian",
+        how: "Play each over one chord or a drone, and listen for the note that changes the mood.", page: "scales.html" },
+      SHARED.byEar,
+      SHARED.transpose,
+      SHARED.write,
+      SHARED.perform,
+      SHARED.habitWeek,
+    ] },
+  ],
+};
+
+const PAGE_NAMES = { "index.html": "Note trainer", "guitar.html": "Fretboard trainer", "chords.html": "Chord trainer", "ear.html": "Ear trainer",
+  "chord-library.html": "Chord library", "keys.html": "Chords in a key", "songs.html": "My songs", "circle.html": "Circle of fifths",
+  "scales.html": "Scale shapes", "metronome.html": "Tempo ladder" };
+
+// ---------- Your progress ----------
+// done: milestone id → the date you achieved it ("2026-11-04"). track: the journey you're looking at.
+let journey = storedJson("journey", {});
+journey.done = journey.done || {};
+if (!journey.track) journey.track = journey.instrument === "piano" ? "piano" : "guitar"; // older saves had "instrument"
+function saveJourney() {
+  try { localStorage.setItem("journey", JSON.stringify(journey)); } catch (e) {}
+}
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function niceDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: y === new Date().getFullYear() ? undefined : "numeric" });
+}
+
+const milestonesOf = track => JOURNEYS[track].flatMap(l => l.milestones);
+
+// Tick off every automatic milestone you've reached (on both journeys), remembering the day we first noticed
+function checkAuto() {
+  let changed = false;
+  [...milestonesOf("guitar"), ...milestonesOf("piano")].forEach(m => {
+    if (!m.auto || journey.done[m.id]) return;
+    const [value, target] = m.auto();
+    if (value >= target) { journey.done[m.id] = today(); changed = true; }
+  });
+  if (changed) saveJourney();
+}
+
+// Your current level: the first one with something left to do
+function currentLevel(levels) {
+  const i = levels.findIndex(l => l.milestones.some(m => !journey.done[m.id]));
+  return i < 0 ? levels.length : i;
+}
+
+// ---------- Drawing the page ----------
+function milestoneEl(m) {
+  const li = document.createElement("li");
+  const done = journey.done[m.id];
+  li.className = "milestone" + (done ? " done" : "");
+
+  const mark = m.auto
+    ? `<div class="auto-mark" title="Ticks itself off">${done ? "✓" : "●"}</div>`
+    : `<input type="checkbox" ${done ? "checked" : ""} aria-label="Done">`;
+  let meta = `<span class="tag">${m.tag}</span>`;
+  if (done) {
+    meta += `<span class="m-done">✓ ${niceDate(done)}</span>`;
+  } else if (m.auto) {
+    const [value, target] = m.auto();
+    meta += `<span class="m-progress"><span class="bar"><div style="width:${Math.min(100, value / target * 100)}%"></div></span>${Math.min(value, target)} / ${target}</span>`;
+  }
+  const link = m.page ? `<a class="m-link" href="${m.page}">${PAGE_NAMES[m.page]} →</a>` : "<span></span>";
+  li.innerHTML = `${mark}
+    <div><div class="m-title">${m.title}</div><div class="m-how">${m.how}</div><div class="m-meta">${meta}</div></div>
+    ${link}`;
+
+  const box = li.querySelector("input");
+  if (box) box.onchange = () => {
+    if (box.checked) journey.done[m.id] = today(); else delete journey.done[m.id];
+    saveJourney();
+    render();
+  };
+  return li;
+}
+
+let openLevels = null; // which levels are unfolded; null = decide automatically
+
+function render() {
+  checkAuto();
+  const track = journey.track;
+  const levels = JOURNEYS[track];
+  const all = milestonesOf(track);
+  const doneCount = all.filter(m => journey.done[m.id]).length;
+  const now = currentLevel(levels);
+
+  // The Guitar / Piano switch, with how far you are on each
+  ["guitar", "piano"].forEach(t => {
+    const list = milestonesOf(t);
+    $(t + "Btn").setAttribute("aria-pressed", t === track);
+    $(t + "Small").textContent = `${list.filter(m => journey.done[m.id]).length} of ${list.length} milestones`;
+  });
+
+  // Overview
+  const share = all.length ? doneCount / all.length : 0;
+  const circumference = 2 * Math.PI * 45;
+  $("ring").style.strokeDasharray = circumference;
+  $("ring").style.strokeDashoffset = circumference * (1 - share);
+  $("ringText").textContent = Math.round(share * 100) + "%";
+  $("levelNow").innerHTML = now < levels.length
+    ? `Level ${now + 1}: ${levels[now].name}<small>${levels[now].about}</small>`
+    : `Journey complete! 🎉<small>You've reached every milestone. Time to set your own goals.</small>`;
+  $("numbers").innerHTML = `<span><b>${doneCount}</b> of ${all.length} milestones</span>` +
+    (practiceDays() ? `<span><b>${practiceDays()}</b> days on the Tempo ladder</span><span><b>${practiceMinutes()}</b> minutes practised there</span>` : "");
+
+  // Up next: the first three open milestones, starting from your current level
+  const upNext = all.filter(m => !journey.done[m.id]).slice(0, 3);
+  $("next").innerHTML = upNext.length ? "" : `<p class="muted">Nothing left. You did it!</p>`;
+  upNext.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "next-item";
+    let progress = "";
+    if (m.auto) { const [v, t] = m.auto(); progress = ` · ${Math.min(v, t)} / ${t}`; }
+    div.innerHTML = `<div><b>${m.title}</b><small>${m.tag}${progress}</small></div>` +
+      (m.page ? `<a class="m-link" href="${m.page}">${PAGE_NAMES[m.page]} →</a>` : "");
+    $("next").appendChild(div);
+  });
+
+  // The levels
+  const wrap = $("levels");
+  if (openLevels === null) openLevels = new Set([now]);
+  wrap.innerHTML = "";
+  levels.forEach((level, i) => {
+    const count = level.milestones.filter(m => journey.done[m.id]).length;
+    const complete = count === level.milestones.length;
+    const d = document.createElement("details");
+    d.className = "level" + (complete ? " complete" : i === now ? " current" : "");
+    d.open = openLevels.has(i);
+    d.ontoggle = () => { d.open ? openLevels.add(i) : openLevels.delete(i); };
+    d.innerHTML = `<summary>
+        <div class="badge">${complete ? "✓" : i + 1}</div>
+        <div class="level-name">${level.name}<small>${level.about}</small></div>
+        <div class="level-count">${count} / ${level.milestones.length}<div class="bar"><div style="width:${count / level.milestones.length * 100}%"></div></div></div>
+      </summary>`;
+    const ul = document.createElement("ul");
+    ul.className = "milestones";
+    level.milestones.forEach(m => ul.appendChild(milestoneEl(m)));
+    d.appendChild(ul);
+    wrap.appendChild(d);
+  });
+
+  // Recently achieved, on this journey
+  const titles = Object.fromEntries(all.map(m => [m.id, m.title]));
+  const recent = Object.entries(journey.done).filter(([id]) => titles[id]).sort((a, b) => a[1] < b[1] ? 1 : -1).slice(0, 6);
+  $("recent").innerHTML = recent.length
+    ? recent.map(([id, date]) => `<li><span>✓ ${titles[id]}</span><time>${niceDate(date)}</time></li>`).join("")
+    : `<li class="muted">Your achievements will appear here.</li>`;
+}
+
+document.querySelectorAll(".tracks button").forEach(b => b.onclick = () => {
+  journey.track = b.dataset.track;
+  saveJourney();
+  openLevels = null;
+  render();
+});
+
+$("resetBtn").onclick = () => {
+  const name = journey.track === "guitar" ? "guitar" : "piano";
+  if (!confirm(`Untick every milestone on the ${name} journey and start over? Milestones shared with the other journey are unticked there too, and automatic ones you've already reached will tick again.`)) return;
+  milestonesOf(journey.track).forEach(m => delete journey.done[m.id]);
+  saveJourney();
+  openLevels = null;
+  render();
+};
+
+render();
+</script>
+</body>
+</html>

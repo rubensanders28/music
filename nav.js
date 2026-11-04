@@ -3,9 +3,11 @@
 // To add a page, add it to PAGES below.
 (() => {
   const PAGES = [
+    ["journey.html", "My journey"],
     ["index.html", "Piano trainer"],
     ["guitar.html", "Fretboard trainer"],
     ["chords.html", "Chord trainer"],
+    ["ear.html", "Ear trainer"],
     ["chord-library.html", "Chord library"],
     ["keys.html", "Chords in a key"],
     ["songs.html", "My songs"],
