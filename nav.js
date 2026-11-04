@@ -8,6 +8,7 @@
     ["chords.html", "Chord trainer"],
     ["chord-library.html", "Chord library"],
     ["keys.html", "Chords in a key"],
+    ["progressions.html", "Progression generator"],
     ["songs.html", "My songs"],
     ["circle.html", "Circle of fifths"],
     ["scales.html", "Scale shapes"],
