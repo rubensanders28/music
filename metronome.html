@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tempo Ladder</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --hl: #f08c00;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --hl: #ffc078;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select, input { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  input[type=number] { width: 70px; }
+
+  /* The big tempo display */
+  .tempo { text-align: center; }
+  .bpm { font-size: 4.5rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .bpm small { font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .marking { color: var(--muted); font-style: italic; margin-top: 2px; }
+  .message { min-height: 1.5em; font-weight: 600; margin-top: 8px; }
+  .message.good { color: var(--good); }
+  .message.bad { color: var(--bad); }
+
+  /* One dot per beat; the first beat of the bar is bigger */
+  .beats { display: flex; justify-content: center; gap: 12px; margin: 18px 0 6px; }
+  .beat { width: 22px; height: 22px; border-radius: 50%; background: var(--btn); transition: background .05s, transform .05s; }
+  .beat.first { width: 30px; height: 30px; margin-top: -4px; }
+  .beat.on { background: var(--hl); transform: scale(1.15); }
+  .beat.first.on { background: var(--accent); }
+
+  /* How far you are from the start tempo to the goal */
+  .ladder { margin-top: 14px; }
+  .ladder-bar { height: 10px; border-radius: 5px; background: var(--btn); overflow: hidden; }
+  .ladder-fill { height: 100%; width: 0; background: var(--good); transition: width .3s; }
+  .ladder-ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .buttons button {
+    font: inherit; font-size: 1.05rem; font-weight: 700; padding: 14px 8px; border: none; border-radius: 12px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .buttons button:hover { outline: 2px solid var(--accent); }
+  .buttons small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+  #startBtn { grid-column: 1 / -1; background: var(--accent); color: var(--card); }
+  #cleanBtn { color: var(--good); }
+  #mistakeBtn { color: var(--bad); }
+  #resetBtn { grid-column: 1 / -1; font-size: 0.9rem; padding: 8px; font-weight: 600; }
+
+  .stats { display: flex; justify-content: space-around; text-align: center; }
+  .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stats span { color: var(--muted); font-size: 0.8rem; }
+
+  .log { list-style: none; padding: 0; margin: 0; max-height: 180px; overflow-y: auto; font-size: 0.85rem; }
+  .log li { padding: 4px 0; border-bottom: 1px solid var(--btn); display: flex; justify-content: space-between; gap: 8px; }
+  .log li:last-child { border-bottom: none; }
+  .log .up { color: var(--good); }
+  .log .down { color: var(--bad); }
+  .log time { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  h2 { font-size: 1rem; margin: 0 0 8px; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="index.html">Piano trainer</a><a href="guitar.html">Fretboard trainer</a><a href="chords.html">Chord trainer</a><a href="chord-library.html">Chord library</a><a href="keys.html">Chords in a key</a><a href="songs.html">My songs</a><a href="circle.html">Circle of fifths</a><a href="scales.html">Scale shapes</a></p>
+  <h1>Tempo Ladder</h1>
+  <p class="sub">Start slow, and climb to your goal tempo a few beats per minute at a time.
+    Played it cleanly? Step up. Made a mistake? Step back down until it's clean again.</p>
+
+  <div class="panel">
+    <div class="settings">
+      <label>Start <input type="number" id="start" min="30" max="300" value="60"> BPM</label>
+      <label>Goal <input type="number" id="goal" min="30" max="300" value="100"> BPM</label>
+      <label>Step <input type="number" id="step" min="1" max="20" value="4"> BPM</label>
+      <label>Beats per bar
+        <select id="beats">
+          <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option>
+        </select>
+      </label>
+      <label>Step up
+        <select id="auto">
+          <option value="0">When I press "Clean"</option>
+          <option value="2">Every 2 bars</option>
+          <option value="4">Every 4 bars</option>
+          <option value="8">Every 8 bars</option>
+          <option value="16">Every 16 bars</option>
+        </select>
+      </label>
+      <label>Accent beat 1
+        <select id="accent">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="panel tempo">
+    <div class="bpm"><span id="bpm">60</span> <small>BPM</small></div>
+    <div class="marking" id="marking"></div>
+    <div class="beats" id="beatDots"></div>
+    <div class="message" id="message"></div>
+
+    <div class="ladder">
+      <div class="ladder-bar"><div class="ladder-fill" id="fill"></div></div>
+      <div class="ladder-ends"><span id="startLabel"></span><span id="goalLabel"></span></div>
+    </div>
+
+    <div class="buttons">
+      <button id="startBtn">▶ Start <small style="color: inherit; opacity: .8">Space</small></button>
+      <button id="cleanBtn">✓ Clean <small>step up · ↑</small></button>
+      <button id="mistakeBtn">✗ Mistake <small>step down · ↓</small></button>
+      <button id="resetBtn">↺ Back to start tempo</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="stats">
+      <div><b id="best">–</b><span>best tempo</span></div>
+      <div><b id="cleanCount">0</b><span>clean</span></div>
+      <div><b id="mistakeCount">0</b><span>mistakes</span></div>
+      <div><b id="time">0:00</b><span>practising</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>This session</h2>
+    <ul class="log" id="log"></ul>
+    <p class="empty" id="logEmpty">Your tempo changes will show up here.</p>
+  </div>
+
+  <p class="hint"><b>How to use it:</b> pick something short you're learning: a scale, a riff, a few bars of a song.
+    Set the start tempo where you can play it perfectly, and the goal where you want to end up.
+    Play it once through, then press Clean or Mistake. Be honest: practising mistakes at speed only makes them stick.<br>
+    In automatic mode the tempo rises on its own every few bars; press Mistake whenever it gets messy.<br>
+    Good habit: once you reach the goal, finish with a few slow, relaxed run-throughs.</p>
+</main>
+
+<script>
+// ---------- Settings ----------
+const $ = id => document.getElementById(id);
+const MIN_BPM = 30, MAX_BPM = 300;
+
+function num(id, fallback) {
+  const v = Math.round(Number($(id).value));
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+}
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const startBpm = () => clamp(num("start", 60), MIN_BPM, MAX_BPM);
+const goalBpm = () => clamp(Math.max(num("goal", 100), startBpm()), MIN_BPM, MAX_BPM); // the goal can't be below the start
+const stepBpm = () => clamp(num("step", 4), 1, 20);
+const beatsPerBar = () => Number($("beats").value);
+
+// The traditional Italian names for tempo ranges
+function marking(bpm) {
+  const names = [[40, "Grave"], [60, "Largo"], [66, "Larghetto"], [76, "Adagio"], [108, "Andante"],
+    [120, "Moderato"], [156, "Allegro"], [176, "Vivace"], [200, "Presto"]];
+  const found = names.find(([upTo]) => bpm < upTo);
+  return found ? found[1] : "Prestissimo";
+}
+
+// ---------- Sound ----------
+// The browser's audio clock is far more precise than setTimeout, so we don't play clicks "now":
+// every 25 ms we look a little way ahead and book every click due in the next 0.1 s at its exact time.
+const audio = new AudioContext();
+const LOOKAHEAD = 0.1;
+
+function click(time, first) {
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.frequency.value = first ? 1600 : 1000; // beat 1 is higher, so you can hear where the bar starts
+  gain.gain.setValueAtTime(first ? 0.6 : 0.4, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(time);
+  osc.stop(time + 0.06);
+}
+
+let bpm = 60;
+let running = false;
+let nextTime = 0;       // when the next click is due, on the audio clock
+let beat = 0;           // which beat of the bar the next click is
+let barsSinceStep = 0;  // for automatic mode
+let timer = null;
+const due = [];         // booked clicks the beat dots haven't shown yet: { time, beat }
+
+function scheduler() {
+  while (nextTime < audio.currentTime + LOOKAHEAD) {
+    click(nextTime, beat === 0 && $("accent").value === "on");
+    due.push({ time: nextTime, beat });
+    nextTime += 60 / bpm;
+    beat++;
+    if (beat >= beatsPerBar()) {
+      beat = 0;
+      barEnded();
+    }
+  }
+}
+
+function barEnded() {
+  const every = Number($("auto").value);
+  if (!every) return;
+  if (++barsSinceStep >= every) {
+    barsSinceStep = 0;
+    stepUp("auto");
+  }
+}
+
+function start() {
+  audio.resume(); // browsers only allow sound after you've clicked something
+  running = true;
+  beat = 0;
+  barsSinceStep = 0;
+  nextTime = audio.currentTime + 0.05;
+  timer = setInterval(scheduler, 25);
+  scheduler();
+  startedAt = performance.now();
+  $("startBtn").firstChild.textContent = "■ Stop ";
+}
+
+function stop() {
+  running = false;
+  clearInterval(timer);
+  due.length = 0;
+  practised += performance.now() - startedAt;
+  document.querySelectorAll(".beat").forEach(d => d.classList.remove("on"));
+  $("startBtn").firstChild.textContent = "▶ Start ";
+}
+
+// Light up each beat dot exactly when its click is heard
+function animate() {
+  while (due.length && due[0].time <= audio.currentTime) {
+    const b = due.shift().beat;
+    document.querySelectorAll(".beat").forEach((d, i) => d.classList.toggle("on", i === b));
+  }
+  updateTime();
+  requestAnimationFrame(animate);
+}
+
+// ---------- The ladder ----------
+let cleanCount = 0, mistakeCount = 0;
+let best = 0;
+try { best = Number(localStorage.getItem("metronomeBest")) || 0; } catch (e) {}
+
+function setMessage(text, kind = "") {
+  $("message").textContent = text;
+  $("message").className = "message " + kind;
+}
+
+// reason: "clean" (you pressed Clean) or "auto" (automatic mode)
+function stepUp(reason) {
+  if (reason === "clean") cleanCount++;
+  const goal = goalBpm();
+  if (bpm >= goal) {
+    setMessage(`You're at your goal of ${goal} BPM! 🎉 Keep it clean, or raise the goal.`, "good");
+  } else {
+    const old = bpm;
+    bpm = Math.min(goal, bpm + stepBpm());
+    log(old, bpm, reason === "auto" ? "automatic step" : "clean");
+    setMessage(bpm === goal ? `Goal reached: ${goal} BPM! 🎉` : `Up to ${bpm}`, "good");
+    if (bpm > best) {
+      best = bpm;
+      try { localStorage.setItem("metronomeBest", best); } catch (e) {}
+    }
+  }
+  render();
+}
+
+function stepDown() {
+  mistakeCount++;
+  barsSinceStep = 0; // in automatic mode, give yourself the full number of bars at the slower tempo
+  const old = bpm;
+  bpm = Math.max(MIN_BPM, bpm - stepBpm());
+  if (bpm !== old) log(old, bpm, "mistake");
+  setMessage(`Back to ${bpm}. Slow and clean wins.`, "bad");
+  render();
+}
+
+function reset() {
+  bpm = startBpm();
+  barsSinceStep = 0;
+  setMessage("");
+  render();
+}
+
+function log(from, to, reason) {
+  const li = document.createElement("li");
+  const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  li.innerHTML = `<span class="${to > from ? "up" : "down"}">${to > from ? "▲" : "▼"} ${from} → ${to} BPM</span>
+    <span>${reason} · <time>${now}</time></span>`;
+  $("log").prepend(li);
+  $("logEmpty").style.display = "none";
+}
+
+// ---------- Practice time ----------
+let practised = 0;  // ms of finished runs
+let startedAt = 0;
+function updateTime() {
+  const ms = practised + (running ? performance.now() - startedAt : 0);
+  const s = Math.floor(ms / 1000);
+  $("time").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// ---------- The page ----------
+function buildBeats() {
+  const dots = $("beatDots");
+  dots.innerHTML = "";
+  for (let i = 0; i < beatsPerBar(); i++) {
+    const d = document.createElement("div");
+    d.className = "beat" + (i === 0 && $("accent").value === "on" ? " first" : "");
+    dots.appendChild(d);
+  }
+}
+
+function render() {
+  const s = startBpm(), g = goalBpm();
+  $("bpm").textContent = bpm;
+  $("marking").textContent = marking(bpm);
+  $("fill").style.width = (g > s ? clamp((bpm - s) / (g - s), 0, 1) * 100 : 100) + "%";
+  $("startLabel").textContent = `start ${s}`;
+  $("goalLabel").textContent = `goal ${g}`;
+  $("best").textContent = best || "–";
+  $("cleanCount").textContent = cleanCount;
+  $("mistakeCount").textContent = mistakeCount;
+}
+
+const SETTINGS = ["start", "goal", "step", "beats", "auto", "accent"];
+function save() {
+  try { localStorage.setItem("metronomeSettings", JSON.stringify(Object.fromEntries(SETTINGS.map(id => [id, $(id).value])))); } catch (e) {}
+}
+try {
+  const saved = JSON.parse(localStorage.getItem("metronomeSettings")) || {};
+  SETTINGS.forEach(id => { if (saved[id] !== undefined) $(id).value = saved[id]; });
+} catch (e) {}
+
+// Changing the start tempo while stopped moves you to it; other settings just take effect
+$("start").onchange = () => { if (!running) bpm = startBpm(); save(); render(); };
+["goal", "step", "auto"].forEach(id => $(id).onchange = () => { save(); render(); });
+["beats", "accent"].forEach(id => $(id).onchange = () => { save(); buildBeats(); });
+
+$("startBtn").onclick = () => running ? stop() : start();
+$("cleanBtn").onclick = () => stepUp("clean");
+$("mistakeBtn").onclick = stepDown;
+$("resetBtn").onclick = reset;
+
+// Keyboard shortcuts, so you don't have to let go of your instrument for long
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, select")) return;
+  if (e.key === " ") { e.preventDefault(); running ? stop() : start(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); stepUp("clean"); }
+  else if (e.key === "ArrowDown") { e.preventDefault(); stepDown(); }
+});
+
+bpm = startBpm();
+buildBeats();
+render();
+animate();
+</script>
+</body>
+</html>
