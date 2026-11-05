@@ -45,6 +45,18 @@
   .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
   select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
 
+  /* Which strings are in the quiz: one toggle button per string */
+  .strings { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 16px; font-size: 0.9rem; color: var(--muted); }
+  .strings .link-btn { background: none; border: none; padding: 0 2px; color: var(--accent); font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .chip {
+    font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.1;
+    padding: 4px 11px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--btn); background: transparent; color: var(--muted);
+  }
+  .chip small { font-weight: 500; font-size: 0.7rem; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:hover { border-color: var(--accent); }
+
   .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .prompt { text-align: center; font-size: 1.3rem; font-weight: 600; margin: 0 0 8px; }
   .feedback { min-height: 1.6em; text-align: center; font-weight: 600; margin: 8px 0 0; }
@@ -117,6 +129,8 @@
       </select>
     </label>
   </div>
+  <div class="strings">Strings: <span id="stringChips" style="display: contents"></span>
+    <button class="link-btn" id="allStrings">All</button></div>
 
   <div class="card">
     <p class="prompt" id="prompt"></p>
@@ -275,14 +289,20 @@ function drawBoard() {
     svg.appendChild(el("line", { x1: X(10), x2: X(fretX(MAX_FRET) + 10), y1: stringY(s), y2: stringY(s), stroke: "#e8e8e8", "stroke-width": 1 + s * 0.45 }));
   });
 
-  // Grey out the frets that aren't part of the quiz
+  // Grey out the frets and strings that aren't part of the quiz
   if (maxFret < MAX_FRET) {
     const greyW = fretX(MAX_FRET) - fretX(maxFret) + 8;
     svg.appendChild(el("rect", { x: rectX(fretX(maxFret) + 2, greyW), y: 18, width: greyW, height: 184, fill: "#000", opacity: 0.45 }));
   }
+  OPEN.forEach((_, s) => {
+    if (strings.has(s)) return;
+    const w = fretX(MAX_FRET) - NUT_X + 10, top = Math.max(18, stringY(s) - 16), bottom = Math.min(202, stringY(s) + 16);
+    svg.appendChild(el("rect", { x: rectX(NUT_X, w), y: top, width: w, height: bottom - top, fill: "#000", opacity: 0.45 }));
+  });
 
-  // Invisible clickable areas, one per string and fret
+  // Invisible clickable areas, one per string and fret (only on the strings in the quiz)
   for (let s = 0; s < OPEN.length; s++) {
+    if (!strings.has(s)) continue;
     for (let f = 0; f <= maxFret; f++) {
       const left = f === 0 ? 4 : fretX(f - 1);
       const w = f === 0 ? NUT_X - 8 : fretX(f) - left;
@@ -321,26 +341,81 @@ function setting(id) { return document.getElementById(id).value; }
 function allowed(i) { return setting("notes") === "all" || isNatural(i); }
 function randomInt(n) { return Math.floor(Math.random() * n); }
 
+// ---------- Which strings are in the quiz ----------
+// Strings are numbered as drawn: 0 = thin high E at the top, 5 = thick low E at the bottom.
+// The buttons go the way guitarists count from the bass up: low E, A, D, G, B, high e.
+const STRING_LABELS = [["e", "1st, high"], ["B", "2nd"], ["G", "3rd"], ["D", "4th"], ["A", "5th"], ["E", "6th, low"]];
+const STRING_NAMES_LONG = ["high E", "B", "G", "D", "A", "low E"];
+let strings = new Set([0, 1, 2, 3, 4, 5]);
+try {
+  const saved = JSON.parse(localStorage.getItem("fretTrainerStrings"));
+  if (Array.isArray(saved)) strings = new Set(saved);
+} catch (e) {}
+function saveStrings() {
+  try { localStorage.setItem("fretTrainerStrings", JSON.stringify([...strings])); } catch (e) {}
+}
+
+function buildStringChips() {
+  const box = document.getElementById("stringChips");
+  box.innerHTML = "";
+  [5, 4, 3, 2, 1, 0].forEach(s => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.innerHTML = `${STRING_LABELS[s][0]} <small>${STRING_LABELS[s][1]}</small>`;
+    b.setAttribute("aria-pressed", strings.has(s));
+    b.onclick = () => {
+      if (strings.has(s)) strings.delete(s); else strings.add(s);
+      saveStrings();
+      buildStringChips();
+      restart();
+    };
+    box.appendChild(b);
+  });
+}
+document.getElementById("allStrings").onclick = () => {
+  strings = new Set([0, 1, 2, 3, 4, 5]);
+  saveStrings();
+  buildStringChips();
+  restart();
+};
+
+// Every string and fret in the quiz, as { s, f }
+function quizCells() {
+  const maxFret = Number(setting("frets"));
+  const cells = [];
+  strings.forEach(s => { for (let f = 0; f <= maxFret; f++) cells.push({ s, f }); });
+  return cells;
+}
+
 function nextRound() {
   locked = false;
   marks.innerHTML = "";
   feedback.textContent = "";
   feedback.className = "feedback";
-  const maxFret = Number(setting("frets"));
+  choices.innerHTML = "";
+  if (strings.size === 0) {
+    prompt.textContent = "Pick at least one string.";
+    return;
+  }
+  const cells = quizCells().filter(c => allowed(noteIndex(midiAt(c.s, c.f))));
 
   if (setting("mode") === "name") {
-    let s, f;
-    do { s = randomInt(6); f = randomInt(maxFret + 1); }
-    while (!allowed(noteIndex(midiAt(s, f))) || (target && target.s === s && target.f === f));
-    target = { s, f };
+    // A random fret on one of your strings (not the same one twice in a row, if there's a choice)
+    let options = cells.filter(c => !(target && target.s === c.s && target.f === c.f));
+    if (!options.length) options = cells;
+    target = options[randomInt(options.length)];
     prompt.textContent = "What note is this?";
-    dot(s, f, css("--accent"));
+    dot(target.s, target.f, css("--accent"));
     buildChoices();
   } else {
-    let i;
-    do { i = randomInt(12); } while (!allowed(i) || i === target);
-    target = i;
-    prompt.textContent = `Find a ${pretty(i)}`;
+    // A note that can actually be found on your strings and frets (frets 0–5 on one string don't have every note)
+    const notes = [...new Set(cells.map(c => noteIndex(midiAt(c.s, c.f))))];
+    let options = notes.filter(i => i !== target);
+    if (!options.length) options = notes;
+    target = options[randomInt(options.length)];
+    const where = strings.size === 1 ? ` on the ${STRING_NAMES_LONG[[...strings][0]]} string` : "";
+    // "an" before the notes whose names start with a vowel sound: an A, an E, an F
+    prompt.textContent = `Find ${/^[AEF]/.test(pretty(target)) ? "an" : "a"} ${pretty(target)}${where}`;
   }
 }
 
@@ -376,11 +451,10 @@ function answerFind(s, f) {
   const right = noteIndex(midi) === target;
   pluck(midi);
 
-  // Show every place the target note appears, so you start to see the pattern
-  const maxFret = Number(setting("frets"));
-  for (let ss = 0; ss < 6; ss++)
-    for (let ff = 0; ff <= maxFret; ff++)
-      if (noteIndex(midiAt(ss, ff)) === target) dot(ss, ff, css("--good"), NOTES[target].replace("#", "♯"));
+  // Show every place the target note appears on your strings, so you start to see the pattern
+  quizCells().forEach(({ s: ss, f: ff }) => {
+    if (noteIndex(midiAt(ss, ff)) === target) dot(ss, ff, css("--good"), NOTES[target].replace("#", "♯"));
+  });
   if (!right) dot(s, f, css("--bad"), NOTES[noteIndex(midi)].replace("#", "♯"));
 
   finish(right, right ? `Yes! Here are all the ${pretty(target)}s` : `That was ${pretty(noteIndex(midi))}. The green dots are all the ${pretty(target)}s`);
@@ -424,6 +498,7 @@ hand.onchange = () => {
 };
 
 document.getElementById("best").textContent = best;
+buildStringChips();
 restart();
 </script>
 </body>
