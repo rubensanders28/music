@@ -42,8 +42,8 @@
   h2 { font-size: 1rem; margin: 0 0 10px; }
   .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
 
-  /* Intervals / Chords switch */
-  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
+  /* Notes / Intervals / Chords switch */
+  .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
   .modes button { font: inherit; font-size: 1.05rem; font-weight: 700; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
   .modes button small { display: block; font-size: 0.78rem; font-weight: 500; }
   .modes button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
@@ -76,6 +76,9 @@
   .played { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 34px; margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
   .played button { font: inherit; font-weight: 700; font-size: 0.95rem; border: none; border-radius: 8px; padding: 4px 10px; background: var(--btn); color: var(--ink); cursor: pointer; }
   .played button:hover { outline: 2px solid var(--accent); }
+  .played button.mid { font-size: 0.78rem; font-weight: 600; padding: 3px 7px; color: var(--muted); }
+  .played button.on { background: var(--accent); color: var(--card); }
+  .played .count { flex-basis: 100%; text-align: center; font-size: 0.8rem; }
   .compare { display: none; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .compare.show { display: flex; }
   .small { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 6px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
@@ -88,11 +91,33 @@
     background: var(--btn); color: var(--ink); cursor: pointer;
   }
   .answers button small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--muted); }
-  .answers button:hover:not(:disabled) { outline: 2px solid var(--accent); }
-  .answers button:disabled { cursor: default; opacity: .45; }
-  .answers button.right { background: var(--good); color: var(--card); opacity: 1; }
-  .answers button.wrong { background: var(--bad); color: var(--card); opacity: 1; }
+  .answers button:hover { outline: 2px solid var(--accent); }
+  /* After answering, every option can still be clicked to hear it; the one you're listening to gets a ring */
+  .answers.done button { opacity: .6; }
+  .answers.done button.right, .answers.done button.wrong, .answers.done button.listening { opacity: 1; }
+  .answers button.listening { box-shadow: 0 0 0 3px var(--accent); }
+  .answers button.right { background: var(--good); color: var(--card); }
+  .answers button.wrong { background: var(--bad); color: var(--card); }
   .answers button.right small, .answers button.wrong small { color: inherit; }
+
+  /* Notes mode: the whole 88-key piano to click on. It's wider than the page, so it scrolls sideways. */
+  .kb-wrap { overflow-x: auto; margin-top: 14px; padding-bottom: 6px; }
+  .kb { position: relative; display: flex; height: 150px; min-width: 1040px; user-select: none; }
+  .kb button { border: none; padding: 0; cursor: pointer; font: inherit; }
+  .kb .w {
+    flex: 1; background: #fdfdfb; border: 1px solid #555; border-left-width: 0; border-radius: 0 0 4px 4px;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; color: #888; font-size: 0.6rem; font-weight: 600;
+  }
+  .kb .w:first-child { border-left-width: 1px; }
+  .kb .b { position: absolute; top: 0; width: 1.15%; height: 60%; z-index: 1; background: #1c1c1c; border-radius: 0 0 3px 3px; }
+  .kb .w:hover { background: #eef1ff; }
+  .kb .b:hover { background: #3a3f5c; }
+  .kb .w.out { background: #e4e1da; }   /* outside the range the quiz plays from */
+  .kb .b.out { background: #4a4a4a; }
+  .kb .right { background: var(--good) !important; color: #fff; }
+  .kb .wrong { background: var(--bad) !important; color: #fff; }
+  .kb .listening { box-shadow: inset 0 0 0 3px var(--accent); }
+  .kb .on { background: var(--accent) !important; }
 
   .stats { display: flex; justify-content: space-around; margin-top: 16px; text-align: center; }
   .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
@@ -116,6 +141,7 @@
     The ones you miss come back more often.</p>
 
   <div class="modes" role="group" aria-label="What to train">
+    <button data-mode="notes">Notes<small>one note: find it on the keyboard</small></button>
     <button data-mode="intervals">Intervals<small>the distance between two notes</small></button>
     <button data-mode="chords">Chords<small>major, minor, 7th…</small></button>
   </div>
@@ -136,7 +162,27 @@
           <option value="broken">Note by note, then together</option>
         </select>
       </label>
-      <label>Base note
+      <label class="for-notes">Range
+        <select id="noteRange">
+          <option value="48-71">C3–B4 (2 octaves)</option>
+          <option value="60-71">C4–B4 (1 octave)</option>
+          <option value="36-83">C2–B5 (4 octaves)</option>
+          <option value="21-108">The whole keyboard</option>
+        </select>
+      </label>
+      <label class="for-notes">Counts as right
+        <select id="noteMatch">
+          <option value="name">The right note, in any octave</option>
+          <option value="exact">Only the exact key</option>
+        </select>
+      </label>
+      <label class="for-notes">Reference note
+        <select id="noteRef">
+          <option value="none">None</option>
+          <option value="c4">Play middle C (C4) first</option>
+        </select>
+      </label>
+      <label id="baseLabel">Base note
         <select id="base">
           <option value="random">Random</option>
         </select>
@@ -147,7 +193,13 @@
           <option value="guitar">Guitar</option>
         </select>
       </label>
-      <label>Song hints
+      <label>After a right answer
+        <select id="afterRight">
+          <option value="stay">Wait, so I can listen</option>
+          <option value="auto">Go to the next one</option>
+        </select>
+      </label>
+      <label id="hintsLabel">Song hints
         <select id="hints">
           <option value="on">On</option>
           <option value="off">Off</option>
@@ -167,9 +219,11 @@
     <div class="compare" id="compare">
       <button class="small" id="hearMine"></button>
       <button class="small" id="hearRight"></button>
+      <button class="small" id="betweenBtn">▶ Notes in between</button>
       <button class="small next" id="nextBtn">Next →</button>
     </div>
     <div class="answers" id="answers"></div>
+    <div class="kb-wrap" id="kbWrap"><div class="kb" id="kb"></div></div>
 
     <div class="stats">
       <div><b id="score">0 / 0</b><span>correct</span></div>
@@ -184,7 +238,9 @@
     <button class="reset" id="resetStats">Reset these numbers</button>
   </div>
 
-  <p class="hint"><b>Tips:</b> sing or hum the notes back before you answer. For intervals, the song hints help a lot:
+  <p class="hint"><b>Tips:</b> sing or hum the notes back before you answer. For single notes, the reference note turns it into
+    an interval question: hear how far the note is from C. Without it, you're training perfect pitch, which takes a long time,
+    so start with a small range and only the white keys. For intervals, the song hints help a lot:
     if it sounds like the start of that song, that's the interval. For chords, major sounds bright, minor sad,
     diminished tense, augmented dreamy and unresolved, and sus chords "want" to move somewhere.<br>
     Keys: <b>Space</b> plays again (or goes to the next question once you've answered).<br>
@@ -235,6 +291,16 @@ const MODES = {
 // The usual name for each of the 12 notes when it's the base note: flats for the black keys, except F♯
 const BASE_NAMES = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 BASE_NAMES.forEach((name, pc) => $("base").add(new Option(name, pc)));
+// A single key's name with its octave: 61 → "D♭4"
+const keyName = midi => BASE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+
+// Notes mode: one note, found on the keyboard. The items are the 12 note names, so the accuracy chart
+// and the "which ones are in the quiz" chips work per note name.
+MODES.notes = {
+  items: BASE_NAMES.map((name, pc) => ({ id: String(pc), short: name, name: FLATS[NOTES[pc]] ? `${pretty(pc)} / ${FLATS[NOTES[pc]]}` : name })),
+  easy: ["0", "2", "4", "5", "7", "9", "11"], // the white keys
+  bestKey: "earNotesBest",
+};
 
 // How many letters up each note is from the base. A minor 3rd is always 2 letters up (C to E♭, never D♯),
 // a tritone 3 letters (C to F♯), and so on. For chords the same, except the diminished 7th's top note,
@@ -253,11 +319,13 @@ function spell(baseMidi, semis, letters) {
 
 // ---------- Saved settings and statistics ----------
 // stats[mode][item id] = { right, wrong } over all sessions
-let saved = { mode: "intervals", on: { intervals: EASY_INTERVALS, chords: EASY_CHORDS }, stats: { intervals: {}, chords: {} } };
+let saved = { mode: "intervals", on: {}, stats: {} };
 try { saved = { ...saved, ...JSON.parse(localStorage.getItem("earTrainer")) }; } catch (e) {}
-saved.on = { intervals: EASY_INTERVALS, chords: EASY_CHORDS, ...saved.on };
-saved.stats = { intervals: {}, chords: {}, ...saved.stats };
-const SETTINGS = ["direction", "style", "base", "instrument", "hints"];
+saved.on = { notes: MODES.notes.easy, intervals: EASY_INTERVALS, chords: EASY_CHORDS, ...saved.on };
+saved.stats = { notes: {}, intervals: {}, chords: {}, ...saved.stats };
+// "afterRight" replaced an older "after" setting whose default was to go on automatically; the new default is to wait
+delete saved.after;
+const SETTINGS = ["direction", "style", "noteRange", "noteMatch", "noteRef", "base", "afterRight", "instrument", "hints"];
 SETTINGS.forEach(id => { if (saved[id]) $(id).value = saved[id]; });
 
 function save() {
@@ -274,10 +342,13 @@ function note(midi, when) {
   else playPiano(midi, when);
 }
 
-// A question: { item, base, notes: [{ midi, name }...] lowest first, order: "up" | "down" | "together" | "broken" }
+// A question: { item, base, notes: [{ midi, name }...] lowest first, order: "up" | "down" | "together" | "broken" | "single" }
 function playQuestion(q) {
   const midis = q.notes.map(n => n.midi);
-  if (q.order === "together") midis.forEach(m => note(m, 0));
+  if (q.order === "single") { // Notes mode: the note on its own, or after middle C as a reference
+    if ($("noteRef").value === "c4") { note(60, 0); note(midis[0], 1.1); } else note(midis[0], 0);
+  }
+  else if (q.order === "together") midis.forEach(m => note(m, 0));
   else if (q.order === "up") midis.forEach((m, i) => note(m, i * 0.8));
   else if (q.order === "down") [...midis].reverse().forEach((m, i) => note(m, i * 0.8));
   else { // broken: each note, then all together
@@ -291,7 +362,7 @@ function showPlayed(q) {
   const box = $("played");
   const heard = q.order === "down" ? [...q.notes].reverse() : q.notes;
   const joiner = q.order === "up" || q.order === "down" ? "→" : saved.mode === "chords" ? "·" : "+";
-  box.innerHTML = "Notes: ";
+  box.innerHTML = `${q.item.short}: `;
   heard.forEach((n, i) => {
     if (i) box.insertAdjacentHTML("beforeend", `<span>${joiner}</span>`);
     const b = document.createElement("button");
@@ -335,6 +406,8 @@ const bestOf = () => { try { return Number(localStorage.getItem(mode().bestKey))
 function nextQuestion() {
   const items = enabled();
   answered = false;
+  clearTimeout(autoNext);
+  walkTimers.forEach(clearTimeout);
   $("feedback").textContent = "";
   $("feedback").className = "feedback";
   $("songHint").textContent = "";
@@ -349,6 +422,21 @@ function nextQuestion() {
 
   let item;
   do { item = pick(); } while (current && items.length > 2 && item.id === current.item.id && Math.random() < 0.7); // fewer repeats in a row
+
+  if (saved.mode === "notes") {
+    // Any key with that note name inside the chosen range
+    const [lo, hi] = $("noteRange").value.split("-").map(Number);
+    const keys = [];
+    for (let m = lo; m <= hi; m++) if (m % 12 === Number(item.id)) keys.push(m);
+    const midi = keys[Math.floor(Math.random() * keys.length)];
+    current = { item, base: midi, notes: [{ midi, name: keyName(midi) }], order: "single" };
+    $("question").textContent = "Which note was it? Click it on the keyboard." +
+      ($("noteRef").value === "c4" ? " (Middle C plays first.)" : "") +
+      ($("noteMatch").value === "name" ? " Any octave counts." : "");
+    if (started) playQuestion(current);
+    return;
+  }
+
   let order;
   if (saved.mode === "intervals") {
     order = $("direction").value;
@@ -377,6 +465,12 @@ document.addEventListener("keydown", () => { started = true; }, { capture: true,
 function buildAnswers() {
   const box = $("answers");
   box.innerHTML = "";
+  box.classList.remove("done");
+  shown = null;
+  const notes = saved.mode === "notes";
+  box.style.display = notes ? "none" : "";
+  $("kbWrap").style.display = notes ? "" : "none";
+  if (notes) return resetKeyboard();
   enabled().forEach(it => {
     const b = document.createElement("button");
     b.dataset.id = it.id;
@@ -387,28 +481,19 @@ function buildAnswers() {
 }
 
 function answer(item, button) {
-  if (!current || answered) return;
+  if (!current) return;
+  if (answered) return listenTo(item, button); // after answering, the buttons play that option instead
   answered = true;
   const right = item.id === current.item.id;
-  const key = saved.mode + ":" + current.item.id;
-  const stat = saved.stats[saved.mode][current.item.id] = saved.stats[saved.mode][current.item.id] || { right: 0, wrong: 0 };
-  total++;
-  if (right) {
-    correct++; streak++; stat.right++;
-    weight[key] = Math.max(0, (weight[key] || 0) - 1);
-  } else {
-    streak = 0; stat.wrong++;
-    weight[key] = Math.min(6, (weight[key] || 0) + 3);
-    // Also count it against the one you picked, so it gets practised against this one
-    weight[saved.mode + ":" + item.id] = Math.min(6, (weight[saved.mode + ":" + item.id] || 0) + 1);
-  }
-  if (streak > bestOf()) { try { localStorage.setItem(mode().bestKey, streak); } catch (e) {} }
+  score(right, item.id);
 
+  $("answers").classList.add("done");
   document.querySelectorAll("#answers button").forEach(b => {
-    b.disabled = true;
-    if (b.dataset.id === current.item.id) b.classList.add("right");
+    if (b.dataset.id === current.item.id) b.classList.add("right", "listening");
   });
   if (!right) button.classList.add("wrong");
+  shown = current;
+  $("question").textContent = `Click any of the answers to hear it from the same ${saved.mode === "intervals" ? "note" : "root"}.`;
 
   const it = current.item;
   $("feedback").textContent = right ? `Yes! ${it.name[0].toUpperCase() + it.name.slice(1)}` : `It was ${/^[aeiou]/.test(it.name) ? "an" : "a"} ${it.name}`;
@@ -420,20 +505,211 @@ function answer(item, button) {
   updateStats();
   renderAccuracy();
 
-  if (right) {
-    setTimeout(() => { if (answered) nextQuestion(); }, 1300);
-  } else {
-    // Let you compare what you picked with what it was, then go on when you're ready
-    picked = item;
-    $("hearMine").textContent = `▶ Your answer: ${item.short}`;
-    $("hearRight").textContent = `▶ The answer: ${it.short}`;
-    $("compare").classList.add("show");
-  }
+  // After a wrong answer you can compare what you picked with what it was; for intervals you can
+  // always hear the notes in between. Right answers go on by themselves unless you chose to wait.
+  picked = item;
+  $("hearMine").textContent = `▶ Your answer: ${item.short}`;
+  $("hearRight").textContent = `▶ The answer: ${it.short}`;
+  $("hearMine").style.display = $("hearRight").style.display = right ? "none" : "";
+  $("betweenBtn").style.display = saved.mode === "intervals" ? "" : "none";
+  $("compare").classList.add("show");
+  if (right && $("afterRight").value === "auto") autoNext = setTimeout(nextQuestion, 1800);
 }
 
+// Count an answer: the score, your streak, the long-term results, and how often each one comes up from now on
+function score(right, pickedId) {
+  const key = saved.mode + ":" + current.item.id;
+  const stat = saved.stats[saved.mode][current.item.id] = saved.stats[saved.mode][current.item.id] || { right: 0, wrong: 0 };
+  total++;
+  if (right) {
+    correct++; streak++; stat.right++;
+    weight[key] = Math.max(0, (weight[key] || 0) - 1);
+  } else {
+    streak = 0; stat.wrong++;
+    weight[key] = Math.min(6, (weight[key] || 0) + 3);
+    // Also count it against the one you picked, so it gets practised against this one
+    weight[saved.mode + ":" + pickedId] = Math.min(6, (weight[saved.mode + ":" + pickedId] || 0) + 1);
+  }
+  if (streak > bestOf()) { try { localStorage.setItem(mode().bestKey, streak); } catch (e) {} }
+}
+
+// ---------- Notes mode: the keyboard ----------
+// All 88 keys, A0 (MIDI 21) to C8 (108). White keys sit side by side; each black key is placed over the
+// line between two white keys.
+const KB_LOW = 21, KB_HIGH = 108;
+const isBlack = m => [1, 3, 6, 8, 10].includes(m % 12);
+const keyEls = new Map(); // MIDI number → its button
+(function buildKeyboard() {
+  const kb = $("kb");
+  const whiteCount = [...Array(KB_HIGH - KB_LOW + 1).keys()].filter(i => !isBlack(KB_LOW + i)).length;
+  let whites = 0;
+  for (let m = KB_LOW; m <= KB_HIGH; m++) {
+    const b = document.createElement("button");
+    if (isBlack(m)) {
+      b.className = "b";
+      b.style.left = `calc(${whites / whiteCount * 100}% - 0.575%)`;
+    } else {
+      b.className = "w";
+      if (m % 12 === 0) b.textContent = keyName(m); // C keys show their octave, to help you find your way
+      whites++;
+    }
+    b.setAttribute("aria-label", keyName(m));
+    b.onclick = () => answerKey(m);
+    kb.appendChild(b);
+    keyEls.set(m, b);
+  }
+})();
+
+// A fresh keyboard for a new question: no colours, and the keys outside the range greyed a little
+function resetKeyboard() {
+  const [lo, hi] = $("noteRange").value.split("-").map(Number);
+  keyEls.forEach((b, m) => {
+    b.classList.remove("right", "wrong", "listening", "on");
+    b.classList.toggle("out", m < lo || m > hi);
+  });
+  // Scroll so the middle of the range is in view (on narrow screens the keyboard is wider than the page)
+  const wrap = $("kbWrap"), kb = $("kb");
+  requestAnimationFrame(() => {
+    const mid = keyEls.get(Math.round((lo + hi) / 2) - (isBlack(Math.round((lo + hi) / 2)) ? 1 : 0));
+    wrap.scrollLeft = mid.offsetLeft + mid.offsetWidth / 2 - wrap.clientWidth / 2;
+  });
+}
+
+let guess = null;     // the key you clicked as your answer
+let listenKey = null; // the key you last clicked after answering ("Notes in between" starts from it)
+
+function answerKey(midi) {
+  if (!current) return;
+  if (answered) { // after answering, keys just play, so you can compare
+    clearTimeout(autoNext);
+    walkTimers.forEach(clearTimeout);
+    note(midi, 0);
+    listenKey = midi;
+    keyEls.forEach((b, m) => b.classList.toggle("listening", m === midi));
+    showNotesRow(midi);
+    return;
+  }
+  answered = true;
+  const target = current.notes[0].midi;
+  const sameName = midi % 12 === target % 12;
+  const right = $("noteMatch").value === "exact" ? midi === target : sameName;
+  guess = listenKey = midi;
+  score(right, String(midi % 12));
+
+  keyEls.get(target).classList.add("right");
+  if (midi !== target) keyEls.get(midi).classList.add(right ? "right" : "wrong");
+  note(midi, 0);
+
+  $("feedback").textContent = right
+    ? (midi === target ? `Yes! ${keyName(target)}` : `Yes! ${BASE_NAMES[target % 12]} (it was ${keyName(target)}, you clicked ${keyName(midi)})`)
+    : `It was ${keyName(target)}. You clicked ${keyName(midi)}` + (sameName ? ": right note, wrong octave." : ".");
+  $("feedback").className = "feedback " + (right ? "good" : "bad");
+  $("question").textContent = "Click any key to hear it.";
+  showNotesRow(midi);
+
+  save();
+  updateStats();
+  renderAccuracy();
+
+  $("hearMine").textContent = `▶ Your note: ${keyName(midi)}`;
+  $("hearRight").textContent = `▶ The answer: ${keyName(target)}`;
+  $("hearMine").style.display = $("hearRight").style.display = midi === target ? "none" : "";
+  $("betweenBtn").style.display = midi === target ? "none" : "";
+  $("compare").classList.add("show");
+  if (right && $("afterRight").value === "auto") autoNext = setTimeout(nextQuestion, 1800);
+}
+
+// Notes mode: the answer, and the key you clicked, as playable chips
+function showNotesRow(clicked) {
+  const target = current.notes[0].midi;
+  const box = $("played");
+  box.innerHTML = "";
+  const chip = (label, m) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.title = "Play this note";
+    b.onclick = () => note(m, 0);
+    box.appendChild(b);
+  };
+  box.append("Answer: ");
+  chip(keyName(target), target);
+  if (clicked !== target) { box.append(clicked === guess ? " · You clicked: " : " · Listening to: "); chip(keyName(clicked), clicked); }
+}
+
+// "Notes in between" in Notes mode: from the key you clicked to the answer
+function notesBetweenQuestion() {
+  const target = current.notes[0].midi, from = listenKey;
+  const ends = [{ midi: from, name: keyName(from) }, { midi: target, name: keyName(target) }];
+  return { item: { short: "From your note to the answer" }, order: from < target ? "up" : "down",
+    notes: from < target ? ends : [...ends].reverse() };
+}
+
+// ---------- The notes in between ----------
+// Walks from the first note you heard to the second, one half step at a time, so you can count them.
+// The notes in between are named with sharps going up and flats going down, the usual way.
+let autoNext = null;  // the pending "next question" after a right answer
+let walkTimers = [];
+
+function chromaticName(midi, useFlats) {
+  const n = NOTES[midi % 12];
+  const name = useFlats && FLATS[n] ? FLATS[n] : n.replace("#", "♯");
+  return name + (Math.floor(midi / 12) - 1);
+}
+
+// The interval or chord you're listening to after answering: the answer at first, then whatever you click
+let shown = null;
+function listenTo(item, button) {
+  clearTimeout(autoNext); // stay on this question while you listen
+  walkTimers.forEach(clearTimeout);
+  shown = { ...current, item, notes: notesFor(item, current.base, current.order) };
+  playQuestion(shown);
+  showPlayed(shown);
+  document.querySelectorAll("#answers button").forEach(b => b.classList.toggle("listening", b === button || (!button && b.dataset.id === item.id)));
+}
+
+function walkBetween() {
+  clearTimeout(autoNext); // stay on this question while you listen
+  walkTimers.forEach(clearTimeout);
+  const q = saved.mode === "notes" ? notesBetweenQuestion() : shown || current;
+  const heard = q.order === "down" ? [...q.notes].reverse() : q.notes;
+  const from = heard[0].midi, to = heard[1].midi, dir = to > from ? 1 : -1;
+  const midis = [];
+  for (let m = from; m !== to + dir; m += dir) midis.push(m);
+
+  const box = $("played");
+  box.innerHTML = `${q.item.short}: `;
+  const chips = midis.map((m, i) => {
+    const end = i === 0 || i === midis.length - 1;
+    const b = document.createElement("button");
+    b.textContent = end ? heard[i === 0 ? 0 : 1].name : chromaticName(m, dir < 0);
+    if (!end) b.className = "mid";
+    b.title = "Play this note";
+    b.onclick = () => note(m, 0);
+    box.appendChild(b);
+    return b;
+  });
+  const steps = midis.length - 1;
+  box.insertAdjacentHTML("beforeend", `<span class="count">${steps} half step${steps === 1 ? "" : "s"} ${dir > 0 ? "up" : "down"}</span>`);
+
+  // Play them one by one, lighting up each note as it sounds (in Notes mode on the keyboard too)
+  const gap = 0.4;
+  midis.forEach((m, i) => {
+    note(m, i * gap);
+    walkTimers.push(setTimeout(() => {
+      chips.forEach((c, j) => c.classList.toggle("on", j === i));
+      if (saved.mode === "notes") keyEls.forEach((b, k) => b.classList.toggle("on", k === m));
+    }, i * gap * 1000));
+  });
+  walkTimers.push(setTimeout(() => {
+    chips.forEach(c => c.classList.remove("on"));
+    keyEls.forEach(b => b.classList.remove("on"));
+  }, midis.length * gap * 1000 + 300));
+}
+$("betweenBtn").onclick = walkBetween;
+
 let picked = null;
-$("hearMine").onclick = () => playQuestion({ ...current, notes: notesFor(picked, current.base, current.order) });
-$("hearRight").onclick = () => playQuestion(current);
+$("hearMine").onclick = () => saved.mode === "notes" ? answerKey(guess) : listenTo(picked);
+$("hearRight").onclick = () => saved.mode === "notes" ? answerKey(current.notes[0].midi) : listenTo(current.item);
 $("nextBtn").onclick = nextQuestion;
 $("playBtn").onclick = () => { if (current) playQuestion(current); else nextQuestion(); };
 
@@ -446,7 +722,7 @@ function updateStats() {
 function renderAccuracy() {
   const box = $("accuracy");
   const rows = mode().items.map(it => ({ it, s: saved.stats[saved.mode][it.id] })).filter(r => r.s && r.s.right + r.s.wrong > 0);
-  if (!rows.length) { box.innerHTML = `<p class="empty" style="grid-column: 1 / -1">Answer a few questions and your results per ${saved.mode === "intervals" ? "interval" : "chord"} show up here.</p>`; return; }
+  if (!rows.length) { box.innerHTML = `<p class="empty" style="grid-column: 1 / -1">Answer a few questions and your results per ${{ notes: "note", intervals: "interval", chords: "chord" }[saved.mode]} show up here.</p>`; return; }
   box.innerHTML = rows.map(({ it, s }) => {
     const n = s.right + s.wrong, pct = Math.round(s.right / n * 100);
     const colour = pct >= 80 ? "var(--good)" : pct >= 50 ? "var(--accent)" : "var(--bad)";
@@ -491,7 +767,10 @@ function setMode(m) {
   save();
   document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
   $("directionLabel").style.display = m === "intervals" ? "" : "none";
+  $("hintsLabel").style.display = m === "intervals" ? "" : "none";
   $("styleLabel").style.display = m === "chords" ? "" : "none";
+  $("baseLabel").style.display = m === "notes" ? "none" : "";
+  document.querySelectorAll(".for-notes").forEach(e => e.style.display = m === "notes" ? "" : "none");
   correct = total = streak = 0;
   current = null;
   buildChips();
@@ -500,8 +779,8 @@ function setMode(m) {
   nextQuestion();
 }
 document.querySelectorAll(".modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
-["direction", "style", "base"].forEach(id => $(id).onchange = () => { save(); nextQuestion(); });
-["instrument", "hints"].forEach(id => $(id).onchange = save);
+["direction", "style", "base", "noteRange", "noteMatch", "noteRef"].forEach(id => $(id).onchange = () => { save(); nextQuestion(); });
+["afterRight", "instrument", "hints"].forEach(id => $(id).onchange = save);
 
 // Space: play again, or go on to the next question after a wrong answer
 document.addEventListener("keydown", e => {
