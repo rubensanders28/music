@@ -13,6 +13,7 @@
     --muted: #6b665e;
     --line: #2a2723;
     --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
     --good: #2b8a3e;
     --bad: #c92a2a;
     --btn: #ece8df;
@@ -25,6 +26,7 @@
       --muted: #a29d94;
       --line: #e6e2da;
       --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
       --good: #69db7c;
       --bad: #ff8787;
       --btn: #2f2d35;
@@ -38,17 +40,38 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 24px 16px;
   }
-  main { max-width: 560px; margin: 0 auto; }
+  main { max-width: 620px; margin: 0 auto; }
   a { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
 
-  .settings { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  /* Guitar / Piano switch */
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
+  .seg button { font: inherit; font-size: 1.05rem; font-weight: 700; padding: 9px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* Which chords are in the quiz: rows of toggle buttons ("chips"), like the Chord library */
+  .filters { background: var(--card); border-radius: 14px; padding: 8px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .filter { padding: 8px 0; }
+  .filter + .filter { border-top: 1px solid var(--btn); }
+  .filter-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .filter-head h2 { margin: 0; }
+  .link-btn { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit; font-size: 0.85rem; font-weight: 600;
+    padding: 4px 11px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--btn); background: transparent; color: var(--muted);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:hover { border-color: var(--accent); }
+  .settings { display: flex; flex-wrap: wrap; gap: 12px; }
   .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
   select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
 
   .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  svg { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto; }
+  #diagram { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto; }
+  #diagram.piano { max-width: 420px; }
   .grid-line { stroke: var(--line); stroke-width: 1.5; }
   .nut { stroke: var(--line); stroke-width: 6; }
   .finger { fill: var(--line); }
@@ -56,10 +79,17 @@
   .marker { fill: none; stroke: var(--line); stroke-width: 2; }
   .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
   .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+  /* Piano keys (drawn by chord-data.js) */
+  .pk-white { fill: #fdfdfb; stroke: #555; stroke-width: 1; }
+  .pk-black { fill: #1c1c1c; }
+  .pk-on { fill: var(--accent-soft); }
+  .pk-root { fill: var(--accent); }
+  .pk-label { fill: #888; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
 
   .feedback { min-height: 1.6em; text-align: center; font-weight: 600; font-size: 1.1rem; margin: 8px 0 0; }
   .feedback.good { color: var(--good); }
   .feedback.bad  { color: var(--bad); }
+  .empty { color: var(--muted); text-align: center; padding: 30px 0; }
 
   h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
   .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; }
@@ -87,48 +117,58 @@
 <script src="nav.js"></script>
 <main>
   <h1>Chord Trainer</h1>
-  <p class="sub">Look at the chord shape and name it: pick the root note and the chord type.</p>
+  <p class="sub">Look at the chord and name it: pick the root note and the chord type.</p>
 
-  <div class="settings">
-    <label>Chords
-      <select id="level">
-        <option value="1">Major &amp; minor</option>
-        <option value="2">+ 7, maj7, m7</option>
-        <option value="3">+ sus, dim, aug, 6</option>
-        <option value="4">All 22 types</option>
-      </select>
-    </label>
-    <label>Shapes
-      <select id="shapes">
-        <option value="open">Open chords only</option>
-        <option value="low">Near the nut</option>
-        <option value="all">Whole neck</option>
-      </select>
-    </label>
-    <label>Root dot
-      <select id="rootDot">
-        <option value="on">Highlight</option>
-        <option value="off">Hide</option>
-      </select>
-    </label>
-    <label>Hand
-      <select id="hand">
-        <option value="right">Right-handed</option>
-        <option value="left">Left-handed</option>
-      </select>
-    </label>
-    <label>Sound
-      <select id="sound">
-        <option value="on">On</option>
-        <option value="off">Off</option>
-      </select>
-    </label>
+  <div class="seg" role="group" aria-label="Instrument">
+    <button data-instrument="guitar">Guitar</button>
+    <button data-instrument="piano">Piano</button>
+  </div>
+
+  <div class="filters">
+    <div class="filter">
+      <div class="filter-head"><h2>Chord types</h2>
+        <button class="link-btn" data-all="types">All</button><button class="link-btn" data-none="types">None</button></div>
+      <div class="chips" id="typeChips"></div>
+    </div>
+    <div class="filter">
+      <div class="filter-head"><h2>Root notes</h2>
+        <button class="link-btn" data-all="roots">All</button><button class="link-btn" data-none="roots">None</button></div>
+      <div class="chips" id="rootChips"></div>
+    </div>
+    <div class="filter settings">
+      <label class="guitar-only">Shapes
+        <select id="shapes">
+          <option value="open">Open chords only</option>
+          <option value="low">Near the nut</option>
+          <option value="all">Whole neck</option>
+        </select>
+      </label>
+      <label>Root note
+        <select id="rootDot">
+          <option value="on">Highlight</option>
+          <option value="off">Don't highlight</option>
+        </select>
+      </label>
+      <label class="guitar-only">Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+      <label>Sound
+        <select id="sound">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+    </div>
   </div>
 
   <div class="card">
     <p class="progress" id="progress"></p>
     <svg id="diagram" viewBox="0 0 240 285" aria-label="Chord diagram"></svg>
-    <button class="hear" id="hearBtn">▶ Strum it</button>
+    <p class="empty" id="empty" hidden></p>
+    <button class="hear" id="hearBtn">▶ Hear it</button>
     <div class="feedback" id="feedback"></div>
     <h2>Root note</h2>
     <div class="choices" id="roots"></div>
@@ -141,28 +181,60 @@
     <div><b id="streak">0</b><span>streak</span></div>
     <div><b id="best">0</b><span>best streak</span></div>
   </div>
-  <p class="hint">How to read the diagram: the vertical lines are strings, the horizontal ones are frets.
-    Dots are where your fingers go, ○ means play the string open, × means don't play it.
-    A label like "5fr" means the diagram starts at the 5th fret. The lowest note played is always the root.<br>
-    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
-    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+  <p class="hint" id="hint"></p>
 </main>
 
-<!-- The chord list, diagram drawing and guitar sound are shared with the chord library -->
+<!-- The chord list, diagram drawing, piano keyboard and guitar sound are shared with the chord library;
+     piano-sound.js is the piano -->
 <script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
 <script>
-// ---------- Drawing and sound, using the shared code in chord-data.js ----------
-const svg = document.getElementById("diagram");
+const $ = id => document.getElementById(id);
+const svg = $("diagram");
 
+// ---------- Settings, remembered between visits ----------
+// types / roots: which chords are in the quiz. The first time: major and minor, every root.
+let settings = { instrument: "guitar", types: ["maj", "min"], roots: NOTES.map((_, i) => String(i)), shapes: "open", rootDot: "on", sound: "on" };
+try { settings = { ...settings, ...JSON.parse(localStorage.getItem("chordTrainer")) }; } catch (e) {}
+["shapes", "rootDot", "sound"].forEach(id => $(id).value = settings[id]);
+function save() {
+  ["shapes", "rootDot", "sound"].forEach(id => settings[id] = $(id).value);
+  try { localStorage.setItem("chordTrainer", JSON.stringify(settings)); } catch (e) {}
+}
+const piano = () => settings.instrument === "piano";
+// Guitar and piano each have their own best streak (the guitar one is also used by My journey)
+const bestKey = () => piano() ? "chordTrainerPianoBest" : "chordTrainerBest";
+
+// ---------- Drawing and sound, using the shared code in chord-data.js ----------
+// On the piano, a "chord" is just { root, type }: its notes come from pianoChord, lowest note = the root.
 function draw(chord) {
-  drawChord(svg, chord, {
-    lefty: document.getElementById("hand").value === "left",
-    showRoot: document.getElementById("rootDot").value === "on",
-  });
+  svg.classList.toggle("piano", piano());
+  if (piano()) {
+    drawPianoChord(svg, pianoChord(chord.root, chord.type.id), $("rootDot").value === "on" ? 48 + chord.root : null);
+  } else {
+    svg.setAttribute("viewBox", "0 0 240 285");
+    drawChord(svg, chord, { lefty: $("hand").value === "left", showRoot: $("rootDot").value === "on" });
+  }
 }
 
 function play(chord) {
-  if (document.getElementById("sound").value === "on") strum(chord);
+  if ($("sound").value !== "on") return;
+  if (piano()) pianoChord(chord.root, chord.type.id).forEach((m, i) => playPiano(m, i * 0.02));
+  else strum(chord);
+}
+
+// ---------- Which chords can come up ----------
+function pool() {
+  const types = TYPES.filter(t => settings.types.includes(t.id));
+  const roots = settings.roots.map(Number);
+  if (piano()) return roots.flatMap(root => types.map(type => ({ root, type })));
+  const shapes = $("shapes").value;
+  return CHORDS.filter(c => {
+    if (!settings.types.includes(c.type.id) || !roots.includes(c.root)) return false;
+    if (shapes === "open") return position(c) === "open";
+    if (shapes === "low") return position(c) !== "high"; // open chords + barres within the first 4 frets
+    return true;
+  });
 }
 
 // ---------- Game logic ----------
@@ -170,24 +242,12 @@ let current = null;
 let pickedRoot = null, pickedType = null;
 let locked = false;
 let correct = 0, total = 0, streak = 0;
-let best = 0;
-try { best = Number(localStorage.getItem("chordTrainerBest")) || 0; } catch (e) {}
+let nextTimer = null;
+const bestOf = () => { try { return Number(localStorage.getItem(bestKey())) || 0; } catch (e) { return 0; } };
 
-const feedback = document.getElementById("feedback");
-const rootsEl = document.getElementById("roots");
-const typesEl = document.getElementById("types");
-function setting(id) { return document.getElementById(id).value; }
-
-function pool() {
-  const level = Number(setting("level"));
-  const shapes = setting("shapes");
-  return CHORDS.filter(c => {
-    if (c.type.level > level) return false;
-    if (shapes === "open") return position(c) === "open";
-    if (shapes === "low") return position(c) !== "high"; // open chords + barres within the first 4 frets
-    return true;
-  });
-}
+const feedback = $("feedback");
+const rootsEl = $("roots");
+const typesEl = $("types");
 
 // Chords are dealt like a shuffled deck of cards: every chord name (like "Am" or "F♯7")
 // comes up once before any repeats. Then the deck is shuffled again.
@@ -204,7 +264,29 @@ function shuffle(list) {
 }
 
 function nextRound() {
+  clearTimeout(nextTimer);
   const options = pool();
+  locked = false;
+  pickedRoot = pickedType = null;
+  feedback.textContent = "";
+  feedback.className = "feedback";
+  buildButtons();
+
+  if (options.length === 0) {
+    current = null;
+    svg.style.display = "none";
+    $("hearBtn").style.display = "none";
+    $("progress").textContent = "";
+    $("empty").hidden = false;
+    $("empty").textContent = settings.types.length === 0 || settings.roots.length === 0
+      ? "Pick at least one chord type and one root note."
+      : "There are no shapes for these chords here. Try \"Near the nut\" or \"Whole neck\" under Shapes.";
+    return;
+  }
+  svg.style.display = "";
+  $("hearBtn").style.display = "";
+  $("empty").hidden = true;
+
   if (deck.length === 0) {
     deck = shuffle([...new Set(options.map(chordKey))]);
     deckSize = deck.length;
@@ -212,21 +294,15 @@ function nextRound() {
     if (current && deck.length > 1 && deck[deck.length - 1] === chordKey(current)) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
   }
   const key = deck.pop();
-  // A chord can have several shapes (e.g. an open one and a barre one); pick one of them
+  // On the guitar a chord can have several shapes (e.g. an open one and a barre one); pick one of them
   const shapes = options.filter(c => chordKey(c) === key);
   current = shapes[Math.floor(Math.random() * shapes.length)];
-  document.getElementById("progress").textContent = `Chord ${deckSize - deck.length} of ${deckSize}`;
-
-  locked = false;
-  pickedRoot = pickedType = null;
-  feedback.textContent = "";
-  feedback.className = "feedback";
-  buildButtons();
+  $("progress").textContent = `Chord ${deckSize - deck.length} of ${deckSize}`;
   draw(current);
 }
 
+// The answer buttons: all 12 roots, and only the chord types you picked
 function buildButtons() {
-  const level = Number(setting("level"));
   rootsEl.innerHTML = "";
   NOTES.forEach((n, i) => {
     const b = document.createElement("button");
@@ -236,13 +312,18 @@ function buildButtons() {
     rootsEl.appendChild(b);
   });
   typesEl.innerHTML = "";
-  TYPES.filter(t => t.level <= level).forEach(t => {
+  TYPES.filter(t => settings.types.includes(t.id)).forEach(t => {
     const b = document.createElement("button");
     b.textContent = t.label;
     b.dataset.type = t.id;
     b.onclick = () => { pickedType = t.id; mark(typesEl, b); check(); };
     typesEl.appendChild(b);
   });
+  // With only one type in the quiz there's nothing to choose: it's picked for you
+  if (settings.types.length === 1) {
+    pickedType = settings.types[0];
+    typesEl.firstChild.classList.add("picked");
+  }
 }
 
 function mark(group, button) {
@@ -253,7 +334,7 @@ function mark(group, button) {
 
 // Once both a root and a type are picked, check the answer
 function check() {
-  if (locked || pickedRoot === null || pickedType === null) return;
+  if (locked || !current || pickedRoot === null || pickedType === null) return;
   locked = true;
   total++;
 
@@ -261,10 +342,7 @@ function check() {
   const typeRight = pickedType === current.type.id;
   const right = rootRight && typeRight;
   if (right) { correct++; streak++; } else { streak = 0; }
-  if (streak > best) {
-    best = streak;
-    try { localStorage.setItem("chordTrainerBest", best); } catch (e) {}
-  }
+  if (streak > bestOf()) { try { localStorage.setItem(bestKey(), streak); } catch (e) {} }
 
   // Green for the right answer in each row, red for a wrong pick
   rootsEl.querySelector(`[data-root="${current.root}"]`).classList.add("good");
@@ -275,26 +353,85 @@ function check() {
   play(current);
   feedback.textContent = right ? `Yes! ${chordName(current)}` : `That was ${chordName(current)}`;
   feedback.className = "feedback " + (right ? "good" : "bad");
-  document.getElementById("score").textContent = `${correct} / ${total}`;
-  document.getElementById("streak").textContent = streak;
-  document.getElementById("best").textContent = best;
+  updateStats();
 
-  setTimeout(nextRound, right ? 1500 : 3000);
+  nextTimer = setTimeout(nextRound, right ? 1500 : 3000);
 }
 
-// ---------- Settings ----------
-const hand = document.getElementById("hand");
+function updateStats() {
+  $("score").textContent = `${correct} / ${total}`;
+  $("streak").textContent = streak;
+  $("best").textContent = bestOf();
+}
+
+// ---------- Chord type and root chips ----------
+const CHIP_ITEMS = {
+  types: TYPES.map(t => ({ id: t.id, label: t.label })),
+  roots: NOTES.map((n, i) => ({ id: String(i), label: FLATS[n] ? `${pretty(i)}/${FLATS[n]}` : n })),
+};
+const CHIP_BOXES = { types: "typeChips", roots: "rootChips" };
+
+// Changing what's in the quiz starts a fresh deck
+function restart() { save(); current = null; deck = []; nextRound(); }
+
+function makeChips(group) {
+  const box = $(CHIP_BOXES[group]);
+  box.innerHTML = "";
+  CHIP_ITEMS[group].forEach(({ id, label }) => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", settings[group].includes(id));
+    b.onclick = () => {
+      settings[group] = settings[group].includes(id) ? settings[group].filter(x => x !== id) : [...settings[group], id];
+      b.setAttribute("aria-pressed", settings[group].includes(id));
+      restart();
+    };
+    box.appendChild(b);
+  });
+}
+// The "All" and "None" links
+document.querySelectorAll("[data-all], [data-none]").forEach(btn => {
+  btn.onclick = () => {
+    const group = btn.dataset.all || btn.dataset.none;
+    settings[group] = btn.dataset.all ? CHIP_ITEMS[group].map(i => i.id) : [];
+    makeChips(group);
+    restart();
+  };
+});
+
+// ---------- Guitar or piano ----------
+function setInstrument(inst) {
+  settings.instrument = inst;
+  document.querySelectorAll("[data-instrument]").forEach(b => b.setAttribute("aria-pressed", b.dataset.instrument === inst));
+  document.querySelectorAll(".guitar-only").forEach(e => e.style.display = piano() ? "none" : "");
+  $("hearBtn").textContent = piano() ? "▶ Play it" : "▶ Strum it";
+  $("hint").innerHTML = (piano()
+    ? "The lit keys are the notes of the chord, played with the root at the bottom. The dark blue key is the root (unless you hide it)."
+    : "How to read the diagram: the vertical lines are strings, the horizontal ones are frets. Dots are where your fingers go, ○ means play the string open, × means don't play it. A label like \"5fr\" means the diagram starts at the 5th fret. The lowest note played is always the root.")
+    + `<br>${piano() ? "Piano" : "Guitar"} sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
+  // A fresh start: the score and streak belong to one instrument
+  correct = total = streak = 0;
+  updateStats();
+  restart();
+}
+document.querySelectorAll("[data-instrument]").forEach(b => b.onclick = () => setInstrument(b.dataset.instrument));
+
+const hand = $("hand");
 try { hand.value = localStorage.getItem("fretTrainerHand") || "right"; } catch (e) {} // shared with the fretboard trainer
 hand.onchange = () => {
   try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
-  draw(current);
+  if (current) draw(current);
 };
-document.getElementById("rootDot").onchange = () => draw(current);
-["level", "shapes"].forEach(id => document.getElementById(id).onchange = () => { current = null; deck = []; nextRound(); });
-document.getElementById("hearBtn").onclick = () => play(current);
+$("rootDot").onchange = () => { save(); if (current) draw(current); };
+$("sound").onchange = save;
+$("shapes").onchange = restart;
+$("hearBtn").onclick = () => { if (current) play(current); };
 
-document.getElementById("best").textContent = best;
-nextRound();
+makeChips("types");
+makeChips("roots");
+setInstrument(settings.instrument);
 </script>
 </body>
 </html>
