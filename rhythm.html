@@ -207,6 +207,7 @@
     A take counts as played well when every note is in time (green) and there are no extra taps.</p>
 </main>
 
+<script src="recent.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -567,6 +568,8 @@ function score() {
 
 let attempts = 0, passed = 0, streak = 0, best = 0;
 try { best = Number(localStorage.getItem("rhythmBest")) || 0; } catch (e) {}
+// How many of your last 50 takes you played well (recent.js)
+const recent = lastAnswers("rhythmRecent", "takes").mount(document.querySelector(".stats"), $("passed").parentNode);
 
 function finish() {
   stopAll();
@@ -581,6 +584,7 @@ function finish() {
   attempts++;
   const clean = good === notes.length && extra === 0;
   if (clean) { passed++; streak++; } else { streak = 0; }
+  if (taps.length) recent.add(clean); // a take with no taps at all was probably a mistake, not a try
   if (streak > best) { best = streak; try { localStorage.setItem("rhythmBest", best); } catch (e) {} }
   updateStats();
 

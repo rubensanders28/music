@@ -188,6 +188,7 @@
      piano-sound.js is the piano -->
 <script src="chord-data.js"></script>
 <script src="piano-sound.js"></script>
+<script src="recent.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const svg = $("diagram");
@@ -244,6 +245,10 @@ let locked = false;
 let correct = 0, total = 0, streak = 0;
 let nextTimer = null;
 const bestOf = () => { try { return Number(localStorage.getItem(bestKey())) || 0; } catch (e) { return 0; } };
+
+// Accuracy over your last 50 answers (recent.js), per instrument like the best streak
+const recentKey = () => piano() ? "chordTrainerPianoRecent" : "chordTrainerRecent";
+const recent = lastAnswers(recentKey()).mount(document.querySelector(".stats"), $("score").parentNode);
 
 const feedback = $("feedback");
 const rootsEl = $("roots");
@@ -342,6 +347,7 @@ function check() {
   const typeRight = pickedType === current.type.id;
   const right = rootRight && typeRight;
   if (right) { correct++; streak++; } else { streak = 0; }
+  recent.add(right);
   if (streak > bestOf()) { try { localStorage.setItem(bestKey(), streak); } catch (e) {} }
 
   // Green for the right answer in each row, red for a wrong pick
@@ -413,6 +419,7 @@ function setInstrument(inst) {
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
   // A fresh start: the score and streak belong to one instrument
   correct = total = streak = 0;
+  recent.use(recentKey());
   updateStats();
   restart();
 }

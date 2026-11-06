@@ -152,6 +152,7 @@
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
 </main>
 
+<script src="recent.js"></script>
 <script>
 // ---------- Music basics ----------
 // All 12 notes in an octave. The ones with "#" are the black keys on a piano.
@@ -336,6 +337,8 @@ const css = name => getComputedStyle(document.documentElement).getPropertyValue(
 const feedback = document.getElementById("feedback");
 const choices = document.getElementById("choices");
 const prompt = document.getElementById("prompt");
+// Accuracy over your last 50 answers (recent.js), shown next to "correct"
+const recent = lastAnswers("fretTrainerRecent").mount(document.querySelector(".stats"), document.getElementById("score").parentNode);
 
 function setting(id) { return document.getElementById(id).value; }
 function allowed(i) { return setting("notes") === "all" || isNatural(i); }
@@ -463,6 +466,7 @@ function answerFind(s, f) {
 function finish(right, message) {
   total++;
   if (right) { correct++; streak++; } else { streak = 0; }
+  recent.add(right);
   if (streak > best) {
     best = streak;
     try { localStorage.setItem("fretTrainerBest", best); } catch (e) {}

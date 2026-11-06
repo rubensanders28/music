@@ -154,6 +154,7 @@
 </div>
 
 <script src="piano-sound.js"></script>
+<script src="recent.js"></script>
 <script>
 // ---------- Music basics ----------
 // The seven note letters, and how many semitones each sits above C.
@@ -243,6 +244,8 @@ try { best = Number(localStorage.getItem("noteTrainerBest")) || 0; } catch (e) {
 
 const feedback = document.getElementById("feedback");
 const piano = document.getElementById("piano");
+// Accuracy over your last 50 answers (recent.js), shown next to "correct"
+const recent = lastAnswers("noteTrainerRecent").mount(document.querySelector(".stats"), document.getElementById("score").parentNode);
 
 function randomInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1));
@@ -284,6 +287,7 @@ function answer(step, sharp, keyEl) {
 
   const right = !sharp && step === current.step;
   if (right) { correct++; streak++; } else { streak = 0; }
+  recent.add(right);
   if (streak > best) {
     best = streak;
     try { localStorage.setItem("noteTrainerBest", best); } catch (e) {}

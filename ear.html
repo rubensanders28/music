@@ -251,6 +251,7 @@
 <!-- chord-data.js gives us the chord types and the guitar sound; piano-sound.js the piano sound -->
 <script src="chord-data.js"></script>
 <script src="piano-sound.js"></script>
+<script src="recent.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -402,6 +403,9 @@ let current = null;
 let answered = false;
 let correct = 0, total = 0, streak = 0;
 const bestOf = () => { try { return Number(localStorage.getItem(mode().bestKey)) || 0; } catch (e) { return 0; } };
+// Accuracy over your last 50 answers (recent.js), one for each mode: earIntervalsRecent, earChordsRecent, earNotesRecent
+const recentKey = () => "ear" + saved.mode[0].toUpperCase() + saved.mode.slice(1) + "Recent";
+const recent = lastAnswers(recentKey()).mount(document.querySelector(".stats"), $("score").parentNode);
 
 function nextQuestion() {
   const items = enabled();
@@ -530,6 +534,7 @@ function score(right, pickedId) {
     // Also count it against the one you picked, so it gets practised against this one
     weight[saved.mode + ":" + pickedId] = Math.min(6, (weight[saved.mode + ":" + pickedId] || 0) + 1);
   }
+  recent.add(right);
   if (streak > bestOf()) { try { localStorage.setItem(mode().bestKey, streak); } catch (e) {} }
 }
 
@@ -773,6 +778,7 @@ function setMode(m) {
   document.querySelectorAll(".for-notes").forEach(e => e.style.display = m === "notes" ? "" : "none");
   correct = total = streak = 0;
   current = null;
+  recent.use(recentKey());
   buildChips();
   updateStats();
   renderAccuracy();

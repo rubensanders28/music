@@ -230,6 +230,7 @@
 <!-- Shared code: chord shapes, keys, guitar sound (chord-data.js) and piano sound (piano-sound.js) -->
 <script src="chord-data.js"></script>
 <script src="piano-sound.js"></script>
+<script src="recent.js"></script>
 <script>
 // ---------- Saving songs ----------
 // Each song: { id, title, artist, link, chords: [{ root: 0–11, type: "min" }, ...] }
@@ -287,6 +288,7 @@ $("songList").onchange = () => { currentId = $("songList").value; saveSongs(); l
 $("newSong").onclick = () => { newSong(); loadSong(); $("title").focus(); };
 $("deleteSong").onclick = () => {
   if (!confirm(`Delete "${song().title || "Untitled song"}"?`)) return;
+  try { localStorage.removeItem("songRecent:" + currentId); } catch (e) {}
   songs = songs.filter(s => s.id !== currentId);
   if (songs.length === 0) newSong();
   currentId = songs[0].id;
@@ -562,6 +564,15 @@ $("playBtn").onclick = () => {
 // ---------- 5. Practice ----------
 let deck = [], asking = null, locked = false;
 let correct = 0, total = 0, streak = 0;
+// Accuracy over your last 50 answers (recent.js), for each song
+const recent = lastAnswers("");
+function scoreText() {
+  recent.use("songRecent:" + currentId);
+  const { count, percent } = recent.summary();
+  const parts = total ? [`${correct} / ${total} correct`, `streak ${streak}`] : [];
+  if (count) parts.push(`last ${Math.min(count, RECENT_MAX)}: ${percent}%`);
+  return parts.join(" · ");
+}
 
 function shuffle(list) {
   for (let i = list.length - 1; i > 0; i--) {
@@ -580,7 +591,7 @@ function resetPractice() {
 function nextQuestion() {
   const question = $("question"), answers = $("answers");
   question.innerHTML = answers.innerHTML = $("feedback").textContent = "";
-  $("score").textContent = total ? `${correct} / ${total} correct · streak ${streak}` : "";
+  $("score").textContent = scoreText();
   if (cards.length < 2) {
     question.innerHTML = `<p class="empty">Add at least 2 different chords to practise.</p>`;
     return;
@@ -622,12 +633,13 @@ function answer(i, button) {
   total++;
   const right = i === asking;
   if (right) { correct++; streak++; } else { streak = 0; }
+  recent.use("songRecent:" + currentId).add(right);
   $("answers").children[asking].classList.add("good");
   if (!right) button.classList.add("bad");
   playChord(cards[asking]);
   $("feedback").textContent = right ? `Yes! ${label(cards[asking].chord)}` : `That was ${label(cards[asking].chord)}`;
   $("feedback").className = "feedback " + (right ? "good" : "bad");
-  $("score").textContent = `${correct} / ${total} correct · streak ${streak}`;
+  $("score").textContent = scoreText();
   setTimeout(nextQuestion, right ? 1300 : 2500);
 }
 
