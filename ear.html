@@ -230,6 +230,7 @@
       <div><b id="streak">0</b><span>streak</span></div>
       <div><b id="best">0</b><span>best streak</span></div>
     </div>
+    <div class="weak" id="weak" hidden></div>
   </div>
 
   <div class="panel">
@@ -252,6 +253,7 @@
 <script src="chord-data.js"></script>
 <script src="piano-sound.js"></script>
 <script src="recent.js"></script>
+<script src="weak.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -389,14 +391,19 @@ function notesFor(item, base, order) {
 }
 
 // ---------- Picking questions ----------
-// Sounds you've missed recently get picked more often. Each miss adds weight, each right answer takes some away.
-const weight = {}; // "mode:id" → extra weight, for this visit
+// Sounds you've missed lately get picked more often, until you get them right a few times (weak.js).
+// One list per mode, kept between visits: earIntervalsWeak, earChordsWeak, earNotesWeak.
+const weakLists = {};
+const weak = () => weakLists[saved.mode] = weakLists[saved.mode] || weakSpots("ear" + saved.mode[0].toUpperCase() + saved.mode.slice(1) + "Weak");
 function pick() {
+  return weak().pick(enabled(), it => it.id);
+}
+function showWeak() {
   const items = enabled();
-  const w = items.map(it => 1 + (weight[saved.mode + ":" + it.id] || 0));
-  let r = Math.random() * w.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < items.length; i++) { if ((r -= w[i]) < 0) return items[i]; }
-  return items[items.length - 1];
+  weak().show($("weak"), items.map(it => it.id), id => {
+    const it = items.find(x => String(x.id) === id);
+    return it ? it.short : id;
+  });
 }
 
 let current = null;
@@ -410,6 +417,7 @@ const recent = lastAnswers(recentKey()).mount(document.querySelector(".stats"), 
 function nextQuestion() {
   const items = enabled();
   answered = false;
+  showWeak();
   clearTimeout(autoNext);
   walkTimers.forEach(clearTimeout);
   $("feedback").textContent = "";
@@ -522,18 +530,11 @@ function answer(item, button) {
 
 // Count an answer: the score, your streak, the long-term results, and how often each one comes up from now on
 function score(right, pickedId) {
-  const key = saved.mode + ":" + current.item.id;
   const stat = saved.stats[saved.mode][current.item.id] = saved.stats[saved.mode][current.item.id] || { right: 0, wrong: 0 };
   total++;
-  if (right) {
-    correct++; streak++; stat.right++;
-    weight[key] = Math.max(0, (weight[key] || 0) - 1);
-  } else {
-    streak = 0; stat.wrong++;
-    weight[key] = Math.min(6, (weight[key] || 0) + 3);
-    // Also count it against the one you picked, so it gets practised against this one
-    weight[saved.mode + ":" + pickedId] = Math.min(6, (weight[saved.mode + ":" + pickedId] || 0) + 1);
-  }
+  if (right) { correct++; streak++; stat.right++; } else { streak = 0; stat.wrong++; }
+  weak().add(current.item.id, right);
+  showWeak();
   recent.add(right);
   if (streak > bestOf()) { try { localStorage.setItem(mode().bestKey, streak); } catch (e) {} }
 }

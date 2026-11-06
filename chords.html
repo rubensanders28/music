@@ -181,6 +181,7 @@
     <div><b id="streak">0</b><span>streak</span></div>
     <div><b id="best">0</b><span>best streak</span></div>
   </div>
+  <div class="weak" id="weak" hidden></div>
   <p class="hint" id="hint"></p>
 </main>
 
@@ -189,6 +190,7 @@
 <script src="chord-data.js"></script>
 <script src="piano-sound.js"></script>
 <script src="recent.js"></script>
+<script src="weak.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const svg = $("diagram");
@@ -249,6 +251,16 @@ const bestOf = () => { try { return Number(localStorage.getItem(bestKey())) || 0
 // Accuracy over your last 50 answers (recent.js), per instrument like the best streak
 const recentKey = () => piano() ? "chordTrainerPianoRecent" : "chordTrainerRecent";
 const recent = lastAnswers(recentKey()).mount(document.querySelector(".stats"), $("score").parentNode);
+// Weak spots (weak.js), per instrument too
+const weakGuitar = weakSpots("chordTrainerWeak"), weakPiano = weakSpots("chordTrainerPianoWeak");
+const weak = () => piano() ? weakPiano : weakGuitar;
+function showWeak() {
+  const keys = [...new Set(pool().map(chordKey))];
+  weak().show($("weak"), keys, k => {
+    const [root, type] = k.split("-");
+    return pretty(Number(root)) + TYPES.find(t => t.id === type).suffix;
+  });
+}
 
 const feedback = $("feedback");
 const rootsEl = $("roots");
@@ -292,8 +304,11 @@ function nextRound() {
   $("hearBtn").style.display = "";
   $("empty").hidden = true;
 
+  showWeak();
   if (deck.length === 0) {
-    deck = shuffle([...new Set(options.map(chordKey))]);
+    // Every chord once, plus extra cards for the ones you've been getting wrong (weak.js): up to 3 more
+    const keys = [...new Set(options.map(chordKey))];
+    deck = shuffle(keys.flatMap(k => Array(1 + Math.round(weak().missRate(k) * 3)).fill(k)));
     deckSize = deck.length;
     // Don't start a new deck with the chord we just had
     if (current && deck.length > 1 && deck[deck.length - 1] === chordKey(current)) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
@@ -348,6 +363,8 @@ function check() {
   const right = rootRight && typeRight;
   if (right) { correct++; streak++; } else { streak = 0; }
   recent.add(right);
+  weak().add(chordKey(current), right);
+  showWeak();
   if (streak > bestOf()) { try { localStorage.setItem(bestKey(), streak); } catch (e) {} }
 
   // Green for the right answer in each row, red for a wrong pick
@@ -412,7 +429,7 @@ function setInstrument(inst) {
   document.querySelectorAll("[data-instrument]").forEach(b => b.setAttribute("aria-pressed", b.dataset.instrument === inst));
   document.querySelectorAll(".guitar-only").forEach(e => e.style.display = piano() ? "none" : "");
   $("hearBtn").textContent = piano() ? "▶ Play it" : "▶ Strum it";
-  $("hint").innerHTML = (piano()
+  $("hint").innerHTML = "Chords you've been getting wrong come up more often, until you get them right a few times.<br>" + (piano()
     ? "The lit keys are the notes of the chord, played with the root at the bottom. The dark blue key is the root (unless you hide it)."
     : "How to read the diagram: the vertical lines are strings, the horizontal ones are frets. Dots are where your fingers go, ○ means play the string open, × means don't play it. A label like \"5fr\" means the diagram starts at the 5th fret. The lowest note played is always the root.")
     + `<br>${piano() ? "Piano" : "Guitar"} sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed

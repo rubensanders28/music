@@ -146,13 +146,16 @@
     <div><b id="streak">0</b><span>streak</span></div>
     <div><b id="best">0</b><span>best streak</span></div>
   </div>
-  <p class="hint">Strings are drawn the way you see them in tabs: thin high E on top, thick low E at the bottom.<br>
+  <div class="weak" id="weak" hidden></div>
+  <p class="hint">Frets (and in "Find" mode, notes) you've been getting wrong come up more often, until you get them right a few times.<br>
+    Strings are drawn the way you see them in tabs: thin high E on top, thick low E at the bottom.<br>
     Tip: the 12th fret is the same note as the open string, one octave higher.<br>
     Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
 </main>
 
 <script src="recent.js"></script>
+<script src="weak.js"></script>
 <script>
 // ---------- Music basics ----------
 // All 12 notes in an octave. The ones with "#" are the black keys on a piano.
@@ -339,6 +342,20 @@ const choices = document.getElementById("choices");
 const prompt = document.getElementById("prompt");
 // Accuracy over your last 50 answers (recent.js), shown next to "correct"
 const recent = lastAnswers("fretTrainerRecent").mount(document.querySelector(".stats"), document.getElementById("score").parentNode);
+// Weak spots (weak.js): in "name" mode per string and fret, in "find" mode per note
+const weakName = weakSpots("fretTrainerWeakName"), weakFind = weakSpots("fretTrainerWeakFind");
+const cellId = c => `${c.s}:${c.f}`;
+function showWeak() {
+  const el = document.getElementById("weak");
+  if (setting("mode") === "name") {
+    weakName.show(el, quizCells().map(cellId), id => {
+      const [s, f] = id.split(":").map(Number);
+      return `${STRING_NAMES_LONG[s]} string, ${f ? "fret " + f : "open"}`;
+    });
+  } else {
+    weakFind.show(el, NOTES.map((_, i) => String(i)), id => pretty(Number(id)));
+  }
+}
 
 function setting(id) { return document.getElementById(id).value; }
 function allowed(i) { return setting("notes") === "all" || isNatural(i); }
@@ -402,11 +419,13 @@ function nextRound() {
   }
   const cells = quizCells().filter(c => allowed(noteIndex(midiAt(c.s, c.f))));
 
+  showWeak();
   if (setting("mode") === "name") {
-    // A random fret on one of your strings (not the same one twice in a row, if there's a choice)
+    // A fret on one of your strings (not the same one twice in a row, if there's a choice).
+    // Frets you've missed lately come up more often (weak.js).
     let options = cells.filter(c => !(target && target.s === c.s && target.f === c.f));
     if (!options.length) options = cells;
-    target = options[randomInt(options.length)];
+    target = weakName.pick(options, cellId);
     prompt.textContent = "What note is this?";
     dot(target.s, target.f, css("--accent"));
     buildChoices();
@@ -415,7 +434,7 @@ function nextRound() {
     const notes = [...new Set(cells.map(c => noteIndex(midiAt(c.s, c.f))))];
     let options = notes.filter(i => i !== target);
     if (!options.length) options = notes;
-    target = options[randomInt(options.length)];
+    target = weakFind.pick(options, String);
     const where = strings.size === 1 ? ` on the ${STRING_NAMES_LONG[[...strings][0]]} string` : "";
     // "an" before the notes whose names start with a vowel sound: an A, an E, an F
     prompt.textContent = `Find ${/^[AEF]/.test(pretty(target)) ? "an" : "a"} ${pretty(target)}${where}`;
@@ -467,6 +486,8 @@ function finish(right, message) {
   total++;
   if (right) { correct++; streak++; } else { streak = 0; }
   recent.add(right);
+  if (setting("mode") === "name") weakName.add(cellId(target), right); else weakFind.add(String(target), right);
+  showWeak();
   if (streak > best) {
     best = streak;
     try { localStorage.setItem("fretTrainerBest", best); } catch (e) {}

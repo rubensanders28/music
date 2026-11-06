@@ -148,13 +148,16 @@
     <div><b id="streak">0</b><span>streak</span></div>
     <div><b id="best">0</b><span>best streak</span></div>
   </div>
-  <p class="hint">Middle C is labelled C4. In "Hear" mode middle C plays first as a reference, so you can judge the jump.<br>
+  <div class="weak" id="weak" hidden></div>
+  <p class="hint">Notes you've been getting wrong come up more often, until you get them right a few times.<br>
+    Middle C is labelled C4. In "Hear" mode middle C plays first as a reference, so you can judge the jump.<br>
     Piano sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
 </div>
 
 <script src="piano-sound.js"></script>
 <script src="recent.js"></script>
+<script src="weak.js"></script>
 <script>
 // ---------- Music basics ----------
 // The seven note letters, and how many semitones each sits above C.
@@ -246,19 +249,37 @@ const feedback = document.getElementById("feedback");
 const piano = document.getElementById("piano");
 // Accuracy over your last 50 answers (recent.js), shown next to "correct"
 const recent = lastAnswers("noteTrainerRecent").mount(document.querySelector(".stats"), document.getElementById("score").parentNode);
+const weak = weakSpots("noteTrainerWeak");
 
 function randomInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-function nextNote() {
+// Every note in the quiz: { clef, step }, for the clef(s) you chose
+function quizNotes() {
   const choice = document.getElementById("clef").value;
-  const clefName = choice === "both" ? (Math.random() < 0.5 ? "treble" : "bass") : choice;
-  const clef = CLEFS[clefName];
-  let step;
-  do { step = randomInt(clef.low, clef.high); }
-  while (current && step === current.step && clefName === current.clef); // no repeats in a row
-  current = { clef: clefName, step };
+  const list = [];
+  (choice === "both" ? ["treble", "bass"] : [choice]).forEach(clef => {
+    for (let step = CLEFS[clef].low; step <= CLEFS[clef].high; step++) list.push({ clef, step });
+  });
+  return list;
+}
+const noteId = n => `${n.clef}:${n.step}`;
+function showWeak() {
+  const both = document.getElementById("clef").value === "both";
+  weak.show(document.getElementById("weak"), quizNotes().map(noteId), id => {
+    const [clef, step] = id.split(":");
+    return noteName(Number(step)) + (both ? ` <span style="font-weight:400">${clef}</span>` : "");
+  });
+}
+
+function nextNote() {
+  // Notes you've missed lately come up more often (weak.js); never the same one twice in a row
+  let options = quizNotes().filter(n => !(current && n.step === current.step && n.clef === current.clef));
+  if (!options.length) options = quizNotes();
+  current = weak.pick(options, noteId);
+  const clefName = current.clef, step = current.step;
+  showWeak();
 
   locked = false;
   feedback.textContent = "";
@@ -288,6 +309,8 @@ function answer(step, sharp, keyEl) {
   const right = !sharp && step === current.step;
   if (right) { correct++; streak++; } else { streak = 0; }
   recent.add(right);
+  weak.add(noteId(current), right);
+  showWeak();
   if (streak > best) {
     best = streak;
     try { localStorage.setItem("noteTrainerBest", best); } catch (e) {}
