@@ -102,6 +102,42 @@
   .m-done { color: var(--good); font-weight: 600; }
   .m-link { font-size: 0.85rem; white-space: nowrap; }
 
+  /* Practice calendar */
+  .cal-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin-bottom: 12px; }
+  .streak-now { font-size: 1.6rem; font-weight: 800; }
+  .streak-now small { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+  .cal-wrap { overflow: hidden; }
+  #cal { display: block; }
+  #cal text { fill: var(--muted); font-size: 10px; font-family: system-ui, sans-serif; }
+  #cal rect { cursor: pointer; }
+  #cal rect.l0 { fill: var(--btn); }
+  #cal rect.l1 { fill: var(--good); fill-opacity: .3; }
+  #cal rect.l2 { fill: var(--good); fill-opacity: .55; }
+  #cal rect.l3 { fill: var(--good); fill-opacity: .8; }
+  #cal rect.l4 { fill: var(--good); }
+  #cal rect.today { stroke: var(--ink); stroke-width: 1.5; }
+  #cal rect.picked { stroke: var(--accent); stroke-width: 2.5; }
+  .legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+  .legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; background: var(--good); }
+  .day-detail { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-size: 0.9rem; }
+  .day-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .day-head b { font-size: 1rem; }
+  .day-list { list-style: none; margin: 6px 0 0; padding: 0; }
+  .day-list li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+  .day-list .x { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; }
+  .small-btn { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; border: none; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .small-btn.primary { background: var(--accent); color: var(--card); font-weight: 600; }
+  .log-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .log-form input { font: inherit; font-size: 0.9rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .log-form input[type=number] { width: 70px; }
+  select { font: inherit; font-size: 0.9rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font: inherit; font-size: 0.8rem; padding: 4px 9px; border-radius: 12px; border: none; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .timer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 14px; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+  .timer .clock { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .timer .grow { flex: 1; }
+  .log-form input[type=text] { flex: 1; min-width: 150px; }
+
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
   .reset { background: none; border: none; color: var(--muted); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0; }
 
@@ -118,6 +154,18 @@
 <script src="nav.js"></script><script src="sync.js"></script>
 <main>
   <h1>My Journey</h1>
+
+  <div class="panel" id="practice">
+    <div class="cal-top">
+      <div class="streak-now" id="streakNow"></div>
+      <div class="numbers" id="practiceNumbers"></div>
+    </div>
+    <div class="timer" id="timerBox"></div>
+    <div class="cal-wrap" id="calWrap"><svg id="cal" role="img" aria-label="Practice calendar"></svg></div>
+    <div class="legend">Less <i style="background:var(--btn)"></i><i style="opacity:.3"></i><i style="opacity:.55"></i><i style="opacity:.8"></i><i></i> More</div>
+    <div class="day-detail" id="dayDetail"></div>
+  </div>
+
   <p class="sub">Milestones to work towards, from your very first notes to playing like a musician. Go roughly in order:
     each level builds on the one before. Tick a milestone off when you can honestly do it. The ones with a ● tick
     themselves off from your progress on the other pages.</p>
@@ -155,7 +203,7 @@
     journey ticks it on the piano journey too.<br>
     The automatic milestones read your best streaks from the trainers, your Tempo ladder history and your songs in My songs.
     Once a milestone is achieved it stays ticked, with the date, even if you later reset a trainer.
-    Everything is saved in this browser only.<br>
+    Everything is saved on this device, and in your account if you're signed in.<br>
     <button class="reset" id="resetBtn">Start this journey over</button></p>
 </main>
 
@@ -176,10 +224,6 @@ const ladderEntries = () => Object.values(ladder.history || {}).flat();
 // Best clean tempo for one chord switch in the Tempo ladder (by its id there), or on any of them
 const ladderBest = id => Math.max(0, ...((ladder.history || {})[id] || []).map(h => h.best || 0));
 const anyLadderBest = () => Math.max(0, ...ladderEntries().map(h => h.best || 0));
-function practiceDays() {
-  return new Set(ladderEntries().filter(h => h.seconds >= 30 || h.clean || h.mistakes).map(h => h.date)).size;
-}
-const practiceMinutes = () => Math.round(ladderEntries().reduce((sum, h) => sum + (h.seconds || 0), 0) / 60);
 // Songs in My songs that have a title or some chords (it makes an empty one for you to start with)
 const songCount = () => storedJson("mySongs", []).filter(s => s.title || (s.chords && s.chords.length >= 2)).length;
 
@@ -211,7 +255,8 @@ const SHARED = {
   perform: { id: "play-with-others", tag: "Performing", title: "Play for an audience, or play with other musicians",
     how: "Friends, family, an open mic or a jam: performing is a skill of its own." },
   habitWeek: { id: "habit-week", tag: "Habit", title: "Practise at least 5 days a week for a month",
-    how: "Short and often beats long and rare: 15 focused minutes a day is plenty to start." },
+    how: "Short and often beats long and rare: 15 focused minutes a day is plenty to start. Counts weeks (Monday to Sunday) in a row with 5 practice days on the calendar.",
+    auto: () => [bestWeekRun(), 4] },
 };
 
 const JOURNEYS = {
@@ -506,8 +551,7 @@ function render() {
   $("levelNow").innerHTML = now < levels.length
     ? `Level ${now + 1}: ${levels[now].name}<small>${levels[now].about}</small>`
     : `Journey complete! 🎉<small>You've reached every milestone. Time to set your own goals.</small>`;
-  $("numbers").innerHTML = `<span><b>${doneCount}</b> of ${all.length} milestones</span>` +
-    (practiceDays() ? `<span><b>${practiceDays()}</b> days on the Tempo ladder</span><span><b>${practiceMinutes()}</b> minutes practised there</span>` : "");
+  $("numbers").innerHTML = `<span><b>${doneCount}</b> of ${all.length} milestones</span>`;
 
   // Up next: the first three open milestones, starting from your current level
   const upNext = all.filter(m => !journey.done[m.id]).slice(0, 3);
@@ -552,6 +596,279 @@ function render() {
     ? recent.map(([id, date]) => `<li><span>✓ ${titles[id]}</span><time>${niceDate(date)}</time></li>`).join("")
     : `<li class="muted">Your achievements will appear here.</li>`;
 }
+
+// ---------- Practice calendar ----------
+// The calendar counts practice on your instrument, not time on this website: what you log (or time with the
+// practice timer), plus your Tempo ladder sessions, which you play along with on the instrument.
+// Logged practice is saved per month and per device, as "practice:2026-11:<device>" =
+// { "06": { extra: [{ min: 20, inst: "guitar", note: "songs" }] } }, so two devices never overwrite each other.
+const MIN_DAY = 5; // minutes for a day to count towards your streak
+const pad2 = n => String(n).padStart(2, "0");
+const isoOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const dateOf = iso => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function myDevice() {
+  try {
+    let id = localStorage.getItem("sync:device");
+    if (!id) { id = Math.random().toString(36).slice(2, 10); localStorage.setItem("sync:device", id); }
+    return id;
+  } catch (e) { return "local"; }
+}
+
+const INSTRUMENTS = { guitar: "Guitar", piano: "Piano", other: "Other" };
+
+// date → { ladder: seconds, extras: [{ min, inst, note, key, day, index, mine }], minutes }
+function practiceByDay() {
+  const days = {};
+  const dayOf = iso => days[iso] = days[iso] || { ladder: 0, extras: [], minutes: 0 };
+  const me = myDevice();
+  let keys = [];
+  try { keys = Object.keys(localStorage).filter(k => k.startsWith("practice:")); } catch (e) {}
+  keys.forEach(key => {
+    const [, month, device] = key.split(":");
+    Object.entries(storedJson(key, {})).forEach(([d, entry]) => {
+      (entry.extra || []).forEach((x, index) => dayOf(`${month}-${d}`).extras.push({ ...x, key, day: d, index, mine: device === me }));
+    });
+  });
+  ladderEntries().forEach(h => { if (h.date && h.seconds) dayOf(h.date).ladder += h.seconds; });
+  Object.values(days).forEach(day => {
+    day.minutes = Math.round(day.ladder / 60) + day.extras.reduce((a, x) => a + (Number(x.min) || 0), 0);
+  });
+  return days;
+}
+
+function addPractice(iso, min, inst, note) {
+  const key = `practice:${iso.slice(0, 7)}:${myDevice()}`;
+  const data = storedJson(key, {});
+  const d = iso.slice(8);
+  data[d] = data[d] || {};
+  data[d].extra = data[d].extra || [];
+  data[d].extra.push({ min: Math.min(Math.round(min), 600), inst, note });
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (err) {}
+}
+
+// The practice timer: start it, play, press Done and it's logged. It keeps running if you leave the page
+// or your screen turns off, because it remembers when you started (on this device only).
+const TIMER = "sync:practiceTimer";
+let timer = storedJson(TIMER, null);
+const lastInst = () => stored("practiceLastInst") || journey.track || "guitar";
+
+let practice = practiceByDay();
+const minutesOn = iso => (practice[iso] || {}).minutes || 0;
+const practised = iso => minutesOn(iso) >= MIN_DAY;
+
+function currentStreak() {
+  let d = new Date();
+  if (!practised(isoOf(d))) d = addDays(d, -1); // today isn't over yet: the streak is still alive
+  let n = 0;
+  while (practised(isoOf(d))) { n++; d = addDays(d, -1); }
+  return n;
+}
+function longestStreak() {
+  const dates = Object.keys(practice).filter(practised).sort();
+  let best = 0, run = 0, prev = null;
+  dates.forEach(iso => {
+    run = prev && isoOf(addDays(dateOf(prev), 1)) === iso ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = iso;
+  });
+  return best;
+}
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+// The most weeks in a row (Monday to Sunday) with at least 5 practice days
+function bestWeekRun() {
+  const weeks = {};
+  Object.keys(practice).filter(practised).forEach(iso => {
+    const w = isoOf(mondayOf(dateOf(iso)));
+    weeks[w] = (weeks[w] || 0) + 1;
+  });
+  let best = 0, run = 0, prev = null;
+  Object.keys(weeks).filter(w => weeks[w] >= 5).sort().forEach(w => {
+    run = prev && isoOf(addDays(dateOf(prev), 7)) === w ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = w;
+  });
+  return best;
+}
+
+let pickedDay = today();
+let logging = false;
+
+function drawCalendar() {
+  const STEP = 17, CELL = 14, LEFT = 30, TOP = 16;
+  const width = $("calWrap").clientWidth || 600;
+  const weeks = Math.max(10, Math.min(53, Math.floor((width - LEFT) / STEP)));
+  const now = new Date();
+  const first = addDays(mondayOf(now), -7 * (weeks - 1));
+  let svg = "";
+  ["Mon", "", "Wed", "", "Fri", "", ""].forEach((name, r) => {
+    if (name) svg += `<text x="0" y="${TOP + r * STEP + 11}">${name}</text>`;
+  });
+  let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const monday = addDays(first, 7 * w);
+    // Month name above the first week that starts in it (not squeezed against the left edge)
+    if (monday.getMonth() !== lastMonth) {
+      if (w < weeks - 2 && (lastMonth !== -1 || monday.getDate() <= 7))
+        svg += `<text x="${LEFT + w * STEP}" y="10">${monday.toLocaleDateString(undefined, { month: "short" })}</text>`;
+      lastMonth = monday.getMonth();
+    }
+    for (let r = 0; r < 7; r++) {
+      const d = addDays(monday, r);
+      if (d > now) break;
+      const iso = isoOf(d), min = minutesOn(iso);
+      const level = min === 0 ? 0 : min < MIN_DAY ? 1 : min < 15 ? 2 : min < 30 ? 3 : 4;
+      const cls = `l${level}${iso === today() ? " today" : ""}${iso === pickedDay ? " picked" : ""}`;
+      const label = `${niceDate(iso)}: ${min ? min + " min" : "no practice"}`;
+      svg += `<rect class="${cls}" data-day="${iso}" x="${LEFT + w * STEP}" y="${TOP + r * STEP}" width="${CELL}" height="${CELL}" rx="3"><title>${label}</title></rect>`;
+    }
+  }
+  const cal = $("cal");
+  cal.setAttribute("width", LEFT + weeks * STEP);
+  cal.setAttribute("height", TOP + 7 * STEP);
+  cal.innerHTML = svg;
+}
+
+const instOptions = selected => Object.entries(INSTRUMENTS)
+  .map(([v, n]) => `<option value="${v}"${v === selected ? " selected" : ""}>${n}</option>`).join("");
+
+function drawDayDetail() {
+  const day = practice[pickedDay] || { ladder: 0, extras: [], minutes: 0 };
+  const name = pickedDay === today() ? "Today" : pickedDay === isoOf(addDays(new Date(), -1)) ? "Yesterday"
+    : dateOf(pickedDay).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+  const rows = [
+    ...day.extras.map((x, i) => `<li><span><b>${INSTRUMENTS[x.inst] || "Practice"}</b>${x.note ? " · " + escapeHtml(x.note) : ""}</span>
+      <span class="muted">${Number(x.min) || 0} min${x.mine ? ` <button class="x" data-extra="${i}" title="Remove" aria-label="Remove">✕</button>` : ""}</span></li>`),
+    ...(day.ladder >= 30 ? [`<li><span><b>Tempo ladder</b> · chord switches</span><span class="muted">${Math.round(day.ladder / 60)} min</span></li>`] : []),
+  ];
+  $("dayDetail").innerHTML = `
+    <div class="day-head"><b>${name} · ${day.minutes} min</b>
+      ${logging ? "" : `<button class="small-btn" id="logBtn">+ Log practice</button>`}</div>
+    ${rows.length ? `<ul class="day-list">${rows.join("")}</ul>` : `<div class="muted" style="margin-top:4px">${pickedDay === today()
+      ? "Nothing logged yet today. Start the timer when you pick up your instrument, or log what you played."
+      : "No practice logged on this day."}</div>`}
+    ${logging ? `<form class="log-form" id="logForm">
+      <select id="logInst" aria-label="Instrument">${instOptions(lastInst())}</select>
+      <input type="number" id="logMin" min="1" max="600" value="15" aria-label="Minutes" required> min
+      <span class="chips">${[10, 15, 20, 30, 45, 60].map(m => `<button type="button" class="chip" data-min="${m}">${m}</button>`).join("")}</span>
+      <input type="text" id="logNote" maxlength="80" placeholder="What did you play? (optional)" aria-label="What did you play">
+      <button class="small-btn primary" type="submit">Add</button>
+      <button class="small-btn" type="button" id="logCancel">Cancel</button>
+    </form>` : ""}`;
+
+  const btn = $("logBtn");
+  if (btn) btn.onclick = () => { logging = true; drawDayDetail(); $("logMin").focus(); $("logMin").select(); };
+  const form = $("logForm");
+  if (form) {
+    form.querySelectorAll("[data-min]").forEach(c => c.onclick = () => { $("logMin").value = c.dataset.min; });
+    form.onsubmit = e => {
+      e.preventDefault();
+      const min = Math.round(Number($("logMin").value));
+      if (!(min > 0)) return;
+      try { localStorage.setItem("practiceLastInst", $("logInst").value); } catch (err) {}
+      addPractice(pickedDay, min, $("logInst").value, $("logNote").value.trim());
+      logging = false;
+      refreshPractice();
+    };
+    $("logCancel").onclick = () => { logging = false; drawDayDetail(); };
+  }
+  $("dayDetail").querySelectorAll("[data-extra]").forEach(b => b.onclick = () => {
+    const x = day.extras[Number(b.dataset.extra)];
+    const data = storedJson(x.key, {});
+    if (!data[x.day] || !data[x.day].extra) return;
+    data[x.day].extra.splice(x.index, 1);
+    try { localStorage.setItem(x.key, JSON.stringify(data)); } catch (err) {}
+    refreshPractice();
+  });
+}
+
+function saveTimer() {
+  try { timer ? localStorage.setItem(TIMER, JSON.stringify(timer)) : localStorage.removeItem(TIMER); } catch (e) {}
+}
+const clockText = secs => `${Math.floor(secs / 60)}:${pad2(Math.floor(secs % 60))}`;
+
+function drawTimer() {
+  const box = $("timerBox");
+  if (!timer) {
+    box.innerHTML = `<button class="small-btn primary" id="timerStart">▶ Start practising</button>
+      <select id="timerInst" aria-label="Instrument">${instOptions(lastInst())}</select>
+      <span class="muted grow" style="font-size:.85rem">Start it when you pick up your instrument, press Done when you stop.</span>`;
+    $("timerStart").onclick = () => {
+      const inst = $("timerInst").value;
+      try { localStorage.setItem("practiceLastInst", inst); } catch (e) {}
+      timer = { start: Date.now(), inst };
+      saveTimer();
+      drawTimer();
+    };
+    return;
+  }
+  box.innerHTML = `<span class="clock" id="clock">${clockText((Date.now() - timer.start) / 1000)}</span>
+    <b>${INSTRUMENTS[timer.inst] || ""}</b>
+    <input type="text" id="timerNote" maxlength="80" placeholder="What are you playing? (optional)" aria-label="What are you playing"
+      style="font:inherit;font-size:.9rem;padding:6px 8px;border-radius:8px;border:1px solid var(--btn);background:var(--card);color:var(--ink);min-width:150px;flex:1">
+    <button class="small-btn primary" id="timerDone">■ Done</button>
+    <button class="small-btn" id="timerCancel">Cancel</button>`;
+  $("timerNote").value = timer.note || "";
+  $("timerNote").oninput = () => { timer.note = $("timerNote").value; saveTimer(); };
+  $("timerDone").onclick = () => {
+    const min = Math.min(600, Math.round((Date.now() - timer.start) / 60000));
+    if (min < 1) {
+      if (!confirm("That was less than a minute, so there's nothing to log. Stop the timer anyway?")) return;
+    } else {
+      addPractice(isoOf(new Date(timer.start)), min, timer.inst, (timer.note || "").trim());
+    }
+    timer = null;
+    saveTimer();
+    drawTimer();
+    refreshPractice();
+  };
+  $("timerCancel").onclick = () => {
+    if (!confirm("Stop the timer without logging this practice?")) return;
+    timer = null;
+    saveTimer();
+    drawTimer();
+  };
+}
+setInterval(() => {
+  if (timer && $("clock")) $("clock").textContent = clockText((Date.now() - timer.start) / 1000);
+}, 1000);
+
+function drawPractice() {
+  const streakNow = currentStreak();
+  const todayDone = practised(today());
+  $("streakNow").innerHTML = streakNow
+    ? `🔥 ${streakNow}-day streak${todayDone ? "" : `<small> · practise ${MIN_DAY} min today to keep it</small>`}`
+    : `Start a streak today<small> · ${MIN_DAY} minutes counts</small>`;
+  const monday = mondayOf(new Date());
+  let week = 0;
+  for (let i = 0; i < 7; i++) week += minutesOn(isoOf(addDays(monday, i)));
+  const monthPrefix = today().slice(0, 7);
+  const monthDays = Object.keys(practice).filter(iso => iso.startsWith(monthPrefix) && practised(iso)).length;
+  $("practiceNumbers").innerHTML = `<span>Longest <b>${longestStreak()}</b> days</span>` +
+    `<span>This week <b>${week}</b> min</span><span>This month <b>${monthDays}</b> days</span>`;
+  drawCalendar();
+  drawDayDetail();
+}
+
+function refreshPractice() {
+  practice = practiceByDay();
+  drawPractice();
+  render(); // the "5 days a week for a month" milestone reads the calendar
+}
+
+$("cal").addEventListener("click", e => {
+  const day = e.target.dataset && e.target.dataset.day;
+  if (!day) return;
+  pickedDay = day;
+  logging = false;
+  drawPractice();
+});
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawCalendar, 150); });
+drawTimer();
+drawPractice();
 
 document.querySelectorAll(".tracks button").forEach(b => b.onclick = () => {
   journey.track = b.dataset.track;
