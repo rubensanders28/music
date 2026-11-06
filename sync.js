@@ -76,6 +76,12 @@
     .sync-dialog p { margin: 6px 0; color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
     .sync-dialog label { display: grid; gap: 3px; margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
     .sync-dialog input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--btn); background: var(--bg); color: var(--ink); }
+    .sync-dialog .pw { position: relative; display: grid; }
+    .sync-dialog .pw input { padding-right: 42px; }
+    .sync-dialog .pw .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; padding: 6px; border-radius: 6px;
+      color: var(--muted); display: flex; }
+    .sync-dialog .pw .eye:hover { color: var(--accent); }
+    .sync-dialog .pw .eye svg { width: 20px; height: 20px; pointer-events: none; }
     .sync-dialog .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .sync-dialog button { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 8px 14px; background: var(--btn); color: var(--ink); cursor: pointer; }
     .sync-dialog button.main { background: var(--accent); color: #fff; }
@@ -118,6 +124,13 @@
 
   const escape = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  // A password box with an eye button that shows or hides what you typed
+  const EYE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const EYE_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>`;
+  const passwordBox = (autocomplete, extra = "") =>
+    `<span class="pw"><input name="password" type="password" autocomplete="${autocomplete}" ${extra} required>` +
+    `<button type="button" class="eye" data-act="togglepw" aria-label="Show password" title="Show password">${EYE}</button></span>`;
+
   // The window has a few screens: sign in, create an account, forgot password, set a new password, and "signed in"
   function showScreen(screen, message = "", bad = false) {
     const user = currentUser;
@@ -127,20 +140,20 @@
       signin: `${close}<h2>Sign in</h2>
         <p>Sign in to keep your progress on every device you use.</p>
         <form data-form="signin"><label>Email <input name="email" type="email" autocomplete="email" required></label>
-        <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+        <label>Password ${passwordBox("current-password")}</label>
         ${msg}<div class="row"><button class="main">Sign in</button><button type="button" data-act="signup">Create an account</button></div></form>
         <div class="row"><button class="link" data-act="forgot">Forgot your password?</button></div>`,
       signup: `${close}<h2>Create an account</h2>
         <p>Free. We store only your email address and your practice progress, and you can delete both at any time.</p>
         <form data-form="signup"><label>Email <input name="email" type="email" autocomplete="email" required></label>
-        <label>Password (at least 8 characters) <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Password (at least 8 characters) ${passwordBox("new-password", 'minlength="8"')}</label>
         ${msg}<div class="row"><button class="main">Create account</button><button type="button" data-act="signin">I have an account</button></div></form>`,
       forgot: `${close}<h2>Forgot your password?</h2>
         <p>We'll email you a link to set a new one.</p>
         <form data-form="forgot"><label>Email <input name="email" type="email" autocomplete="email" required></label>
         ${msg}<div class="row"><button class="main">Send the link</button><button type="button" data-act="signin">Back</button></div></form>`,
       newpassword: `<h2>Set a new password</h2>
-        <form data-form="newpassword"><label>New password (at least 8 characters) <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <form data-form="newpassword"><label>New password (at least 8 characters) ${passwordBox("new-password", 'minlength="8"')}</label>
         ${msg}<div class="row"><button class="main">Save password</button></div></form>`,
       account: user ? `${close}<h2>Your account</h2>
         <p>Signed in as <b>${escape(user.email)}</b>. Your progress syncs on every device where you sign in.</p>
@@ -166,6 +179,16 @@
     const act = e.target.dataset && e.target.dataset.act;
     if (!act) return;
     e.preventDefault();
+    if (act === "togglepw") {
+      const input = e.target.parentElement.querySelector("input");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      e.target.innerHTML = show ? EYE_OFF : EYE;
+      e.target.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      e.target.title = show ? "Hide password" : "Show password";
+      input.focus();
+      return;
+    }
     if (act === "close") return dialog.close();
     if (["signin", "signup", "forgot"].includes(act)) return showScreen(act);
     if (act === "signout") return signOut();
