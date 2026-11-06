@@ -291,7 +291,7 @@ const JOURNEYS = {
       { id: "switch-120", tag: "Switching", title: "Switch between barre chords cleanly at 120 BPM",
         how: "Pick a progression in the Tempo ladder and climb all the way up.", page: "metronome.html", auto: () => [anyLadderBest(), 120] },
       { id: "g-16ths", tag: "Rhythm", title: "Strum funky 16th-note rhythms with muted strums",
-        how: "Hand moves in 16ths all the time; mute the strings with your fretting hand for the percussive 'chk'." },
+        how: "Hand moves in 16ths all the time; mute the strings with your fretting hand for the percussive 'chk'. Get the feel with level 4 of the Rhythm trainer first.", page: "rhythm.html" },
       { id: "g-ten-songs", tag: "Songs", title: "Have 10 songs you can play from memory",
         how: "Your repertoire for when someone hands you a guitar.", page: "songs.html", auto: () => [songCount(), 10] },
       SHARED.signatures,
@@ -343,7 +343,7 @@ const JOURNEYS = {
       { id: "p-hands-together", tag: "Technique", title: "Play a simple piece hands together",
         how: "Practise each hand alone first, then together very slowly." },
       { id: "p-rhythms", tag: "Rhythm", title: "Read and count quarters, halves, eighths and dotted notes",
-        how: "Count out loud: \"1 & 2 & 3 & 4 &\". Clap the rhythm before you play it." },
+        how: "Count out loud: \"1 & 2 & 3 & 4 &\". Tap level 3 of the Rhythm trainer cleanly before you play it.", page: "rhythm.html" },
       { id: "p-sharps-flats", tag: "Basics", title: "Find any sharp or flat on the keyboard",
         how: "Every black key has two names: C♯ is also D♭." },
       { id: "p-g-scale", tag: "Scales", title: "Play G major and F major, each hand on its own",
@@ -410,7 +410,7 @@ const JOURNEYS = {
   ],
 };
 
-const PAGE_NAMES = { "index.html": "Note trainer", "guitar.html": "Fretboard trainer", "chords.html": "Chord trainer", "ear.html": "Ear trainer",
+const PAGE_NAMES = { "index.html": "Note trainer", "guitar.html": "Fretboard trainer", "chords.html": "Chord trainer", "ear.html": "Ear trainer", "rhythm.html": "Rhythm trainer",
   "chord-library.html": "Chord library", "keys.html": "Chords in a key", "songs.html": "My songs", "circle.html": "Circle of fifths",
   "scales.html": "Scale shapes", "metronome.html": "Tempo ladder" };
 

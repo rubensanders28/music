@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rhythm Trainer</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --ok: #e67700;
+    --bad: #c92a2a;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --ok: #ffc078;
+      --bad: #ff8787;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select, input { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  input[type=number] { width: 70px; }
+  .level-about { color: var(--muted); font-size: 0.85rem; margin: 10px 0 0; }
+
+  /* The rhythm */
+  .score-wrap { overflow-x: auto; }
+  #notation { display: block; width: 100%; min-width: 560px; height: auto; }
+  #notation .staff { stroke: var(--line); stroke-width: 1.5; }
+  #notation .barline { stroke: var(--line); stroke-width: 2; }
+  #notation .ink { fill: var(--line); stroke: var(--line); }
+  #notation .hollow { fill: var(--card); stroke: var(--line); stroke-width: 2; }
+  #notation .stem { stroke: var(--line); stroke-width: 2; }
+  #notation .beam { fill: var(--line); }
+  #notation .rest { fill: var(--line); stroke: var(--line); }
+  #notation .count { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  #notation .count.beat { fill: var(--ink); font-weight: 700; }
+  #notation .time-sig { fill: var(--line); font-size: 22px; font-weight: 800; text-anchor: middle; font-family: Georgia, serif; }
+  #notation .playhead { stroke: var(--accent); stroke-width: 2; opacity: .8; }
+  #notation .good { fill: var(--good); stroke: var(--good); }
+  #notation .ok { fill: var(--ok); stroke: var(--ok); }
+  #notation .bad { fill: var(--bad); stroke: var(--bad); }
+  #notation .offset { font-size: 12px; font-weight: 700; text-anchor: middle; font-family: system-ui, sans-serif; stroke: none; }
+  #notation .tap { stroke-width: 3; stroke-linecap: round; }
+  #notation .tap-row { fill: var(--muted); font-size: 11px; font-family: system-ui, sans-serif; }
+
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .buttons button, .small {
+    font: inherit; font-weight: 700; border: none; border-radius: 10px; padding: 10px 16px;
+    background: var(--btn); color: var(--ink); cursor: pointer;
+  }
+  .buttons button:hover, .small:hover { outline: 2px solid var(--accent); }
+  .buttons button:disabled { opacity: .5; cursor: default; outline: none; }
+  #tapItBtn { background: var(--accent); color: #fff; }
+  .small { font-size: 0.85rem; padding: 6px 12px; font-weight: 600; }
+
+  /* The big area you tap on (phones), or press any key (computers) */
+  .pad {
+    margin-top: 12px; height: 120px; border-radius: 16px; border: 3px dashed var(--btn); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; color: var(--muted); font-weight: 700; font-size: 1.1rem;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation; cursor: pointer; transition: background .06s, border-color .15s;
+  }
+  .pad small { font-weight: 500; font-size: 0.8rem; }
+  .pad.live { border-color: var(--accent); color: var(--ink); }
+  .pad.hit { background: var(--btn); }
+  .count-in { font-size: 2.4rem; font-weight: 800; color: var(--accent); }
+
+  .result { min-height: 1.6em; margin-top: 10px; font-weight: 700; font-size: 1.05rem; text-align: center; }
+  .result.good { color: var(--good); }
+  .result.ok { color: var(--ok); }
+  .result.bad { color: var(--bad); }
+  .result-detail { text-align: center; color: var(--muted); font-size: 0.9rem; min-height: 1.3em; }
+
+  .stats { display: flex; justify-content: space-around; text-align: center; }
+  .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stats span { color: var(--muted); font-size: 0.8rem; }
+  .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .calib { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--muted); }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>Rhythm Trainer</h1>
+  <p class="sub">Read the rhythm, listen to it if you like, then tap it in time. You'll see how early or late
+    each note was, so you learn to feel the beat as well as count it.</p>
+
+  <div class="panel">
+    <div class="settings">
+      <label>Level
+        <select id="level">
+          <option value="1">1 · Quarters and halves</option>
+          <option value="2">2 · + Eighth notes</option>
+          <option value="3">3 · + Dotted notes, off-beats</option>
+          <option value="4">4 · + Sixteenth notes</option>
+          <option value="5">5 · + Syncopation</option>
+        </select>
+      </label>
+      <label>Time
+        <select id="meter">
+          <option value="4">4/4</option>
+          <option value="3">3/4</option>
+        </select>
+      </label>
+      <label>Bars
+        <select id="bars">
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
+      </label>
+      <label>Tempo <input type="number" id="bpm" min="40" max="160" value="70"> BPM</label>
+      <label>Timing
+        <select id="tolerance">
+          <option value="110">Relaxed</option>
+          <option value="70" selected>Normal</option>
+          <option value="40">Strict</option>
+        </select>
+      </label>
+      <label>Metronome while tapping
+        <select id="metro">
+          <option value="on">On</option>
+          <option value="off">Off (harder)</option>
+        </select>
+      </label>
+      <label>Counting
+        <select id="counting">
+          <option value="on">Show 1 & 2 &</option>
+          <option value="off">Hide</option>
+        </select>
+      </label>
+    </div>
+    <p class="level-about" id="levelAbout"></p>
+  </div>
+
+  <div class="panel">
+    <div class="score-wrap"><svg id="notation" viewBox="0 0 800 150" aria-label="Rhythm"></svg></div>
+    <div class="buttons">
+      <button id="listenBtn">▶ Listen</button>
+      <button id="tapItBtn">● Tap it</button>
+      <button id="newBtn">↻ New rhythm</button>
+    </div>
+    <div class="pad" id="pad">Press ● Tap it to start<small>Then tap here, or press any key, on every note</small></div>
+    <div class="result" id="result"></div>
+    <div class="result-detail" id="detail"></div>
+    <div class="legend">
+      <span><i style="background: var(--good)"></i>In time</span>
+      <span><i style="background: var(--ok)"></i>A little off</span>
+      <span><i style="background: var(--bad)"></i>Missed or extra</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="stats">
+      <div><b id="attempts">0</b><span>tries</span></div>
+      <div><b id="passed">0</b><span>played well</span></div>
+      <div><b id="streak">0</b><span>streak</span></div>
+      <div><b id="best">0</b><span>best streak</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Timing calibration</h2>
+    <div class="calib">
+      <span id="calibText"></span>
+      <button class="small" id="calibBtn">Calibrate</button>
+      <button class="small" id="calibReset">Reset</button>
+    </div>
+    <p class="hint">Headphones (especially Bluetooth) and some speakers play sound a little late, which would make every
+      tap look late. Calibrate once per set of headphones or speakers: you'll hear 4 count-in clicks, then tap along with the next 8.</p>
+  </div>
+
+  <p class="hint"><b>How to count:</b> say the beat numbers out loud, and "&" for the half-beats in between: "1 & 2 & 3 & 4 &".
+    Sixteenths are counted "1 e & a". Tap on the notes, not the rests, but keep counting through the rests.<br>
+    <b>Keys:</b> any key taps (Space is easiest). Enter starts a new try.<br>
+    A take counts as played well when every note is in time (green) and there are no extra taps.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- Settings, remembered between visits ----------
+const SETTINGS = ["level", "meter", "bars", "bpm", "tolerance", "metro", "counting"];
+try {
+  const saved = JSON.parse(localStorage.getItem("rhythmTrainer")) || {};
+  SETTINGS.forEach(id => { if (saved[id] !== undefined) $(id).value = saved[id]; });
+} catch (e) {}
+function save() {
+  try { localStorage.setItem("rhythmTrainer", JSON.stringify(Object.fromEntries(SETTINGS.map(id => [id, $(id).value])))); } catch (e) {}
+}
+const setting = id => $(id).value;
+const bpm = () => Math.min(160, Math.max(40, Math.round(Number(setting("bpm")) || 70)));
+const beatsPerBar = () => Number(setting("meter"));
+const barCount = () => Number(setting("bars"));
+
+// ---------- Rhythms ----------
+// A rhythm is built from "cells" of one or more beats. Each cell is a list of notes: their length in beats,
+// and whether it's a rest. Notes inside one cell that are shorter than a beat are beamed together.
+//   w = whole (4 beats), h = half (2), q = quarter (1), 8 = eighth (½), 16 = sixteenth (¼)
+//   a dot adds half the length again (q. = 1½), r means a rest
+const LENGTHS = { w: 4, "h.": 3, h: 2, "q.": 1.5, q: 1, "8": 0.5, "16": 0.25 };
+const parseCell = text => text.split(" ").map(t => {
+  const rest = t.endsWith("r"), name = rest ? t.slice(0, -1) : t;
+  return { dur: LENGTHS[name], name, rest };
+});
+
+// level: the level a cell first appears at. where: which beats of the bar it may start on
+// (e.g. a half note starts on beat 1 or 3 in 4/4, the way it's normally written).
+const CELLS = [
+  { text: "q", level: 1 }, { text: "qr", level: 1 }, { text: "h", level: 1, where: "half" }, { text: "hr", level: 1, where: "half" },
+  { text: "w", level: 1, where: "bar" },
+  { text: "8 8", level: 2 },
+  { text: "q. 8", level: 3, where: "half" }, { text: "h.", level: 3, where: "start" }, { text: "8 8r", level: 3 }, { text: "8r 8", level: 3 },
+  { text: "16 16 16 16", level: 4 }, { text: "8 16 16", level: 4 }, { text: "16 16 8", level: 4 },
+  { text: "8 q 8", level: 5, where: "half" }, { text: "16 8 16", level: 5 }, { text: "8r 8 8r 8", level: 5, where: "half" },
+].map(c => ({ ...c, notes: parseCell(c.text), beats: parseCell(c.text).reduce((s, n) => s + n.dur, 0) }));
+
+const LEVEL_ABOUT = {
+  1: "Quarter notes (1 beat), half notes (2 beats) and whole notes (4 beats), with rests of the same lengths.",
+  2: "Adds eighth notes: two to a beat, counted \"1 &\".",
+  3: "Adds the dotted quarter (1½ beats), the dotted half (3 beats), and eighth rests, so some notes fall on the \"&\".",
+  4: "Adds sixteenth notes: four to a beat, counted \"1 e & a\".",
+  5: "Adds syncopation: notes that start off the beat and carry over it, like eighth – quarter – eighth.",
+};
+
+function canStart(cell, beat, meter) {
+  if (beat + cell.beats > meter) return false;
+  if (cell.where === "bar") return beat === 0 && meter === 4;
+  if (cell.where === "start") return beat === 0 && meter >= 3;
+  if (cell.where === "half") return meter === 4 ? beat % 2 === 0 : beat <= 1; // in 3/4 a half note can start on beat 1 or 2
+  return true;
+}
+
+// Make one bar: pick cells one after another until the bar is full. Cells new at your level come up more
+// often, so each level practises what it adds; no two rest-only cells in a row; and enough notes to tap.
+function makeBar(level, meter) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const cells = [];
+    let beat = 0;
+    while (beat < meter) {
+      const options = CELLS.filter(c => c.level <= level && canStart(c, beat, meter))
+        .filter(c => !(c.notes.every(n => n.rest) && (cells.length === 0 || cells[cells.length - 1].notes.every(n => n.rest))));
+      const weights = options.map(c => (c.level === level ? 3 : 1) * (c.notes.every(n => n.rest) ? 0.5 : 1) * (c.text === "w" ? 0.3 : 1));
+      let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+      let cell = options[options.length - 1];
+      for (let i = 0; i < options.length; i++) { if ((r -= weights[i]) < 0) { cell = options[i]; break; } }
+      cells.push(cell);
+      beat += cell.beats;
+    }
+    const notes = cells.flatMap(c => c.notes).filter(n => !n.rest).length;
+    const usesLevel = level === 1 || cells.some(c => c.level === level);
+    // At least 2 notes to tap; a bar that's one whole note is fine when there's another bar with it
+    const enough = notes >= 2 || (cells[0].text === "w" && barCount() > 1);
+    if (enough && usesLevel) return cells;
+  }
+  return [CELLS[0], CELLS[0], CELLS[0], CELLS[0]].slice(0, meter);
+}
+
+// The whole rhythm as a flat list of events: { start (in beats from the beginning), dur, rest, name, cell, bar }
+let rhythm = [];
+let rhythmCells = []; // per bar: its cells
+function newRhythm() {
+  const level = Number(setting("level")), meter = beatsPerBar();
+  rhythmCells = [];
+  rhythm = [];
+  for (let b = 0; b < barCount(); b++) {
+    const cells = makeBar(level, meter);
+    rhythmCells.push(cells);
+    let t = b * meter;
+    cells.forEach((cell, ci) => cell.notes.forEach(n => { rhythm.push({ ...n, start: t, cell: `${b}-${ci}`, bar: b }); t += n.dur; }));
+  }
+  lastResult = null;
+  draw();
+  setResult("", "");
+}
+
+// ---------- Drawing the notation ----------
+const svg = $("notation");
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// Layout: one percussion line; notes are placed by time, so a long note takes more room, like it takes more time
+const LINE_Y = 72, STEM = 38, LEFT = 70, RIGHT = 20;
+let beatW = 160;
+const totalBeats = () => beatsPerBar() * barCount();
+const xAt = t => LEFT + t * beatW + 18;
+
+function draw(result) {
+  svg.innerHTML = "";
+  const W = 800;
+  beatW = (W - LEFT - RIGHT) / totalBeats();
+  svg.setAttribute("viewBox", `0 0 ${W} 150`);
+
+  // Staff line, time signature, bar lines
+  svg.appendChild(el("line", { x1: 20, x2: W - RIGHT, y1: LINE_Y, y2: LINE_Y, class: "staff" }));
+  svg.appendChild(el("text", { x: 42, y: LINE_Y - 6, class: "time-sig" }, beatsPerBar()));
+  svg.appendChild(el("text", { x: 42, y: LINE_Y + 20, class: "time-sig" }, "4"));
+  for (let b = 1; b <= barCount(); b++) {
+    const x = LEFT + b * beatsPerBar() * beatW;
+    svg.appendChild(el("line", { x1: x, x2: x, y1: LINE_Y - 20, y2: LINE_Y + 20, class: "barline" }));
+  }
+
+  // Counting under the line: beat numbers, and "&" (and "e"/"a" from level 4) in between
+  if (setting("counting") === "on") {
+    const sixteenths = Number(setting("level")) >= 4;
+    for (let t = 0; t < totalBeats(); t += sixteenths ? 0.25 : 0.5) {
+      const frac = t % 1;
+      const label = frac === 0 ? String((t % beatsPerBar()) + 1) : frac === 0.5 ? "&" : frac === 0.25 ? "e" : "a";
+      svg.appendChild(el("text", { x: xAt(t), y: LINE_Y + 42, class: "count" + (frac === 0 ? " beat" : "") }, label));
+    }
+  }
+
+  // Notes and rests. Within a cell, notes shorter than a beat are beamed; a lone short note gets a flag.
+  const groups = {};
+  rhythm.forEach((n, i) => { n.index = i; (groups[n.cell] = groups[n.cell] || []).push(n); });
+  Object.values(groups).forEach(group => {
+    const short = group.filter(n => !n.rest && n.dur < 1);
+    const beamed = short.length >= 2 && group.every(n => !n.rest) && group.every(n => n.dur < 1);
+    group.forEach(n => n.rest ? drawRest(n) : drawNote(n, beamed, result));
+    if (beamed) drawBeams(group);
+  });
+
+  // Your taps, along the bottom, and how far off each note was
+  if (result) {
+    result.taps.forEach(tap => {
+      const x = xAt(tap.beat);
+      if (x < 10 || x > W - 5) return;
+      svg.appendChild(el("line", { x1: x, x2: x, y1: 128, y2: 142, class: "tap " + (tap.matched ? tap.rating : "bad") }));
+    });
+    svg.appendChild(el("text", { x: 20, y: 140, class: "tap-row" }, "your taps"));
+  }
+  playhead = el("line", { x1: -10, x2: -10, y1: LINE_Y - 50, y2: LINE_Y + 30, class: "playhead" });
+  svg.appendChild(playhead);
+}
+
+function drawNote(n, beamed, result) {
+  const x = xAt(n.start), y = LINE_Y;
+  const r = result && result.notes[n.index];
+  const colour = r ? " " + r.rating : "";
+  const hollow = n.dur >= 2;
+  const g = el("g", {});
+  g.appendChild(el("ellipse", { cx: x, cy: y, rx: 8, ry: 6, transform: `rotate(-20 ${x} ${y})`, class: (hollow ? "hollow" : "ink") + colour }));
+  if (n.dur < 4) g.appendChild(el("line", { x1: x + 7, x2: x + 7, y1: y - 2, y2: y - STEM, class: "stem" + colour }));
+  if (n.name.includes(".")) g.appendChild(el("circle", { cx: x + 15, cy: y - 3, r: 2.6, class: "ink" + colour }));
+  if (!beamed && n.dur < 1) { // a flag (two for a sixteenth)
+    const flags = n.dur === 0.25 ? 2 : 1;
+    for (let f = 0; f < flags; f++) {
+      const fy = y - STEM + f * 8;
+      g.appendChild(el("path", { d: `M${x + 7} ${fy} c 2 6, 12 8, 10 20 c 0 -8, -6 -10, -10 -13 z`, class: "ink" + colour }));
+    }
+  }
+  if (r) {
+    const text = r.missed ? "missed" : (r.offset > 0 ? "+" : "") + r.offset + " ms";
+    g.appendChild(el("text", { x, y: y - STEM - 10, class: "offset " + r.rating }, text));
+  }
+  svg.appendChild(g);
+}
+
+function drawBeams(group) {
+  const top = LINE_Y - STEM;
+  const xs = group.map(n => xAt(n.start) + 7);
+  svg.appendChild(el("rect", { x: xs[0] - 1, y: top, width: xs[xs.length - 1] - xs[0] + 2, height: 5, class: "beam" }));
+  // Second beam between neighbouring sixteenths; a lone sixteenth gets a short stub towards its neighbour
+  group.forEach((n, i) => {
+    if (n.dur !== 0.25) return;
+    const next = group[i + 1], prev = group[i - 1];
+    if (next && next.dur === 0.25) {
+      svg.appendChild(el("rect", { x: xs[i] - 1, y: top + 8, width: xs[i + 1] - xs[i] + 2, height: 5, class: "beam" }));
+    } else if (!(prev && prev.dur === 0.25)) {
+      const dir = next ? 1 : -1;
+      const x = dir > 0 ? xs[i] : xs[i] - 12;
+      svg.appendChild(el("rect", { x, y: top + 8, width: 12, height: 5, class: "beam" }));
+    }
+  });
+}
+
+function drawRest(n) {
+  const x = xAt(n.start), y = LINE_Y;
+  const g = el("g", { class: "rest" });
+  if (n.dur === 4) g.appendChild(el("rect", { x: x - 8, y: y, width: 16, height: 6 }));            // whole rest: hangs below the line
+  else if (n.dur === 2) g.appendChild(el("rect", { x: x - 8, y: y - 6, width: 16, height: 6 }));   // half rest: sits on the line
+  else if (n.dur === 1) {                                                                             // quarter rest: the zigzag
+    g.appendChild(el("path", { d: `M${x - 3} ${y - 18} l 7 8 l -6 6 l 7 8 c -6 -2, -9 1, -5 7 c -8 -4, -6 -11, 1 -9 l -7 -7 l 6 -6 z` }));
+  } else {                                                                                            // eighth rest: a dot and a stroke
+    g.appendChild(el("circle", { cx: x - 4, cy: y - 8, r: 3 }));
+    g.appendChild(el("path", { d: `M${x - 4} ${y - 6} c 4 1, 7 0, 9 -4 l -6 18`, fill: "none", "stroke-width": 2 }));
+  }
+  svg.appendChild(g);
+}
+
+// ---------- Sound ----------
+// Clicks and the rhythm are scheduled on the browser's audio clock, which is far more precise than timers.
+const audio = new AudioContext();
+function blip(time, freq, volume, length = 0.05, type = "sine") {
+  const osc = audio.createOscillator(), gain = audio.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + length);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(time);
+  osc.stop(time + length + 0.02);
+}
+const metroClick = (time, first) => blip(time, first ? 1500 : 1000, first ? 0.35 : 0.22, 0.04);
+const rhythmSound = time => blip(time, 660, 0.5, 0.12, "triangle"); // a softer "woodblock" for the notes
+const tapSound = () => blip(audio.currentTime, 2200, 0.12, 0.03);
+
+// How late the sound reaches your ears: what the browser knows about, plus your calibration
+let calibration = 0; // ms
+try { calibration = Number(localStorage.getItem("rhythmCalibration")) || 0; } catch (e) {}
+const deviceDelay = () => (audio.outputLatency || audio.baseLatency || 0) * 1000;
+function showCalibration() {
+  $("calibText").textContent = calibration
+    ? `Your taps are corrected by ${calibration > 0 ? "" : "−"}${Math.abs(Math.round(calibration))} ms (on top of the ${Math.round(deviceDelay())} ms the browser reports).`
+    : `Not calibrated yet (the browser reports a sound delay of ${Math.round(deviceDelay())} ms, which is already taken into account).`;
+}
+
+// ---------- Playing and tapping ----------
+let state = "idle";          // idle | listening | countin | recording | calibrating
+let startTime = 0;           // audio time of the first beat of the rhythm (after the count-in)
+let taps = [];               // audio times of your taps, corrected for delays
+let endTimer = null, countTimers = [];
+let playhead = null;
+let lastResult = null;
+const beatLen = () => 60 / bpm();
+
+function stopAll() {
+  clearTimeout(endTimer);
+  countTimers.forEach(clearTimeout);
+  countTimers = [];
+  state = "idle";
+  $("pad").classList.remove("live");
+  setButtons();
+}
+
+function setButtons() {
+  const busy = state !== "idle";
+  // While playing or tapping, no button keeps the keyboard focus: otherwise pressing Space to tap
+  // would also "press" that button (and e.g. stop your take)
+  if (busy && document.activeElement && document.activeElement.tagName === "BUTTON") document.activeElement.blur();
+  $("listenBtn").disabled = busy;
+  $("newBtn").disabled = busy;
+  $("calibBtn").disabled = busy;
+  $("tapItBtn").textContent = busy && state !== "listening" ? "■ Stop" : "● Tap it";
+}
+
+function listen() {
+  if (state !== "idle") return;
+  audio.resume();
+  state = "listening";
+  setButtons();
+  const t0 = audio.currentTime + 0.3;
+  startTime = t0;
+  for (let b = 0; b < totalBeats(); b++) metroClick(t0 + b * beatLen(), b % beatsPerBar() === 0);
+  rhythm.forEach(n => { if (!n.rest) rhythmSound(t0 + n.start * beatLen()); });
+  endTimer = setTimeout(() => { stopAll(); setResult("", ""); }, (0.3 + totalBeats() * beatLen()) * 1000 + 200);
+  pad("Listen…", "count along: " + countWords());
+}
+
+function countWords() {
+  return Array.from({ length: beatsPerBar() }, (_, i) => i + 1).join(" ");
+}
+
+// A one-bar count-in, then you tap along while the metronome (if on) keeps going
+function tapIt() {
+  if (state === "countin" || state === "recording") { stopAll(); pad("Stopped", "Press ● Tap it to try again"); return; }
+  if (state !== "idle") return;
+  audio.resume();
+  state = "countin";
+  taps = [];
+  setButtons();
+  draw(lastResult = null);
+  setResult("", "");
+  const t0 = audio.currentTime + 0.3;
+  const beats = beatsPerBar();
+  startTime = t0 + beats * beatLen();
+  for (let b = 0; b < beats; b++) {
+    metroClick(t0 + b * beatLen(), b === 0);
+    countTimers.push(setTimeout(() => pad(`<span class="count-in">${b + 1}</span>`, b === beats - 1 ? "now tap the notes" : "get ready"), (0.3 + b * beatLen()) * 1000));
+  }
+  if (setting("metro") === "on") for (let b = 0; b < totalBeats(); b++) metroClick(startTime + b * beatLen(), b % beats === 0);
+  countTimers.push(setTimeout(() => {
+    state = "recording";
+    $("pad").classList.add("live");
+    pad("Tap!", "on every note");
+    setButtons();
+  }, (0.3 + (beats - 0.5) * beatLen()) * 1000)); // start listening half a beat early, for taps that come a little early
+  endTimer = setTimeout(finish, (0.3 + (beats + totalBeats() + 0.6) * beatLen()) * 1000);
+}
+
+function pad(main, small) {
+  $("pad").innerHTML = `${main}<small>${small || ""}</small>`;
+}
+
+// A tap: note the time on the audio clock, minus how late the sound reaches you
+function tap() {
+  audio.resume();
+  if (state !== "recording" && state !== "calibrating") return;
+  tapSound();
+  taps.push(audio.currentTime - (deviceDelay() + calibration) / 1000);
+  $("pad").classList.add("hit");
+  setTimeout(() => $("pad").classList.remove("hit"), 80);
+}
+
+// ---------- Scoring ----------
+// Each note is matched with the closest tap that's within half a beat of it (and not used by another note).
+// In time: within the Timing setting (e.g. 70 ms). A little off: up to twice that. Further: way off.
+// A note with no tap near it is missed; a tap that belongs to no note is extra.
+function score() {
+  const tol = Number(setting("tolerance"));
+  const notes = rhythm.map(n => n.rest ? null : { time: startTime + n.start * beatLen() });
+  const used = new Set();
+  const results = rhythm.map((n, i) => {
+    if (n.rest) return null;
+    let best = -1, bestDiff = Infinity;
+    taps.forEach((t, j) => {
+      const d = Math.abs(t - notes[i].time);
+      if (!used.has(j) && d < bestDiff && d <= beatLen() / 2) { best = j; bestDiff = d; }
+    });
+    if (best < 0) return { missed: true, rating: "bad" };
+    used.add(best);
+    const offset = Math.round((taps[best] - notes[i].time) * 1000);
+    return { offset, tap: best, rating: Math.abs(offset) <= tol ? "good" : Math.abs(offset) <= tol * 2 ? "ok" : "bad" };
+  });
+  const tapList = taps.map((t, j) => {
+    const owner = results.find(r => r && r.tap === j);
+    return { beat: (t - startTime) / beatLen(), matched: !!owner, rating: owner ? owner.rating : "bad" };
+  });
+  return { notes: results, taps: tapList };
+}
+
+let attempts = 0, passed = 0, streak = 0, best = 0;
+try { best = Number(localStorage.getItem("rhythmBest")) || 0; } catch (e) {}
+
+function finish() {
+  stopAll();
+  const result = lastResult = score();
+  draw(result);
+  const notes = result.notes.filter(Boolean);
+  const good = notes.filter(r => r.rating === "good").length;
+  const ok = notes.filter(r => r.rating === "ok").length;
+  const missed = notes.filter(r => r.missed).length;
+  const wayOff = notes.filter(r => !r.missed && r.rating === "bad").length;
+  const extra = result.taps.filter(t => !t.matched).length;
+  attempts++;
+  const clean = good === notes.length && extra === 0;
+  if (clean) { passed++; streak++; } else { streak = 0; }
+  if (streak > best) { best = streak; try { localStorage.setItem("rhythmBest", best); } catch (e) {} }
+  updateStats();
+
+  // Do you tend to rush or drag? The average of the notes you played
+  const offsets = notes.filter(r => !r.missed && r.rating !== "bad").map(r => r.offset);
+  const avg = offsets.length ? Math.round(offsets.reduce((a, b) => a + b, 0) / offsets.length) : 0;
+  const tendency = offsets.length < 2 || Math.abs(avg) < 15 ? "Nicely centred on the beat." :
+    avg < 0 ? `On average you were ${-avg} ms early: you're rushing a little.` : `On average you were ${avg} ms late: you're dragging a little.`;
+
+  if (taps.length === 0) {
+    setResult("No taps heard.", "bad", "Tap the pad or press any key on each note. Press ● Tap it to try again.");
+  } else if (clean) {
+    setResult(`Well played! All ${notes.length} notes in time. 🎉`, "good", tendency);
+  } else {
+    const parts = [`${good} of ${notes.length} notes in time`];
+    if (ok) parts.push(`${ok} a little off`);
+    if (wayOff) parts.push(`${wayOff} way off`);
+    if (missed) parts.push(`${missed} missed`);
+    if (extra) parts.push(`${extra} extra tap${extra === 1 ? "" : "s"}`);
+    setResult(parts.join(" · "), good >= notes.length * 0.7 ? "ok" : "bad", tendency + " Try it again, or press ▶ Listen.");
+  }
+  pad("Done", "Press ● Tap it to try again, or ↻ New rhythm");
+}
+
+function setResult(text, kind, detail = "") {
+  $("result").textContent = text;
+  $("result").className = "result " + kind;
+  $("detail").textContent = detail;
+}
+
+function updateStats() {
+  $("attempts").textContent = attempts;
+  $("passed").textContent = passed;
+  $("streak").textContent = streak;
+  $("best").textContent = best;
+}
+
+// The playhead moves through the bars while the rhythm plays or you tap
+function animate() {
+  if (playhead && (state === "listening" || state === "recording" || state === "countin")) {
+    const beat = (audio.currentTime - startTime) / beatLen();
+    const x = beat >= 0 ? xAt(beat) : -10;
+    playhead.setAttribute("x1", x);
+    playhead.setAttribute("x2", x);
+  } else if (playhead) {
+    playhead.setAttribute("x1", -10);
+    playhead.setAttribute("x2", -10);
+  }
+  requestAnimationFrame(animate);
+}
+
+// ---------- Calibration ----------
+// Four count-in clicks, then 8 clicks to tap along with. The typical gap between click and tap is your delay.
+function calibrate() {
+  if (state !== "idle") return;
+  audio.resume();
+  state = "calibrating";
+  taps = [];
+  setButtons();
+  const beat = 60 / 90, t0 = audio.currentTime + 0.3;
+  const clicks = [];
+  for (let i = 0; i < 12; i++) { metroClick(t0 + i * beat, i % 4 === 0); if (i >= 4) clicks.push(t0 + i * beat); }
+  $("pad").classList.add("live");
+  pad("Calibrating", "listen to 4 clicks, then tap along with the next 8");
+  for (let i = 0; i < 4; i++) countTimers.push(setTimeout(() => pad(`<span class="count-in">${i + 1}</span>`, "then tap along"), (0.3 + i * beat) * 1000));
+  countTimers.push(setTimeout(() => pad("Tap with the clicks", ""), (0.3 + 4 * beat) * 1000));
+  endTimer = setTimeout(() => {
+    const before = calibration;
+    // Offsets measured with the current correction, so the new correction adds to it
+    const gaps = clicks.map(c => {
+      let bestGap = null;
+      taps.forEach(t => { const g = t - c; if (Math.abs(g) < beat / 2 && (bestGap === null || Math.abs(g) < Math.abs(bestGap))) bestGap = g; });
+      return bestGap;
+    }).filter(g => g !== null).map(g => g * 1000).sort((a, b) => a - b);
+    stopAll();
+    if (gaps.length < 5) {
+      pad("Not enough taps", "Press Calibrate and tap along with all 8 clicks");
+      return;
+    }
+    const median = gaps[Math.floor(gaps.length / 2)];
+    calibration = Math.round(before + median);
+    try { localStorage.setItem("rhythmCalibration", calibration); } catch (e) {}
+    showCalibration();
+    pad("Calibrated", `Corrected by ${Math.round(calibration)} ms. Press ● Tap it to practise`);
+  }, (0.3 + 12.5 * beat) * 1000);
+}
+
+// ---------- Wiring it up ----------
+$("listenBtn").onclick = listen;
+$("tapItBtn").onclick = tapIt;
+$("newBtn").onclick = () => { if (state === "idle") newRhythm(); };
+$("calibBtn").onclick = calibrate;
+$("calibReset").onclick = () => {
+  calibration = 0;
+  try { localStorage.removeItem("rhythmCalibration"); } catch (e) {}
+  showCalibration();
+};
+
+// Tapping: the pad reacts on touch/press (not on release) for the best timing; any key works on a computer
+$("pad").addEventListener("pointerdown", e => { e.preventDefault(); tap(); });
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, select") || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "Enter" && state === "idle" && !e.target.matches("button")) { e.preventDefault(); tapIt(); return; }
+  if (state === "recording" || state === "calibrating") { e.preventDefault(); tap(); }
+  else if (e.key === " ") e.preventDefault(); // don't scroll the page
+});
+
+SETTINGS.forEach(id => $(id).onchange = () => {
+  save();
+  if (state !== "idle") stopAll();
+  $("levelAbout").textContent = LEVEL_ABOUT[setting("level")];
+  if (["level", "meter", "bars"].includes(id)) newRhythm(); else draw(lastResult);
+});
+
+$("levelAbout").textContent = LEVEL_ABOUT[setting("level")];
+showCalibration();
+updateStats();
+newRhythm();
+setButtons();
+animate();
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@
     ["guitar.html", "Fretboard trainer"],
     ["chords.html", "Chord trainer"],
     ["ear.html", "Ear trainer"],
+    ["rhythm.html", "Rhythm trainer"],
     ["chord-library.html", "Chord library"],
     ["keys.html", "Chords in a key"],
     ["songs.html", "My songs"],
