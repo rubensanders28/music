@@ -1,5 +1,6 @@
 // The menu at the top of every page, kept in one place so it looks the same everywhere.
-// Put <script src="nav.js"></script> right after <body>; the menu appears where the script is.
+// Put <script src="nav.js"></script><script src="sync.js"></script> right after <body>; the menu appears where
+// the script is, and sync.js (syncing between your devices) adds its button to it.
 // To add a page, add it to PAGES below.
 (() => {
   const PAGES = [
