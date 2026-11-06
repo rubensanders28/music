@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --hl: #f08c00;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --hl: #ffc078;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+
+  /* Scale / Chord switch */
+  .modes { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--btn); }
+  .modes button { font: inherit; font-weight: 700; padding: 8px 22px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .modes button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .btn { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 7px 14px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--card); }
+  .btn:hover { outline: 2px solid var(--accent); }
+
+  /* What's shown */
+  .title { font-size: 1.4rem; font-weight: 800; }
+  .notes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0 4px; }
+  .note-chip { display: inline-flex; flex-direction: column; align-items: center; min-width: 44px; padding: 5px 8px; border-radius: 10px; background: var(--btn); font-weight: 800; }
+  .note-chip small { font-weight: 600; font-size: 0.72rem; color: var(--muted); }
+  .note-chip.root { background: var(--accent); color: var(--card); }
+  .note-chip.root small { color: var(--card); opacity: .85; }
+  .step { font-size: 0.72rem; color: var(--muted); font-weight: 700; padding: 0 2px; }
+  .about { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin: 6px 0 0; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  /* The keyboard */
+  .kb-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .kb { position: relative; display: flex; height: 190px; user-select: none; touch-action: manipulation; }
+  .kb.wide { min-width: 1400px; }
+  .key { position: relative; border: none; padding: 0; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; font: inherit; }
+  .white { flex: 1; background: #fdfdfb; border: 1px solid #999; border-left-width: 0; border-radius: 0 0 6px 6px; padding-bottom: 18px; color: #333; }
+  .white:first-child { border-left-width: 1px; }
+  .black { position: absolute; top: 0; height: 60%; z-index: 1; background: #1c1c1c; border-radius: 0 0 4px 4px; padding-bottom: 6px; color: #fff; }
+  .key .lab { font-size: 0.72rem; font-weight: 800; line-height: 1.1; text-align: center; pointer-events: none; }
+  .key .c-lab { position: absolute; bottom: 2px; left: 0; right: 0; font-size: 0.58rem; color: #999; font-weight: 600; pointer-events: none; }
+  /* In the scale or chord (any octave), the root, the chord's hand position, and keys you're playing */
+  .white.in { background: #d7defb; }
+  .black.in { background: #4a5bb5; }
+  .white.root { background: #8ea2ff; }
+  .black.root { background: #2f43b8; }
+  .white.shape { background: #a9b8f2; box-shadow: inset 0 -5px 0 #3b5bdb; }
+  .black.shape { background: #3b4fc4; box-shadow: inset 0 -5px 0 #a9b8f2; }
+  .white.shape.root { background: #6f86f5; }
+  .white.down { background: #ffc078 !important; }
+  .black.down { background: #f08c00 !important; }
+  .white.down.out { background: #ffa8a8 !important; }
+  .black.down.out { background: #e03131 !important; }
+  .white.playing { background: #ffc078 !important; }
+  .black.playing { background: #f08c00 !important; }
+
+  .playing-now { min-height: 1.6em; margin-top: 10px; font-weight: 600; text-align: center; }
+  .playing-now .ok { color: var(--good); }
+  .playing-now .no { color: var(--bad); }
+  .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>Keyboard</h1>
+  <p class="sub">See any scale or chord on the keyboard, hear it, and play it yourself: on the screen, with your computer
+    keys, or on a real keyboard connected with a USB cable.</p>
+
+  <div class="panel">
+    <div class="modes" role="group" aria-label="Show">
+      <button data-mode="scale">Scale</button>
+      <button data-mode="chord">Chord</button>
+    </div>
+    <div class="settings">
+      <label>Root <select id="root"></select></label>
+      <label id="scaleLabel">Scale <select id="scale"></select></label>
+      <label id="chordLabel">Chord <select id="chord"></select></label>
+      <label id="invLabel">Inversion <select id="inversion"></select></label>
+      <label>Labels
+        <select id="labels">
+          <option value="names">Note names</option>
+          <option value="degrees">Degrees (1, ♭3, 5…)</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+      <label>Keys
+        <select id="range">
+          <option value="2">2 octaves</option>
+          <option value="3">3 octaves</option>
+          <option value="4">4 octaves</option>
+          <option value="88">All 88</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="title" id="title"></div>
+    <div class="notes" id="notes"></div>
+    <p class="about" id="about"></p>
+    <div class="buttons">
+      <button class="btn primary" id="playBtn">▶ Play</button>
+      <button class="btn" id="playAlt">▶ Play</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="kb-wrap" id="kbWrap"><div class="kb" id="kb"></div></div>
+    <div class="playing-now" id="playingNow"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="panel">
+    <div id="midi"></div>
+    <div class="settings" style="margin-top:8px">
+      <label><input type="checkbox" id="midiSound"> Also play the sound here when I play my keyboard</label>
+    </div>
+  </div>
+
+  <p class="hint"><b>Computer keys:</b> A S D F G H J K are the white keys from C, W E T Y U the black ones; Z and X move an
+    octave down or up. Hold several keys for a chord.<br>
+    <b>Degrees</b> number the notes from the root, compared with the major scale: ♭3 is a semitone lower than the 3rd of the
+    major scale, which is what makes a chord or scale minor.<br>
+    <b>Inversions:</b> the same chord with a different note at the bottom. In first inversion the 3rd is the lowest note,
+    in second inversion the 5th. Pianists use them to move between chords with small hand movements.<br>
+    Piano sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- chord-data.js: chord types, scales and note spelling; piano-sound.js: the piano; midi.js: a real keyboard over USB -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script src="midi.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- Settings ----------
+let saved = { mode: "scale", root: "C", scale: "major", chord: "maj", inversion: "0", labels: "names", range: "3", midiSound: false };
+try { saved = { ...saved, ...JSON.parse(localStorage.getItem("keyboardPage")) }; } catch (e) {}
+function save() {
+  try { localStorage.setItem("keyboardPage", JSON.stringify(saved)); } catch (e) {}
+}
+
+ROOTS.forEach(r => $("root").add(new Option(r.replace("#", "♯").replace("b", "♭"), r)));
+SCALE_TYPES.forEach(s => {
+  let group = [...$("scale").children].find(g => g.label === s.group);
+  if (!group) { group = document.createElement("optgroup"); group.label = s.group; $("scale").appendChild(group); }
+  group.appendChild(new Option(s.name, s.id));
+});
+const CHORD_NAMES = { maj: "major", min: "minor", "7": "dominant 7th", maj7: "major 7th", m7: "minor 7th", sus2: "sus2", sus4: "sus4",
+  dim: "diminished", aug: "augmented", dim7: "diminished 7th", m7b5: "half-diminished (m7♭5)", "6": "6th", "5": "power chord (5)",
+  add9: "add9", "7sus4": "7sus4", m6: "minor 6th", mmaj7: "minor-major 7th", "9": "9th", m9: "minor 9th", maj9: "major 9th",
+  "7s9": "7♯9", "13": "13th" };
+TYPES.forEach(t => $("chord").add(new Option(`${t.suffix ? t.suffix + " · " : ""}${CHORD_NAMES[t.id] || t.label}`, t.id)));
+["root", "scale", "chord", "labels", "range"].forEach(id => { $(id).value = saved[id]; });
+$("midiSound").checked = !!saved.midiSound;
+
+// ---------- Spelling ----------
+const letterOf = name => LETTERS.indexOf(name[0]);
+const pcOfName = name => (NATURAL[letterOf(name)] + (name[1] === "#" ? 1 : name[1] === "b" ? -1 : 0) + 12) % 12;
+// A note `semis` above the root, written with the letter `letters` steps up (so the 3rd of E♭ is G, the ♭3 is G♭)
+function spell(rootName, semis, letters) {
+  const l = (letterOf(rootName) + letters) % 7;
+  const pc = (pcOfName(rootName) + semis) % 12;
+  const acc = ((pc - NATURAL[l] + 18) % 12) - 6;
+  return ACCIDENTAL[acc] !== undefined ? LETTERS[l] + ACCIDENTAL[acc] : pretty(pc);
+}
+
+// Chords: which letter each note uses and its degree name. Most follow the semitone count; a few chords
+// spell a note differently (the 9 in a 7♯9 is a raised 2nd, the 7th of a dim7 is a double-flat 7th).
+const CHORD_LETTER = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6 };
+const CHORD_DEGREE = { 0: "1", 1: "♭9", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
+function chordTones(type) {
+  // Stack the notes upwards: in a 9th chord the 9 (2 semitones) goes above the 7th, so it becomes 14
+  let prev = -1;
+  return type.notes.map(n => {
+    let semi = n;
+    while (semi <= prev) semi += 12;
+    prev = semi;
+    const pc = n % 12;
+    let letters = CHORD_LETTER[pc], degree = CHORD_DEGREE[pc];
+    if (type.id === "dim7" && pc === 9) { letters = 6; degree = "𝄫7"; }
+    if (type.id === "7s9" && pc === 3) { letters = 1; degree = "♯9"; }
+    if (semi > 12 && pc === 2) degree = "9";
+    if (semi > 12 && pc === 9) degree = "13";
+    if (type.id === "add9" && pc === 2) degree = "9";
+    return { semi, letters, degree };
+  });
+}
+
+// ---------- What to show ----------
+// tones: [{ pc, name, degree, semi }] in order from the root. shape: the MIDI notes of one hand position (chords).
+let tones = [], shape = [], byPc = new Map();
+
+function compute() {
+  const rootName = saved.root;
+  const rootPc = pcOfName(rootName);
+  if (saved.mode === "scale") {
+    const scale = SCALE_TYPES.find(s => s.id === saved.scale) || SCALE_TYPES[0];
+    tones = spellNotes(rootName, scale).map((n, i) => ({ ...n, semi: scale.semis[i] }));
+    shape = [];
+  } else {
+    const type = TYPES.find(t => t.id === saved.chord) || TYPES[0];
+    tones = chordTones(type).map(t => ({ pc: (rootPc + t.semi) % 12, name: spell(rootName, t.semi, t.letters), degree: t.degree, semi: t.semi }));
+    // One hand position around middle C, with the chosen inversion: the lowest notes move up an octave
+    const base = 60 + rootPc - (rootPc > 6 ? 12 : 0);
+    const inv = Math.min(Number(saved.inversion) || 0, tones.length - 1);
+    shape = tones.map((t, i) => base + t.semi + (i < inv ? 12 : 0)).sort((a, b) => a - b);
+  }
+  byPc = new Map(tones.map(t => [t.pc, t]));
+}
+
+const prettyRoot = () => saved.root.replace("#", "♯").replace("b", "♭");
+
+function drawInfo() {
+  const scaleMode = saved.mode === "scale";
+  $("scaleLabel").hidden = !scaleMode;
+  $("chordLabel").hidden = $("invLabel").hidden = scaleMode;
+  document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === saved.mode));
+
+  let html = "";
+  if (scaleMode) {
+    const scale = SCALE_TYPES.find(s => s.id === saved.scale) || SCALE_TYPES[0];
+    $("title").textContent = `${prettyRoot()} ${scale.name.toLowerCase()}`;
+    // The notes with the steps between them (W = whole step, H = half step), back up to the root
+    tones.forEach((t, i) => {
+      html += `<span class="note-chip${i === 0 ? " root" : ""}">${t.name}<small>${t.degree}</small></span>`;
+      const next = i + 1 < tones.length ? tones[i + 1].semi : 12;
+      const gap = next - t.semi;
+      html += `<span class="step">${{ 1: "H", 2: "W", 3: "W+H", 4: "2W" }[gap] || gap}</span>`;
+    });
+    html += `<span class="note-chip root">${tones[0].name}<small>8</small></span>`;
+    $("about").textContent = scale.mood + " (W = whole step, 2 keys; H = half step, the very next key.)";
+    $("playBtn").textContent = "▶ Play up and down";
+    $("playAlt").textContent = "▶ Play over 2 octaves";
+  } else {
+    const type = TYPES.find(t => t.id === saved.chord) || TYPES[0];
+    const inv = Math.min(Number(saved.inversion) || 0, tones.length - 1);
+    const name = tones[0].name + type.suffix;
+    $("title").textContent = `${name}${inv ? ` / ${tones[inv].name}` : ""}`;
+    tones.forEach((t, i) => {
+      if (i) html += `<span class="step">+${t.semi - tones[i - 1].semi}</span>`;
+      html += `<span class="note-chip${i === 0 ? " root" : ""}">${t.name}<small>${t.degree}</small></span>`;
+    });
+    const invName = ["root position", "first inversion", "second inversion", "third inversion"][inv] || `inversion ${inv}`;
+    $("about").textContent = `${prettyRoot()} ${CHORD_NAMES[type.id] || type.label}: ${tones.map(t => t.degree).join(" – ")}. ` +
+      `The numbers between the notes are half steps (keys). Shown in ${invName}` +
+      (inv ? `, with ${tones[inv].name} at the bottom` : "") + ".";
+    $("playBtn").textContent = "▶ Play chord";
+    $("playAlt").textContent = "▶ Play note by note";
+  }
+  $("notes").innerHTML = html;
+
+  // Inversions that make sense for this chord: one per note except the top one (a power chord has just one)
+  if (!scaleMode) {
+    const options = ["Root position", "1st inversion", "2nd inversion", "3rd inversion"].slice(0, Math.min(4, tones.length));
+    const keep = Math.min(Number(saved.inversion) || 0, options.length - 1);
+    $("inversion").innerHTML = options.map((o, i) => `<option value="${i}">${o}</option>`).join("");
+    $("inversion").value = String(keep);
+  }
+
+  $("legend").innerHTML = scaleMode
+    ? `<span><i style="background:#8ea2ff"></i>Root</span><span><i style="background:#d7defb;border:1px solid #999"></i>In the scale</span><span><i style="background:#ffc078"></i>You're playing</span><span><i style="background:#ffa8a8"></i>Not in the scale</span>`
+    : `<span><i style="background:#a9b8f2;box-shadow:inset 0 -3px 0 #3b5bdb"></i>Hand position</span><span><i style="background:#d7defb;border:1px solid #999"></i>Chord notes elsewhere</span><span><i style="background:#ffc078"></i>You're playing</span><span><i style="background:#ffa8a8"></i>Not in the chord</span>`;
+}
+
+// ---------- The keyboard ----------
+const BLACK = [1, 3, 6, 8, 10];
+const isBlack = m => BLACK.includes(m % 12);
+const RANGES = { 2: [48, 72], 3: [48, 84], 4: [36, 84], 88: [21, 108] };
+const keyEls = new Map(); // MIDI number → key element
+let low = 48, high = 84;
+
+function buildKeyboard() {
+  [low, high] = RANGES[saved.range] || RANGES[3];
+  const kb = $("kb");
+  kb.innerHTML = "";
+  kb.classList.toggle("wide", saved.range === "88" || saved.range === "4");
+  keyEls.clear();
+  const whites = [];
+  for (let m = low; m <= high; m++) if (!isBlack(m)) whites.push(m);
+  const w = 100 / whites.length;
+  for (let m = low; m <= high; m++) {
+    const key = document.createElement("button");
+    key.type = "button";
+    key.className = "key " + (isBlack(m) ? "black" : "white");
+    key.dataset.midi = m;
+    key.innerHTML = `<span class="lab"></span>${m % 12 === 0 ? `<span class="c-lab">C${m / 12 - 1}</span>` : ""}`;
+    if (isBlack(m)) {
+      const before = whites.filter(x => x < m).length; // the black key sits on the line after this many white keys
+      key.style.left = `calc(${before * w}% - ${w * 0.32}%)`;
+      key.style.width = `${w * 0.64}%`;
+    }
+    key.setAttribute("aria-label", pretty(m % 12) + (Math.floor(m / 12) - 1));
+    // Mouse and touch: press = play; release = let go (so holding keys for a chord works)
+    key.addEventListener("pointerdown", e => { e.preventDefault(); press(m, true); });
+    key.addEventListener("pointerup", () => release(m));
+    key.addEventListener("pointerleave", () => release(m));
+    kb.appendChild(key);
+    keyEls.set(m, key);
+  }
+  drawKeys();
+  // Middle C in view
+  requestAnimationFrame(() => {
+    const c4 = keyEls.get(60);
+    const wrap = $("kbWrap");
+    if (c4 && wrap.scrollWidth > wrap.clientWidth) wrap.scrollLeft = c4.offsetLeft - wrap.clientWidth / 2 + 200;
+  });
+}
+
+function labelFor(t) {
+  return saved.labels === "names" ? t.name : saved.labels === "degrees" ? t.degree : "";
+}
+
+function drawKeys() {
+  keyEls.forEach((key, m) => {
+    const t = byPc.get(m % 12);
+    key.classList.toggle("in", !!t);
+    key.classList.toggle("root", !!t && t === tones[0]);
+    key.classList.toggle("shape", shape.includes(m));
+    key.querySelector(".lab").textContent = t ? labelFor(t) : "";
+    key.title = t ? `${t.name} (${t.degree})` : "";
+  });
+}
+
+// ---------- Playing it ----------
+let timers = [];
+function stopPlayback() {
+  timers.forEach(clearTimeout);
+  timers = [];
+  keyEls.forEach(k => k.classList.remove("playing"));
+}
+function playSequence(midis, gap) {
+  stopPlayback();
+  midis.forEach((m, i) => {
+    playPiano(m, i * gap);
+    timers.push(setTimeout(() => {
+      keyEls.forEach(k => k.classList.remove("playing"));
+      const k = keyEls.get(m);
+      if (k) k.classList.add("playing");
+    }, i * gap * 1000));
+  });
+  timers.push(setTimeout(() => keyEls.forEach(k => k.classList.remove("playing")), midis.length * gap * 1000 + 400));
+}
+// The scale from the root in octave 4 (or 3 for high roots), up and back down
+function scaleMidis(octaves) {
+  const start = 60 + tones[0].pc - (tones[0].pc > 6 ? 12 : 0);
+  const up = [];
+  for (let o = 0; o < octaves; o++) tones.forEach(t => up.push(start + 12 * o + t.semi));
+  up.push(start + 12 * octaves);
+  return [...up, ...up.slice(0, -1).reverse()];
+}
+$("playBtn").onclick = () => {
+  if (saved.mode === "scale") return playSequence(scaleMidis(1), 0.32);
+  stopPlayback();
+  shape.forEach(m => playPiano(m, 0));
+  shape.forEach(m => keyEls.get(m) && keyEls.get(m).classList.add("playing"));
+  timers.push(setTimeout(() => keyEls.forEach(k => k.classList.remove("playing")), 900));
+};
+$("playAlt").onclick = () => {
+  if (saved.mode === "scale") return playSequence(scaleMidis(2), 0.22);
+  playSequence([...shape, ...shape.slice(0, -1).reverse()], 0.35);
+};
+
+// ---------- Playing it yourself: screen, computer keys or a real keyboard ----------
+const down = new Map(); // MIDI number → where it came from ("screen", "keys", "midi")
+
+function press(m, sound, from = "screen") {
+  if (down.has(m)) return;
+  down.set(m, from);
+  if (sound) playPiano(m, 0);
+  const key = keyEls.get(m);
+  if (key) {
+    key.classList.add("down");
+    key.classList.toggle("out", !byPc.has(m % 12));
+  }
+  describe();
+}
+function release(m) {
+  if (!down.has(m)) return;
+  down.delete(m);
+  const key = keyEls.get(m);
+  if (key) key.classList.remove("down", "out");
+  if (down.size) describe(); // keep showing the last note or chord after you let go
+}
+
+// "E (3) ✓" for one note; for several, whether they make the chord
+function describe() {
+  const midis = [...down.keys()].sort((a, b) => a - b);
+  if (!midis.length) return;
+  const what = saved.mode === "scale" ? "scale" : "chord";
+  const parts = midis.map(m => {
+    const t = byPc.get(m % 12);
+    return t ? `<span class="ok">${t.name} (${t.degree}) ✓</span>` : `<span class="no">${pretty(m % 12)} ✗</span>`;
+  });
+  let extra = "";
+  if (saved.mode === "chord" && midis.length >= 2) {
+    const pcs = new Set(midis.map(m => m % 12));
+    const all = tones.every(t => pcs.has(t.pc)) && [...pcs].every(pc => byPc.has(pc));
+    if (all) {
+      const bottom = byPc.get(midis[0] % 12);
+      const inv = tones.indexOf(bottom);
+      const invName = ["root position", "first inversion", "second inversion", "third inversion"][inv] || "";
+      extra = ` · <span class="ok">That's ${$("title").textContent.split(" / ")[0]}${invName ? `, ${invName}` : ""}! 🎉</span>`;
+    } else {
+      const missing = tones.filter(t => !pcs.has(t.pc)).map(t => t.name);
+      if (missing.length && [...pcs].every(pc => byPc.has(pc))) extra = ` · still missing: ${missing.join(", ")}`;
+    }
+  } else if (midis.length === 1 && !byPc.has(midis[0] % 12)) {
+    extra = ` <span class="muted">not in the ${what}</span>`;
+  }
+  $("playingNow").innerHTML = parts.join(" &nbsp;") + extra;
+}
+
+// Computer keys: the bottom letter row is the white keys, the row above the black keys
+const KEYMAP = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15 };
+let keyOctave = 60; // A = middle C
+const keysDown = new Map(); // letter → MIDI number, so releasing plays the right note even after changing octave
+document.addEventListener("keydown", e => {
+  if (e.target.matches && e.target.matches("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "z") { keyOctave = Math.max(24, keyOctave - 12); return; }
+  if (k === "x") { keyOctave = Math.min(96, keyOctave + 12); return; }
+  if (KEYMAP[k] === undefined) return;
+  const m = keyOctave + KEYMAP[k];
+  keysDown.set(k, m);
+  press(m, true, "keys");
+});
+document.addEventListener("keyup", e => {
+  const k = e.key.toLowerCase();
+  if (keysDown.has(k)) { release(keysDown.get(k)); keysDown.delete(k); }
+});
+
+// A real keyboard over USB (midi.js). It makes its own sound, so we only play ours if you ask for it.
+Midi.mount($("midi"));
+Midi.onNote(e => {
+  if (e.type === "on") press(e.midi, $("midiSound").checked, "midi");
+  else release(e.midi);
+});
+$("midiSound").onchange = () => { saved.midiSound = $("midiSound").checked; save(); };
+
+// ---------- Changing settings ----------
+function update() {
+  stopPlayback();
+  compute();
+  drawInfo();
+  drawKeys();
+  $("playingNow").textContent = "";
+  down.forEach((_, m) => { const k = keyEls.get(m); if (k) k.classList.toggle("out", !byPc.has(m % 12)); });
+}
+document.querySelectorAll(".modes button").forEach(b => b.onclick = () => { saved.mode = b.dataset.mode; save(); update(); });
+["root", "scale", "chord", "labels"].forEach(id => $(id).onchange = () => {
+  saved[id] = $(id).value;
+  if (id === "chord") saved.inversion = "0";
+  save();
+  update();
+});
+$("inversion").onchange = () => { saved.inversion = $("inversion").value; save(); update(); };
+$("range").onchange = () => { saved.range = $("range").value; save(); buildKeyboard(); };
+
+compute();
+drawInfo();
+buildKeyboard();
+</script>
+</body>
+</html>

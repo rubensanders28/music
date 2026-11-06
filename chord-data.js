@@ -130,6 +130,58 @@ function position(c) {
   return c.barre <= 4 ? "low" : "high";
 }
 
+// ---------- Scales ----------
+// Each scale lists which letter it uses (0 = the root's letter, 1 = the next letter, ...) and
+// how many semitones above the root each note is. Pentatonic and blues scales skip some letters,
+// and the blues scale uses the 5th letter twice (♭5 and 5).
+//   core: for the blues scale, the notes the guitar positions are built from (the minor pentatonic);
+//         the extra "blue" note is then added wherever it falls inside the position.
+// Used by Scale shapes and the Keyboard page.
+const SEVEN = [0, 1, 2, 3, 4, 5, 6];
+const SCALE_TYPES = [
+  { group: "Major and minor", id: "major", name: "Major", degs: SEVEN, semis: [0, 2, 4, 5, 7, 9, 11],
+    mood: "Bright and happy. The scale most songs and most music lessons start from." },
+  { group: "Major and minor", id: "minor", name: "Natural minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 8, 10],
+    mood: "Sad, dark or serious. Same notes as the major scale three semitones up (its relative major)." },
+  { group: "Major and minor", id: "harmonic", name: "Harmonic minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 8, 11],
+    mood: "Minor with a raised 7th. The big 3-semitone jump gives it a classical, exotic sound." },
+  { group: "Major and minor", id: "melodic", name: "Melodic minor", degs: SEVEN, semis: [0, 2, 3, 5, 7, 9, 11],
+    mood: "Minor at the bottom, major at the top. Used a lot in jazz." },
+  { group: "Pentatonic and blues", id: "majpent", name: "Major pentatonic", degs: [0, 1, 2, 4, 5], semis: [0, 2, 4, 7, 9],
+    mood: "The major scale without its 4th and 7th. Only 5 notes and no semitone clashes, so it's hard to play a wrong note." },
+  { group: "Pentatonic and blues", id: "minpent", name: "Minor pentatonic", degs: [0, 2, 3, 4, 6], semis: [0, 3, 5, 7, 10],
+    mood: "The rock and blues guitar solo scale. Usually the first scale guitarists learn." },
+  { group: "Pentatonic and blues", id: "blues", name: "Blues", degs: [0, 2, 3, 4, 4, 6], semis: [0, 3, 5, 6, 7, 10], core: [0, 1, 2, 4, 5],
+    mood: "Minor pentatonic plus the ♭5, the \"blue note\". Slide through it rather than stopping on it." },
+  { group: "Modes", id: "dorian", name: "Dorian", degs: SEVEN, semis: [0, 2, 3, 5, 7, 9, 10],
+    mood: "Minor with a raised 6th: hopeful rather than sad. Funk, soul and Santana." },
+  { group: "Modes", id: "phrygian", name: "Phrygian", degs: SEVEN, semis: [0, 1, 3, 5, 7, 8, 10],
+    mood: "Minor with a ♭2 right next to the root. Dark, Spanish and metal-sounding." },
+  { group: "Modes", id: "lydian", name: "Lydian", degs: SEVEN, semis: [0, 2, 4, 6, 7, 9, 11],
+    mood: "Major with a raised 4th. Dreamy and floating; loved by film composers." },
+  { group: "Modes", id: "mixolydian", name: "Mixolydian", degs: SEVEN, semis: [0, 2, 4, 5, 7, 9, 10],
+    mood: "Major with a ♭7. Bluesy and relaxed: classic rock and Celtic music." },
+  { group: "Modes", id: "locrian", name: "Locrian", degs: SEVEN, semis: [0, 1, 3, 5, 6, 8, 10],
+    mood: "The unstable one: its ♭5 means the root chord is diminished. Rare, but good to know." },
+];
+
+const ROOTS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
+
+// Spell the scale so every note gets the right letter (B♭ in F major, not A♯).
+// Same idea as spellScale in chord-data.js, but letters can be skipped or repeated.
+function spellNotes(rootName, scale) {
+  const letter = LETTERS.indexOf(rootName[0]);
+  const rootPc = (NATURAL[letter] + (rootName[1] === "#" ? 1 : rootName[1] === "b" ? -1 : 0) + 12) % 12;
+  return scale.semis.map((semi, i) => {
+    const l = (letter + scale.degs[i]) % 7;
+    const pc = (rootPc + semi) % 12;
+    const acc = ((pc - NATURAL[l] + 18) % 12) - 6;
+    // Degree name: compare with the major scale, so 3 semitones on the 3rd letter is "♭3"
+    const shift = semi - MAJOR[scale.degs[i]];
+    return { pc, name: LETTERS[l] + ACCIDENTAL[acc], degree: ACCIDENTAL[shift] + (scale.degs[i] + 1) };
+  });
+}
+
 // ---------- Sound ----------
 // Real acoustic guitar recordings, one file per note, from the open-source
 // tonejs-instruments project (CC BY 3.0). File names use "s" for sharp: "Fs2" = F♯2.

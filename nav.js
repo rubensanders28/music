@@ -6,6 +6,7 @@
   const PAGES = [
     ["journey.html", "My journey"],
     ["index.html", "Piano trainer"],
+    ["keyboard.html", "Keyboard"],
     ["guitar.html", "Fretboard trainer"],
     ["chords.html", "Chord trainer"],
     ["ear.html", "Ear trainer"],
