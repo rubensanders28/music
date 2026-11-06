@@ -127,6 +127,8 @@
   .day-list .x { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; }
   .small-btn { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; border: none; background: var(--btn); color: var(--ink); cursor: pointer; }
   .small-btn.primary { background: var(--accent); color: var(--card); font-weight: 600; }
+  .remark-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+  .remark-form input { flex: 1; min-width: 180px; font: inherit; font-size: 0.9rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
   .log-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
   .log-form input { font: inherit; font-size: 0.9rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
   .log-form input[type=number] { width: 70px; }
@@ -695,6 +697,7 @@ function bestWeekRun() {
 
 let pickedDay = today();
 let logging = false;
+let editingRemark = null; // which logged session on the picked day you're writing a remark for
 
 function drawCalendar() {
   const STEP = 17, CELL = 14, LEFT = 30, TOP = 16;
@@ -739,8 +742,16 @@ function drawDayDetail() {
   const name = pickedDay === today() ? "Today" : pickedDay === isoOf(addDays(new Date(), -1)) ? "Yesterday"
     : dateOf(pickedDay).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
   const rows = [
-    ...day.extras.map((x, i) => `<li><span><b>${INSTRUMENTS[x.inst] || "Practice"}</b>${x.note ? " · " + escapeHtml(x.note) : ""}</span>
-      <span class="muted">${Number(x.min) || 0} min${x.mine ? ` <button class="x" data-extra="${i}" title="Remove" aria-label="Remove">✕</button>` : ""}</span></li>`),
+    ...day.extras.map((x, i) => i === editingRemark
+      // Writing a remark for a session that's already logged
+      ? `<li><form class="remark-form" data-remark-form="${i}">
+          <b>${INSTRUMENTS[x.inst] || "Practice"}</b> · ${Number(x.min) || 0} min
+          <input type="text" id="remarkText" maxlength="200" placeholder="What did you play? How did it go?" aria-label="Remark">
+          <button class="small-btn primary" type="submit">Save</button>
+          <button class="small-btn" type="button" id="remarkCancel">Cancel</button>
+        </form></li>`
+      : `<li><span><b>${INSTRUMENTS[x.inst] || "Practice"}</b>${x.note ? " · " + escapeHtml(x.note) : ""}</span>
+      <span class="muted">${Number(x.min) || 0} min <button class="x" data-remark="${i}" title="${x.note ? "Edit the remark" : "Add a remark"}" aria-label="${x.note ? "Edit the remark" : "Add a remark"}">✎</button>${x.mine ? `<button class="x" data-extra="${i}" title="Remove" aria-label="Remove">✕</button>` : ""}</span></li>`),
     ...(day.ladder >= 30 ? [`<li><span><b>Tempo ladder</b> · chord switches</span><span class="muted">${Math.round(day.ladder / 60)} min</span></li>`] : []),
   ];
   $("dayDetail").innerHTML = `
@@ -759,7 +770,7 @@ function drawDayDetail() {
     </form>` : ""}`;
 
   const btn = $("logBtn");
-  if (btn) btn.onclick = () => { logging = true; drawDayDetail(); $("logMin").focus(); $("logMin").select(); };
+  if (btn) btn.onclick = () => { logging = true; editingRemark = null; drawDayDetail(); $("logMin").focus(); $("logMin").select(); };
   const form = $("logForm");
   if (form) {
     form.querySelectorAll("[data-min]").forEach(c => c.onclick = () => { $("logMin").value = c.dataset.min; });
@@ -773,6 +784,32 @@ function drawDayDetail() {
       refreshPractice();
     };
     $("logCancel").onclick = () => { logging = false; drawDayDetail(); };
+  }
+  // ✎: add or change the remark of a logged session
+  $("dayDetail").querySelectorAll("[data-remark]").forEach(b => b.onclick = () => {
+    editingRemark = Number(b.dataset.remark);
+    logging = false;
+    drawDayDetail();
+    const input = $("remarkText");
+    input.value = day.extras[editingRemark].note || "";
+    input.focus();
+  });
+  const remarkForm = $("dayDetail").querySelector("[data-remark-form]");
+  if (remarkForm) {
+    remarkForm.onsubmit = e => {
+      e.preventDefault();
+      const x = day.extras[editingRemark];
+      const data = storedJson(x.key, {});
+      const entry = data[x.day] && data[x.day].extra && data[x.day].extra[x.index];
+      if (entry) {
+        entry.note = $("remarkText").value.trim();
+        try { localStorage.setItem(x.key, JSON.stringify(data)); } catch (err) {}
+      }
+      editingRemark = null;
+      refreshPractice();
+    };
+    $("remarkCancel").onclick = () => { editingRemark = null; drawDayDetail(); };
+    $("remarkText").onkeydown = e => { if (e.key === "Escape") { editingRemark = null; drawDayDetail(); } };
   }
   $("dayDetail").querySelectorAll("[data-extra]").forEach(b => b.onclick = () => {
     const x = day.extras[Number(b.dataset.extra)];
@@ -862,6 +899,7 @@ $("cal").addEventListener("click", e => {
   const day = e.target.dataset && e.target.dataset.day;
   if (!day) return;
   pickedDay = day;
+  editingRemark = null;
   logging = false;
   drawPractice();
 });
