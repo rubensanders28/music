@@ -15,6 +15,9 @@
     --accent: #3b5bdb;
     --accent-soft: #a9b8f2;
     --btn: #ece8df;
+    --good: #2b8a3e;
+    --gold: #f2b705;
+    --gold-soft: #fff8e1;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -26,6 +29,9 @@
       --accent: #8ea2ff;
       --accent-soft: #4a5a9e;
       --btn: #2f2d35;
+      --good: #2f9e44;
+      --gold: #fcc419;
+      --gold-soft: #3a3320;
     }
   }
   * { box-sizing: border-box; }
@@ -79,7 +85,20 @@
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
   }
   .chord:hover { border-color: var(--accent); }
+  .chord:focus-visible { outline: 3px solid var(--accent); }
   .chord .name { font-weight: 700; font-size: 1.05rem; }
+  /* Chords you know (green) or have mastered (gold) */
+  .chord.know { border-color: var(--good); }
+  .chord.mastered { border-color: var(--gold); background: var(--gold-soft); }
+  .status {
+    display: block; width: 100%; margin-top: 6px; font: inherit; font-size: 0.78rem; font-weight: 700;
+    border: none; border-radius: 8px; padding: 5px 4px; cursor: pointer; background: var(--btn); color: var(--muted);
+  }
+  .status:hover { outline: 2px solid var(--accent); }
+  .chord.know .status { background: var(--good); color: #fff; }
+  .chord.mastered .status { background: var(--gold); color: #1f1d1a; }
+  .known-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+  .known-summary b { color: var(--ink); }
   .chord .where { color: var(--muted); font-size: 0.75rem; margin-bottom: 4px; }
 
   /* Chord diagram colours (the shapes are drawn by chord-data.js) */
@@ -128,7 +147,7 @@
 <main>
   <h1>Chord Library</h1>
   <p class="sub">Every chord in the trainer, on guitar or piano. Choose what to show, and click a chord to hear it.
-    Under "Formulas" you can see how every chord type is built.</p>
+    Mark the chords you know or have mastered with the bar under each one. Under "Formulas" you can see how every chord type is built.</p>
 
   <div class="switches">
     <div class="seg" role="group" aria-label="Instrument">
@@ -156,6 +175,13 @@
       <div class="filter guitar-only">
         <div class="filter-head"><h2>Where on the neck</h2></div>
         <div class="chips" id="positions"></div>
+      </div>
+      <div class="filter">
+        <div class="filter-head"><h2>My chords</h2></div>
+        <div class="known-summary">
+          <div class="chips" id="knownFilter"></div>
+          <span id="knownCount" style="font-size:.85rem; color: var(--muted)"></span>
+        </div>
       </div>
       <div class="filter options">
         <label>Root note
@@ -207,7 +233,7 @@ const selected = {
   roots:     new Set(NOTES.map((_, i) => String(i))),
   positions: new Set(["open", "low"]),
 };
-let settings = { instrument: "guitar", view: "shapes", formulaRoot: "0" };
+let settings = { instrument: "guitar", view: "shapes", formulaRoot: "0", known: "all" };
 try {
   const saved = JSON.parse(localStorage.getItem("chordLibrary"));
   if (saved) {
@@ -309,6 +335,98 @@ document.querySelectorAll("[data-all], [data-none]").forEach(btn => {
   };
 });
 
+// ---------- Chords you know ----------
+// Saved as "chordsKnown" = { guitar: { id: { s: "know" | "mastered", d: "2026-11-06" } }, piano: { ... } }.
+// On the guitar every shape counts on its own (an open C and a barre C are different things to learn),
+// so the id includes the frets: "0-maj-x,3,2,0,1,0". On the piano it's the chord: "0-maj".
+let known = { guitar: {}, piano: {} };
+try { known = { ...known, ...JSON.parse(localStorage.getItem("chordsKnown")) }; } catch (e) {}
+const saveKnown = () => { try { localStorage.setItem("chordsKnown", JSON.stringify(known)); } catch (e) {} };
+const guitarId = c => `${c.root}-${c.type.id}-${c.frets.map(f => f === null ? "x" : f).join(",")}`;
+const pianoId = (root, typeId) => `${root}-${typeId}`;
+const statusOf = id => (known[settings.instrument][id] || {}).s || "";
+const STATUS = {
+  "": { label: "○ Still to learn", next: "know" },
+  know: { label: "✓ I know it", next: "mastered" },
+  mastered: { label: "★ Mastered", next: "" },
+};
+const STATUS_HELP = "Click to mark it: still to learn → I know it → mastered";
+
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function setStatus(id, s) {
+  const list = known[settings.instrument];
+  if (s) list[id] = { s, d: today() }; else delete list[id];
+  saveKnown();
+}
+
+// The "My chords" filter: which chords to show
+const KNOWN_FILTER = [
+  { id: "all", label: "All" },
+  { id: "todo", label: "Still to learn" },
+  { id: "known", label: "Known" },
+  { id: "mastered", label: "Mastered" },
+];
+function buildKnownFilter() {
+  const box = $("knownFilter");
+  box.innerHTML = "";
+  KNOWN_FILTER.forEach(f => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = f.label;
+    b.setAttribute("aria-pressed", settings.known === f.id);
+    b.onclick = () => { settings.known = f.id; save(); buildKnownFilter(); render(); };
+    box.appendChild(b);
+  });
+}
+// "Known" means you know it or have mastered it
+function passesKnown(id) {
+  const s = statusOf(id);
+  return settings.known === "all" || (settings.known === "todo" && !s) ||
+    (settings.known === "known" && !!s) || (settings.known === "mastered" && s === "mastered");
+}
+function drawKnownCount() {
+  const list = Object.values(known[settings.instrument]);
+  const k = list.filter(x => x.s === "know").length, m = list.filter(x => x.s === "mastered").length;
+  const what = piano() ? "chords" : "chord shapes";
+  $("knownCount").innerHTML = k + m
+    ? `On ${piano() ? "piano" : "guitar"} you know <b>${k + m}</b> ${what}, <b>${m}</b> of them mastered.`
+    : `Click the bar under a chord to mark it as known or mastered.`;
+}
+
+// A chord card: click it to hear it; the bar at the bottom marks it as known or mastered
+function chordCard(id, html, svg, play) {
+  const card = document.createElement("div");
+  card.className = "chord";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.title = "Click to hear it";
+  card.innerHTML = html;
+  card.appendChild(svg);
+  const bar = document.createElement("button");
+  bar.className = "status";
+  bar.title = STATUS_HELP;
+  card.appendChild(bar);
+  const paint = () => {
+    const s = statusOf(id);
+    card.classList.toggle("know", s === "know");
+    card.classList.toggle("mastered", s === "mastered");
+    bar.textContent = STATUS[s].label;
+  };
+  paint();
+  bar.onclick = e => {
+    e.stopPropagation();
+    setStatus(id, STATUS[statusOf(id)].next);
+    paint();
+    drawKnownCount();
+  };
+  card.onclick = play;
+  card.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && e.target === card) { e.preventDefault(); play(); } };
+  return card;
+}
+
 // ---------- The library ----------
 function where(c) {
   if (position(c) === "open") return "open";
@@ -328,6 +446,8 @@ function render() {
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
 
   if (settings.view === "formulas") return renderFormulas();
+  buildKnownFilter();
+  drawKnownCount();
   if (piano()) renderPiano(); else renderGuitar();
 }
 
@@ -338,11 +458,13 @@ function renderGuitar() {
   library.innerHTML = "";
 
   const shown = CHORDS.filter(c =>
-    selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)));
+    selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)) && passesKnown(guitarId(c)));
 
   $("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
   if (shown.length === 0) {
-    library.innerHTML = `<p class="empty">Nothing selected. Pick at least one chord type, root note and neck position.</p>`;
+    library.innerHTML = settings.known !== "all"
+      ? `<p class="empty">No chord shapes here with "${KNOWN_FILTER.find(f => f.id === settings.known).label}". Choose "All" under My chords to see them all.</p>`
+      : `<p class="empty">Nothing selected. Pick at least one chord type, root note and neck position.</p>`;
     return;
   }
 
@@ -354,16 +476,10 @@ function renderGuitar() {
 
     const { section, grid } = rootSection(root);
     here.forEach(c => {
-      const card = document.createElement("button");
-      card.className = "chord";
-      card.title = "Click to hear it";
-      card.innerHTML = `<div class="name">${chordName(c)}</div><div class="where">${where(c)}</div>`;
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("viewBox", "0 0 240 285");
       drawChord(svg, c, { lefty, showRoot });
-      card.appendChild(svg);
-      card.onclick = () => strum(c);
-      grid.appendChild(card);
+      grid.appendChild(chordCard(guitarId(c), `<div class="name">${chordName(c)}</div><div class="where">${where(c)}</div>`, svg, () => strum(c)));
     });
     library.appendChild(section);
   });
@@ -376,27 +492,26 @@ function renderPiano() {
   library.innerHTML = "";
   const types = TYPES.filter(t => selected.types.has(t.id));
   const roots = NOTES.map((_, i) => i).filter(i => selected.roots.has(String(i)));
-  const total = types.length * roots.length;
+  const total = roots.reduce((n, root) => n + types.filter(t => passesKnown(pianoId(root, t.id))).length, 0);
   $("count").textContent = `Showing ${total} chord${total === 1 ? "" : "s"}`;
   if (total === 0) {
-    library.innerHTML = `<p class="empty">Nothing selected. Pick at least one chord type and root note.</p>`;
+    library.innerHTML = settings.known !== "all" && types.length && roots.length
+      ? `<p class="empty">No chords here with "${KNOWN_FILTER.find(f => f.id === settings.known).label}". Choose "All" under My chords to see them all.</p>`
+      : `<p class="empty">Nothing selected. Pick at least one chord type and root note.</p>`;
     return;
   }
 
   roots.forEach(root => {
+    const here = types.filter(t => passesKnown(pianoId(root, t.id)));
+    if (!here.length) return;
     const { section, grid } = rootSection(root);
     grid.classList.add("piano");
-    types.forEach(t => {
+    here.forEach(t => {
       const names = spellChord(root, t.id);
-      const card = document.createElement("button");
-      card.className = "chord";
-      card.title = "Click to hear it";
-      card.innerHTML = `<div class="name">${names[0]}${t.suffix}</div><div class="where">${names.join(" · ")}</div>`;
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       drawPianoChord(svg, pianoChord(root, t.id), showRoot ? 48 + root : null);
-      card.appendChild(svg);
-      card.onclick = () => playChordNotes(root, t.id);
-      grid.appendChild(card);
+      grid.appendChild(chordCard(pianoId(root, t.id),
+        `<div class="name">${names[0]}${t.suffix}</div><div class="where">${names.join(" · ")}</div>`, svg, () => playChordNotes(root, t.id)));
     });
     library.appendChild(section);
   });
