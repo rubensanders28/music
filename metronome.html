@@ -110,6 +110,10 @@
   .beat.first { width: 30px; height: 30px; margin-top: -4px; }
   .beat.on { background: var(--hl); transform: scale(1.15); }
   .beat.first.on { background: var(--accent); }
+  /* Gap click: during the silent bars the dots stay dark, so you keep the beat yourself */
+  .beats.silent .beat { opacity: .35; }
+  .gap-note { min-height: 1.4em; font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+  .gap-note.silent { color: var(--hl); }
 
   /* How far you are from the start tempo to the goal */
   .ladder { margin-top: 14px; }
@@ -127,7 +131,7 @@
   #startBtn { grid-column: 1 / -1; background: var(--accent); color: var(--card); }
   #cleanBtn { color: var(--good); }
   #mistakeBtn { color: var(--bad); }
-  #resetBtn { grid-column: 1 / -1; font-size: 0.9rem; padding: 8px; font-weight: 600; }
+  #slowerBtn, #resetBtn { font-size: 0.9rem; padding: 8px; font-weight: 600; }
 
   .stats { display: flex; justify-content: space-around; text-align: center; }
   .stats b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
@@ -162,7 +166,8 @@
 <main>
   <h1>Tempo Ladder</h1>
   <p class="sub">Start slow, and climb to your goal tempo a few beats per minute at a time.
-    Played it cleanly? Step up. Made a mistake? Step back down until it's clean again.</p>
+    Played it cleanly a few times in a row? Step up. Made a mistake? Stay at that tempo until it's clean,
+    and go slower when it's too fast for now.</p>
 
   <!-- What to practise: a chord switch from your library, and a strumming pattern -->
   <div class="panel">
@@ -220,10 +225,27 @@
           <option value="16">Every 16 bars</option>
         </select>
       </label>
+      <label title="How many clean takes in a row at a tempo before you step up. Once can be luck; three times is a skill.">Clean in a row
+        <select id="needed">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="3" selected>3×</option>
+        </select>
+      </label>
       <label>Accent beat 1
         <select id="accent">
           <option value="on">On</option>
           <option value="off">Off</option>
+        </select>
+      </label>
+      <label title="The click goes silent for a bar or two while you keep playing: does it come back exactly where you are?">Gap click
+        <select id="gap">
+          <option value="0">Off</option>
+          <option value="1-1">1 bar on, 1 silent</option>
+          <option value="2-1">2 bars on, 1 silent</option>
+          <option value="2-2">2 bars on, 2 silent</option>
+          <option value="4-2">4 bars on, 2 silent</option>
+          <option value="4-4">4 bars on, 4 silent</option>
         </select>
       </label>
     </div>
@@ -235,6 +257,7 @@
     <div class="marking" id="marking"></div>
     <div class="strums" id="strumStrip"></div>
     <div class="beats" id="beatDots"></div>
+    <div class="gap-note" id="gapNote"></div>
     <div class="message" id="message"></div>
 
     <div class="ladder">
@@ -244,8 +267,9 @@
 
     <div class="buttons">
       <button id="startBtn">▶ Start <small style="color: inherit; opacity: .8">Space</small></button>
-      <button id="cleanBtn">✓ Clean <small>step up · ↑</small></button>
-      <button id="mistakeBtn">✗ Mistake <small>step down · ↓</small></button>
+      <button id="cleanBtn">✓ Clean <small>↑</small></button>
+      <button id="mistakeBtn">✗ Mistake <small>count starts again · ↓</small></button>
+      <button id="slowerBtn">▼ Slower <small>←</small></button>
       <button id="resetBtn">↺ Back to start tempo</button>
     </div>
   </div>
@@ -273,8 +297,15 @@
   <p class="hint"><b>How to use it:</b> pick a chord switch (or "Just the metronome" for anything else, like a scale or a riff).
     Set the start tempo where you can play it perfectly, and the goal where you want to end up.
     Play it once through, then press Clean or Mistake. Be honest: practising mistakes at speed only makes them stick.<br>
+    <b>Clean in a row:</b> with 3×, you step up only after three clean takes in a row at a tempo; a mistake starts the count again.
+    Your best clean tempo is the fastest one you've played cleanly that many times in a row, so it's a tempo you can really play.<br>
     Each chord switch remembers its own start and goal, and keeps a history: one line per day, with the fastest tempo you played it cleanly.<br>
-    In automatic mode the tempo rises on its own every few bars; press Mistake whenever it gets messy.<br>
+    In automatic mode the tempo rises on its own every few bars; press Mistake whenever it gets messy (you then get the
+    full number of bars again before it rises), and Slower when it's too fast.<br>
+    <b>Keys:</b> Space start/stop · ↑ clean · ↓ mistake · ← slower.<br>
+    <b>Gap click:</b> the click goes silent for a bar or two while you keep playing (and counting in your head).
+    When it comes back, you should be exactly with it. If you've drifted ahead you're rushing; if it comes in before you, you're dragging.
+    Start with short gaps at a slow tempo.<br>
     Everything is saved in this browser only, so use the same browser each time.</p>
 </main>
 
@@ -382,13 +413,24 @@ function chordAt(barNumber) {
   return ex ? Math.floor(barNumber / ex.bars) % ex.chords.length : -1;
 }
 
+// Gap click: e.g. "2-1" = 2 bars with the click, then 1 silent bar, and round again. You always start with clicks.
+function gapSetting() {
+  const [on, off] = $("gap").value.split("-").map(Number);
+  return on && off ? { on, off } : null;
+}
+function silentBar(barNumber) {
+  const g = gapSetting();
+  return !!g && barNumber % (g.on + g.off) >= g.on;
+}
+
 function scheduler() {
   while (nextTime < audio.currentTime + LOOKAHEAD) {
     const length = 60 / bpm;
-    click(nextTime, beat === 0 && $("accent").value === "on");
+    const silent = silentBar(bar);
+    if (!silent) click(nextTime, beat === 0 && $("accent").value === "on");
     // Two display moments per beat: the beat itself and the "&" halfway, for the strumming pattern
-    due.push({ time: nextTime, beat, half: 0, chord: chordAt(bar) });
-    due.push({ time: nextTime + length / 2, beat, half: 1, chord: chordAt(bar) });
+    due.push({ time: nextTime, beat, half: 0, chord: chordAt(bar), silent, bar });
+    due.push({ time: nextTime + length / 2, beat, half: 1, chord: chordAt(bar), silent, bar });
     nextTime += length;
     beat++;
     if (beat >= beatsPerBar()) {
@@ -429,6 +471,8 @@ function stop() {
   practised += ms;
   record({ seconds: ms / 1000 });
   document.querySelectorAll(".beat.on, .strum.on").forEach(d => d.classList.remove("on"));
+  $("beatDots").classList.remove("silent");
+  $("gapNote").textContent = "";
   $("startBtn").firstChild.textContent = "▶ Start ";
 }
 
@@ -436,16 +480,35 @@ function stop() {
 function animate() {
   while (due.length && due[0].time <= audio.currentTime) {
     const d = due.shift();
-    if (d.half === 0) document.querySelectorAll(".beat").forEach((dot, i) => dot.classList.toggle("on", i === d.beat));
+    if (d.half === 0 && d.beat === 0) showGap(d);
+    // In a silent bar nothing lights up: no peeking at the dots to stay in time
+    if (d.half === 0) document.querySelectorAll(".beat").forEach((dot, i) => dot.classList.toggle("on", !d.silent && i === d.beat));
     const strums = document.querySelectorAll(".strum");
     if (strums.length) {
       const slot = (d.beat * 2 + d.half) % strums.length;
-      strums.forEach((s, i) => s.classList.toggle("on", i === slot));
+      strums.forEach((s, i) => s.classList.toggle("on", !d.silent && i === slot));
     }
     if (d.chord >= 0) showChord(d.chord);
   }
   updateTime();
   requestAnimationFrame(animate);
+}
+
+// At the start of each bar: tell you what's happening with the gap click
+function showGap(d) {
+  const note = $("gapNote");
+  $("beatDots").classList.toggle("silent", d.silent);
+  const g = gapSetting();
+  if (!g) { note.textContent = ""; note.className = "gap-note"; return; }
+  const inCycle = d.bar % (g.on + g.off);
+  if (d.silent) {
+    const left = g.on + g.off - inCycle;
+    note.textContent = `🔇 Silent: keep the beat going${left > 1 ? ` (${left} bars)` : ""}`;
+    note.className = "gap-note silent";
+  } else {
+    note.textContent = d.bar >= g.on + g.off && inCycle === 0 ? "🔊 Back in: were you right with it?" : "";
+    note.className = "gap-note";
+  }
 }
 
 // ---------- The ladder ----------
@@ -458,10 +521,28 @@ function setMessage(text, kind = "") {
   $("message").className = "message " + kind;
 }
 
-// reason: "clean" (you pressed Clean) or "auto" (automatic mode).
+// Clean takes in a row at the current tempo. With "Clean in a row" set to 3, you step up (and the tempo
+// counts as your best clean tempo) only after 3 clean takes without a mistake in between.
+let cleanInARow = 0;
+const neededInARow = () => Number($("needed").value) || 1;
+
+function pressClean() {
+  cleanCount++;
+  cleanInARow++;
+  const needed = neededInARow();
+  if (cleanInARow < needed) {
+    record({ clean: 1 });
+    setMessage(`Clean ${cleanInARow} of ${needed} at ${bpm}. Again!`, "good");
+    render();
+    return;
+  }
+  stepUp("clean");
+}
+
+// reason: "clean" (enough clean takes in a row) or "auto" (automatic mode).
 // Either way, the tempo you just finished counts as played cleanly.
 function stepUp(reason) {
-  if (reason === "clean") cleanCount++;
+  cleanInARow = 0;
   const goal = goalBpm();
   const old = bpm;
   if (bpm >= goal) {
@@ -479,19 +560,35 @@ function stepUp(reason) {
   render();
 }
 
-function stepDown() {
+// A mistake doesn't change the tempo: it starts your count of clean takes in a row again.
+// In automatic mode it also gives you the full number of bars again before the next step up.
+function pressMistake() {
   mistakeCount++;
+  const had = cleanInARow;
+  cleanInARow = 0;
+  barsSinceStep = 0;
+  const needed = neededInARow();
+  setMessage(needed > 1
+    ? `Mistake${had ? `: back to 0 of ${needed}` : ""}. Stay at ${bpm} until it's clean ${needed}× in a row.`
+    : `Mistake. Stay at ${bpm} until it's clean.`, "bad");
+  record({ mistakes: 1 });
+  render();
+}
+
+// Slower: your own choice, when a tempo is too fast for now
+function stepDown() {
+  cleanInARow = 0;
   barsSinceStep = 0; // in automatic mode, give yourself the full number of bars at the slower tempo
   const old = bpm;
   bpm = Math.max(MIN_BPM, bpm - stepBpm());
-  if (bpm !== old) log(old, bpm, "mistake");
-  setMessage(`Back to ${bpm}. Slow and clean wins.`, "bad");
-  record({ mistakes: 1 });
+  if (bpm !== old) log(old, bpm, "slower");
+  setMessage(bpm !== old ? `Down to ${bpm}. Slow and clean wins.` : `${bpm} BPM is as slow as it goes.`, "");
   render();
 }
 
 function reset() {
   bpm = startBpm();
+  cleanInARow = 0;
   barsSinceStep = 0;
   setMessage("");
   render();
@@ -824,7 +921,7 @@ function render() {
   $("mistakeCount").textContent = mistakeCount;
 }
 
-const SETTINGS = ["start", "goal", "step", "beats", "auto", "accent"];
+const SETTINGS = ["start", "goal", "step", "beats", "auto", "accent", "gap", "needed"];
 function save() {
   try { localStorage.setItem("metronomeSettings", JSON.stringify(Object.fromEntries(SETTINGS.map(id => [id, $(id).value])))); } catch (e) {}
 }
@@ -842,20 +939,23 @@ function saveTempos() {
 // Changing the start tempo while stopped moves you to it; other settings just take effect
 $("start").onchange = () => { if (!running) bpm = startBpm(); saveTempos(); render(); };
 $("goal").onchange = () => { saveTempos(); render(); };
-["step", "auto"].forEach(id => $(id).onchange = () => { save(); render(); });
+["step", "auto", "gap"].forEach(id => $(id).onchange = () => { save(); render(); });
+$("needed").onchange = () => { cleanInARow = 0; save(); setMessage(""); render(); };
 ["beats", "accent"].forEach(id => $(id).onchange = () => { save(); buildBeats(); });
 
 $("startBtn").onclick = () => running ? stop() : start();
-$("cleanBtn").onclick = () => stepUp("clean");
-$("mistakeBtn").onclick = stepDown;
+$("cleanBtn").onclick = pressClean;
+$("mistakeBtn").onclick = pressMistake;
+$("slowerBtn").onclick = stepDown;
 $("resetBtn").onclick = reset;
 
 // Keyboard shortcuts, so you don't have to let go of your instrument for long
 document.addEventListener("keydown", e => {
   if (e.target.matches("input, select, textarea")) return;
   if (e.key === " ") { e.preventDefault(); running ? stop() : start(); }
-  else if (e.key === "ArrowUp") { e.preventDefault(); stepUp("clean"); }
-  else if (e.key === "ArrowDown") { e.preventDefault(); stepDown(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); pressClean(); }
+  else if (e.key === "ArrowDown") { e.preventDefault(); pressMistake(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); stepDown(); }
 });
 
 fillExerciseSelect();
