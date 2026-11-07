@@ -82,6 +82,9 @@ const SHAPES = [
 ];
 // The usual open Emaj7 and Esus2 use all six strings; they go first, so they're the shape shown by default
 SHAPES.unshift({ openRoot: 4, movable: false, chords: { maj7: [0,2,1,1,0,0], sus2: [0,2,4,4,0,0] } });
+// Open F♯m7♭5 (2 0 2 2 1 0): all six strings, with open A and E as the ♭3 and ♭7. It's the ii chord in E minor,
+// where those open strings ring along nicely, so it goes first too.
+SHAPES.unshift({ openRoot: 6, movable: false, chords: { m7b5: [2,0,2,2,1,0] } });
 
 // Turn every shape into real chords: one per root note it can reach.
 // Each chord is { root, type, frets, barre } where barre is the fret the shape was slid to.
