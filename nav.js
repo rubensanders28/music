@@ -15,6 +15,7 @@
     ["chord-library.html", "Chord library"],
     ["keys.html", "Chords in a key"],
     ["songs.html", "My songs"],
+    ["intervals.html", "Intervals"],
     ["circle.html", "Circle of fifths"],
     ["scales.html", "Scale shapes"],
     ["caged.html", "CAGED system"],

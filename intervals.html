@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intervals</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
+    --good: #2b8a3e;
+    --hl: #f08c00;
+    --btn: #ece8df;
+    --wood: #f3e6cf;
+    --fret: #b9a789;
+    --string: #6b665e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
+      --good: #69db7c;
+      --hl: #ffc078;
+      --btn: #2f2d35;
+      --wood: #2d2822;
+      --fret: #6e6352;
+      --string: #a29d94;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1000px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  h3 { font-size: 1rem; margin: 14px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+  .panel { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .panel p, .panel li { line-height: 1.55; }
+  .panel p:last-child { margin-bottom: 0; }
+  .muted { color: var(--muted); }
+  ul, ol { padding-left: 1.3em; margin: 6px 0; }
+
+  /* Choosing an interval */
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-bottom: 12px; }
+  .pick button { font: inherit; border: 2px solid transparent; border-radius: 10px; padding: 8px 4px; background: var(--btn); color: var(--ink); cursor: pointer; line-height: 1.15; }
+  .pick button b { display: block; font-size: 1.05rem; }
+  .pick button small { color: var(--muted); font-size: 0.72rem; }
+  .pick button[aria-pressed=true] { background: var(--accent); color: var(--card); }
+  .pick button[aria-pressed=true] small { color: var(--card); opacity: .85; }
+  .btn { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 8px 14px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--card); }
+  .btn:hover { outline: 2px solid var(--accent); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .now { margin: 4px 0 12px; }
+  .now .big { font-size: 1.5rem; font-weight: 800; }
+  .now .notes { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .now p { margin: 6px 0 0; color: var(--muted); }
+
+  /* Keyboard */
+  .kb-wrap { overflow-x: auto; }
+  #kb { display: block; width: 100%; min-width: 560px; height: auto; }
+  #kb .w { fill: #fdfdfb; stroke: #888; }
+  #kb .b { fill: #1c1c1c; }
+  #kb .between.w { fill: #fff1d6; }
+  #kb .between.b { fill: #6b5a3a; }
+  #kb .lo { fill: var(--accent); }
+  #kb .hi { fill: var(--hl); }
+  #kb .num { font-size: 11px; font-weight: 700; text-anchor: middle; font-family: system-ui, sans-serif; fill: #8a6d00; }
+  #kb .num.on-black { fill: #ffd8a8; }
+  #kb .lab { font-size: 12px; font-weight: 800; text-anchor: middle; font-family: system-ui, sans-serif; fill: #fff; }
+  .caption { font-size: 0.82rem; color: var(--muted); margin: 6px 0 14px; }
+
+  /* Guitar */
+  .gtr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gtr-row > div { min-width: 0; } /* let the pictures scroll inside their column instead of widening the page */
+  @media (max-width: 700px) { .gtr-row { grid-template-columns: 1fr; } }
+  .gtr { overflow-x: auto; }
+  .gtr svg { display: block; width: 100%; min-width: 300px; height: auto; }
+  .gtr .wood { fill: var(--wood); }
+  .gtr .fret { stroke: var(--fret); stroke-width: 2; }
+  .gtr .nut { stroke: var(--ink); stroke-width: 5; }
+  .gtr .str { stroke: var(--string); }
+  .gtr .fn { fill: var(--muted); font-size: 11px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .gtr .sn { fill: var(--muted); font-size: 11px; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; }
+  .gtr .lab { fill: #fff; font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; }
+  .gtr .step { fill: var(--hl); opacity: .35; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--btn); vertical-align: top; }
+  th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; }
+  td.n { font-weight: 800; white-space: nowrap; }
+  td .play { font: inherit; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 6px; padding: 3px 8px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  td .play:hover { outline: 2px solid var(--accent); }
+  .table-wrap { overflow-x: auto; }
+  .feel { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--btn); color: var(--muted); }
+  .feel.stable { color: var(--good); }
+  .feel.tense { color: #c92a2a; }
+  .boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .box { padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+  .box b { display: block; margin-bottom: 2px; }
+  code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>Intervals</h1>
+  <p class="sub">An interval is the distance between two notes. Every scale, chord and melody is built from them, so once you
+    know intervals, the rest of music theory starts to make sense.</p>
+
+  <div class="panel">
+    <h2>Half steps and whole steps</h2>
+    <p>The smallest step in Western music is a <b>half step</b> (also called a semitone): from one key on the piano to the very
+      next one, black or white, or from one fret to the next on the guitar. Two half steps make a <b>whole step</b> (a tone).</p>
+    <p>There are 12 different notes before they repeat an octave higher: C, C♯/D♭, D, D♯/E♭, E, F, F♯/G♭, G, G♯/A♭, A, A♯/B♭, B.
+      Notice there's no black key between E and F, or between B and C: those are half steps too.</p>
+    <p><b>Every interval is just a number of half steps.</b> A minor 3rd is 3, a major 3rd 4, a perfect 5th 7, an octave 12.
+      Try it below: the orange numbers count the half steps.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Try it</h2>
+    <div class="settings">
+      <label>Start on <select id="root"></select></label>
+      <label>Sound <select id="sound"><option value="piano">Piano</option><option value="guitar">Guitar</option></select></label>
+    </div>
+    <div class="pick" id="pick"></div>
+    <div class="now" id="now"></div>
+    <div class="buttons" style="margin-bottom:12px">
+      <button class="btn primary" id="playUp">▶ Up</button>
+      <button class="btn" id="playDown">▶ Down</button>
+      <button class="btn" id="playTogether">▶ Together</button>
+    </div>
+    <div class="kb-wrap"><svg id="kb" viewBox="0 0 700 150" role="img" aria-label="Keyboard showing the interval"></svg></div>
+    <p class="caption">Blue: the starting note. Orange: the other note. The numbers count the half steps from one to the other.</p>
+    <div class="gtr-row">
+      <div><h3>On one string</h3><div class="gtr" id="gtrOne"></div>
+        <p class="caption" id="oneText"></p></div>
+      <div><h3>Across two strings (the usual shape)</h3><div class="gtr" id="gtrTwo"></div>
+        <p class="caption" id="twoText"></p></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>All the intervals</h2>
+    <p class="muted" style="font-size:.88rem">The song is a well-known melody that starts with that interval going up: sing the first
+      two notes and you have the sound. It's the easiest way to remember them.</p>
+    <div class="table-wrap"><table id="table"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Reading the names</h2>
+    <div class="boxes">
+      <div class="box"><b>The number counts letters</b>From C to E is a 3rd because it spans three letter names: C, D, E.
+        C to G is a 5th: C, D, E, F, G. Count both the first and the last.</div>
+      <div class="box"><b>The word says exactly how big</b>Two 3rds can differ: C to E♭ is a <i>minor</i> 3rd (3 half steps),
+        C to E a <i>major</i> 3rd (4). The letters are the same, the size isn't.</div>
+      <div class="box"><b>Perfect: 4ths, 5ths and octaves</b>These sound so pure that they're called perfect, and they don't come
+        in major or minor. One half step bigger is <i>augmented</i>, one smaller is <i>diminished</i>.</div>
+      <div class="box"><b>Major and minor: 2nds, 3rds, 6ths and 7ths</b>Major is the bigger one, minor is one half step smaller.
+        In the major scale, every interval from the root is major or perfect.</div>
+      <div class="box"><b>Same sound, two names</b>An augmented 4th and a diminished 5th are both 6 half steps: the <i>tritone</i>.
+        Which name you use depends on the letters: C to F♯ is a 4th (C D E F), C to G♭ is a 5th.</div>
+      <div class="box"><b>Short names</b><code>m3</code> minor 3rd, <code>M3</code> major 3rd, <code>P5</code> perfect 5th,
+        <code>A4</code> augmented 4th, <code>d5</code> diminished 5th. Chord symbols use them: the 3 and 5 of a chord are intervals from its root.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Turning an interval upside down</h2>
+    <p>Go up a 3rd from C to E, or go <i>down</i> from C to the E below: that's a 6th. An interval and its upside-down version always
+      add up to 9 (3 + 6, 2 + 7, 4 + 5), and their half steps add up to 12. Major turns into minor and the other way round;
+      perfect stays perfect.</p>
+    <p>That's why a guitarist can find a note "a 4th up" or "a 5th down" in the same place: they're the same note name.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Where you'll meet them</h2>
+    <ul>
+      <li><b>Scales</b> are a pattern of steps. The major scale is whole, whole, half, whole, whole, whole, half; from its root
+        that gives M2, M3, P4, P5, M6, M7 and the octave. See <a href="scales.html">Scale shapes</a>.</li>
+      <li><b>Chords</b> are stacked intervals. A major chord is a major 3rd with a minor 3rd on top (C E G); a minor chord the other
+        way round (C E♭ G). The <a href="chord-library.html">Chord library</a> shows every chord's formula.</li>
+      <li><b>Power chords</b> on the guitar are just a root and a perfect 5th (plus the octave): no 3rd, so neither major nor minor.</li>
+      <li><b>Harmony</b> sounds sweet or tense because of its intervals: 3rds and 6ths sound warm, 5ths and octaves open and solid,
+        2nds, 7ths and the tritone tense: they want to move on.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Learning them by ear</h2>
+    <ol>
+      <li>Pick two or three intervals to start, for example the major 3rd, the perfect 5th and the octave.</li>
+      <li>Play them above (up, down and together) and sing along. Connect each one to its song from the table.</li>
+      <li>Then test yourself in the <a href="ear.html">Ear trainer</a> with only those intervals, and add more as they get easy.</li>
+      <li>On the guitar, learn the shapes across two strings: they're the same on every pair of strings, except that anything
+        crossing from the G to the B string moves up one fret.</li>
+    </ol>
+  </div>
+
+  <p class="hint">Sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky,
+    licensed <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+    The guitar pictures are drawn the way you see them in tabs (high strings on top), mirrored if you've chosen left-handed elsewhere.</p>
+</main>
+
+<!-- chord-data.js: note names and the guitar sound; piano-sound.js: the piano -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- The intervals ----------
+// letters: how many letter names up (C→E is 2 letters up, a 3rd). feel: stable (open, at rest) or tense (wants to move).
+// song: a well-known melody that starts with this interval going up.
+const INTERVALS = [
+  { semis: 0, short: "P1", name: "unison", letters: 0, feel: "stable", song: "Two notes the same (the first notes of “Jingle Bells”)" },
+  { semis: 1, short: "m2", name: "minor 2nd", letters: 1, feel: "tense", song: "The “Jaws” theme" },
+  { semis: 2, short: "M2", name: "major 2nd", letters: 1, feel: "mild", song: "“Happy Birthday” (Hap-py BIRTH-)" },
+  { semis: 3, short: "m3", name: "minor 3rd", letters: 2, feel: "mild", song: "“Greensleeves” · “Smoke on the Water” riff" },
+  { semis: 4, short: "M3", name: "major 3rd", letters: 2, feel: "stable", song: "“When the Saints Go Marching In”" },
+  { semis: 5, short: "P4", name: "perfect 4th", letters: 3, feel: "stable", song: "“Here Comes the Bride” · “Amazing Grace”" },
+  { semis: 6, short: "d5", name: "tritone (diminished 5th)", letters: 4, also: "augmented 4th (A4)", feel: "tense", song: "“The Simpsons” theme · “Maria” (West Side Story)" },
+  { semis: 7, short: "P5", name: "perfect 5th", letters: 4, feel: "stable", song: "“Twinkle Twinkle Little Star” · the “Star Wars” theme" },
+  { semis: 8, short: "m6", name: "minor 6th", letters: 5, feel: "mild", song: "The “Love Story” theme (Where Do I Begin)" },
+  { semis: 9, short: "M6", name: "major 6th", letters: 5, feel: "mild", song: "“My Bonnie Lies Over the Ocean” · the NBC chimes" },
+  { semis: 10, short: "m7", name: "minor 7th", letters: 6, feel: "tense", song: "“Somewhere” (West Side Story) · the original “Star Trek” theme" },
+  { semis: 11, short: "M7", name: "major 7th", letters: 6, feel: "tense", song: "“Don't Know Why” (Norah Jones)" },
+  { semis: 12, short: "P8", name: "octave", letters: 7, feel: "stable", song: "“Somewhere Over the Rainbow” (Some-WHERE)" },
+];
+const FEEL = { stable: "open, at rest", mild: "sweet or soft", tense: "tense, wants to move" };
+
+// ---------- Settings ----------
+const ROOT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+let saved = { root: 0, semis: 4, sound: "piano" };
+try { saved = { ...saved, ...JSON.parse(localStorage.getItem("intervalsPage")) }; } catch (e) {}
+const save = () => { try { localStorage.setItem("intervalsPage", JSON.stringify(saved)); } catch (e) {} };
+const lefty = () => { try { return localStorage.getItem("fretTrainerHand") === "left"; } catch (e) { return false; } };
+const nice = s => s.replace("#", "♯").replace(/^([A-G])b/, "$1♭");
+ROOT_NAMES.forEach((n, i) => $("root").add(new Option(FLATS[NOTES[i]] ? `${nice(NOTES[i])} / ${FLATS[NOTES[i]]}` : n, i)));
+$("root").value = saved.root;
+$("sound").value = saved.sound;
+
+const interval = () => INTERVALS.find(x => x.semis === saved.semis) || INTERVALS[4];
+
+// Spell the top note: the right number of letters up, then whatever ♯ or ♭ makes the size right (C→E♭ is a 3rd, not D♯)
+function spellUp(rootIdx, semis, letters) {
+  const name = ROOT_NAMES[rootIdx], l0 = LETTERS.indexOf(name[0]);
+  const spellWith = n => {
+    const l = (l0 + n) % 7, pc = (rootIdx + semis) % 12;
+    const acc = ((pc - NATURAL[l] + 18) % 12) - 6;
+    return ACCIDENTAL[acc] !== undefined ? LETTERS[l] + ACCIDENTAL[acc] : nice(NOTES[pc]);
+  };
+  const s = spellWith(letters);
+  // The tritone can be a diminished 5th or an augmented 4th: use the 4th when the 5th needs a double flat (E♭ → A, not B𝄫)
+  if (semis === 6 && /𝄫|𝄪/.test(s)) return spellWith(3);
+  return s;
+}
+const rootLabel = () => nice(ROOT_NAMES[saved.root]);
+
+// ---------- The interval buttons ----------
+function buildPick() {
+  $("pick").innerHTML = INTERVALS.map(x => `<button data-semis="${x.semis}" aria-pressed="${x.semis === saved.semis}">
+    <b>${x.short}</b><small>${x.semis === 6 ? "tritone" : x.name}<br>${x.semis} half step${x.semis === 1 ? "" : "s"}</small></button>`).join("");
+  $("pick").querySelectorAll("[data-semis]").forEach(b => b.onclick = () => { saved.semis = Number(b.dataset.semis); save(); render(); play("up"); });
+}
+
+// ---------- Keyboard: two octaves from the starting note's C ----------
+const BLACK = [1, 3, 6, 8, 10];
+function drawKeyboard() {
+  const low = 48 + saved.root, high = low + saved.semis;    // starting note in octave 3 (C3 = 48)
+  const from = 48, to = 48 + 26;                            // C3 to D5: enough for any interval up to an octave from B
+  const whites = [];
+  for (let m = from; m <= to; m++) if (!BLACK.includes(m % 12)) whites.push(m);
+  const ww = 700 / whites.length, bw = ww * 0.62, H = 150, BH = 92;
+  const xWhite = m => whites.indexOf(m) * ww;
+  const xBlack = m => xWhite(m - 1) + ww - bw / 2;
+  let g = "";
+  const cls = m => m === low ? " lo" : m === high ? " hi" : m > low && m < high ? " between" : "";
+  whites.forEach(m => { g += `<rect class="w${cls(m)}" x="${xWhite(m)}" y="0" width="${ww}" height="${H}" rx="3"/>`; });
+  for (let m = from; m <= to; m++) if (BLACK.includes(m % 12)) g += `<rect class="b${cls(m)}" x="${xBlack(m)}" y="0" width="${bw}" height="${BH}" rx="2"/>`;
+  // Half-step numbers on the keys after the starting note, and the note names on the two notes
+  for (let m = low + 1; m <= high; m++) {
+    const black = BLACK.includes(m % 12), cx = black ? xBlack(m) + bw / 2 : xWhite(m) + ww / 2;
+    if (m === high) continue;
+    g += `<text class="num${black ? " on-black" : ""}" x="${cx}" y="${black ? BH - 10 : H - 30}">${m - low}</text>`;
+  }
+  const label = (m, text) => {
+    const black = BLACK.includes(m % 12), cx = black ? xBlack(m) + bw / 2 : xWhite(m) + ww / 2;
+    return `<text class="lab" x="${cx}" y="${black ? BH - 12 : H - 12}">${text}</text>`;
+  };
+  g += label(low, rootLabel());
+  if (saved.semis) g += label(high, `${spellUp(saved.root, saved.semis, interval().letters)} (${saved.semis})`);
+  $("kb").innerHTML = g;
+}
+
+// ---------- Guitar: on one string, and across two strings ----------
+// strings: which strings to draw (0 = low E … 5 = high e); notes: [{ s, f, kind: "lo" | "hi" }]; frets: [first, last]
+function drawNeck(el, strings, notes, [first, last], steps = []) {
+  const W = 360, top = 6, gap = 26, rows = strings.length;
+  const H = top + rows * gap + 18; // room for the fret numbers underneath
+  const cols = last - first + 1, fw = (W - 40) / cols;
+  const flip = x => lefty() ? W - x : x;
+  const xFret = f => flip(30 + (f - first + 0.5) * fw);
+  const xWire = n => flip(30 + (n - first + 1) * fw);         // the wire after fret n (n = 0: the nut)
+  const yStr = s => top + gap * (strings.length - 1 - strings.indexOf(s) + 0.5); // high strings on top
+  let g = `<rect class="wood" x="${Math.min(xWire(first - 1), xWire(last))}" y="${top}" width="${Math.abs(xWire(last) - xWire(first - 1))}" height="${rows * gap}" rx="3"/>`;
+  steps.forEach(f => { g += `<rect class="step" x="${Math.min(xWire(f - 1), xWire(f))}" y="${top}" width="${fw}" height="${rows * gap}"/>`; });
+  for (let n = first; n <= last; n++) g += `<line class="${n === 0 ? "nut" : "fret"}" x1="${xWire(n)}" x2="${xWire(n)}" y1="${top}" y2="${top + rows * gap}"/>`;
+  strings.forEach(s => {
+    g += `<line class="str" x1="${xWire(first - 1)}" x2="${xWire(last)}" y1="${yStr(s)}" y2="${yStr(s)}" stroke-width="${2.4 - s * 0.3}"/>`;
+    g += `<text class="sn" x="${lefty() ? W - 12 : 12}" y="${yStr(s)}">${s === 5 ? "e" : STRING_NAMES[s]}</text>`;
+  });
+  for (let f = Math.max(first, 1); f <= last; f++) g += `<text class="fn" x="${xFret(f)}" y="${H - 4}">${f}</text>`;
+  notes.forEach(n => {
+    g += `<circle cx="${xFret(n.f)}" cy="${yStr(n.s)}" r="10" fill="var(${n.kind === "lo" ? "--accent" : "--hl"})"/>
+      <text class="lab" x="${xFret(n.f)}" y="${yStr(n.s)}">${n.text}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+}
+
+function drawGuitar() {
+  const x = interval(), top = spellUp(saved.root, saved.semis, x.letters);
+  // One string: the A string, starting at the root's fret (open A is A)
+  const f0 = (saved.root - 9 + 12) % 12;
+  const steps = [];
+  for (let f = f0 + 1; f < f0 + saved.semis; f++) steps.push(f);
+  drawNeck($("gtrOne"), [1], [{ s: 1, f: f0, kind: "lo", text: rootLabel() }, ...(saved.semis ? [{ s: 1, f: f0 + saved.semis, kind: "hi", text: top }] : [])],
+    [Math.max(0, f0 - 1), Math.max(f0 + 12, f0 + saved.semis + 1)], steps);
+  $("oneText").textContent = saved.semis
+    ? `${saved.semis} fret${saved.semis === 1 ? "" : "s"} up the same string: one fret is one half step.`
+    : "The same note twice.";
+
+  // Two strings: root on the low E string. Up to a 3rd: same string. A 4th to a major 6th: the A string. 7ths: the D string.
+  // The octave: the D string, two frets up. (Strings are a 4th apart: 5 half steps.)
+  const e0 = (saved.root - 4 + 12) % 12, start = e0 === 0 ? 0 : e0;
+  let other;
+  if (saved.semis <= 4) other = { s: 0, f: start + saved.semis };
+  else if (saved.semis <= 9) other = { s: 1, f: start + saved.semis - 5 };
+  else other = { s: 2, f: start + saved.semis - 10 };
+  const notes = [{ s: 0, f: start, kind: "lo", text: rootLabel() }];
+  if (saved.semis) notes.push({ ...other, kind: "hi", text: top });
+  drawNeck($("gtrTwo"), [0, 1, 2], notes, [Math.max(0, start - 1), Math.max(start + 5, other.f + 1)]);
+  const move = other.f - start;
+  const where = other.s === 0 ? "the same string" : other.s === 1 ? "the next string up" : "two strings up";
+  $("twoText").textContent = !saved.semis ? "" : `From the low E string: ${where}, ${move === 0 ? "the same fret" : `${Math.abs(move)} fret${Math.abs(move) === 1 ? "" : "s"} ${move > 0 ? "higher" : "lower"}`}.
+    This shape works on every pair of strings, except when it crosses from the G to the B string: then it's one fret higher.`;
+}
+
+// ---------- In words ----------
+function drawNow() {
+  const x = interval(), top = spellUp(saved.root, saved.semis, x.letters);
+  const counted = [...Array(x.letters + 1)].map((_, i) => LETTERS[(LETTERS.indexOf(ROOT_NAMES[saved.root][0]) + i) % 7]).join(" ");
+  $("now").innerHTML = `<div class="big">${x.name[0].toUpperCase() + x.name.slice(1)} <span class="muted" style="font-size:1rem">(${x.short}${x.also ? ", also called " + x.also : ""})</span></div>
+    <div class="notes">${rootLabel()} → ${top} · ${x.semis} half step${x.semis === 1 ? "" : "s"}${x.semis >= 2 ? ` (${x.semis % 2 ? `${Math.floor(x.semis / 2)} whole step${x.semis < 4 ? "" : "s"} and a half` : `${x.semis / 2} whole step${x.semis === 2 ? "" : "s"}`})` : ""}</div>
+    <p>${x.letters ? `Counting letters: ${counted} is ${x.letters + 1} letters, so it's a ${ordinal(x.letters + 1)}. ` : ""}Sounds ${FEEL[x.feel]}. Remember it by: ${x.song}.</p>`;
+}
+const ordinal = n => ({ 1: "1st (unison)", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th", 6: "6th", 7: "7th", 8: "octave (8th)" })[n] || n + "th";
+
+function drawTable() {
+  $("table").innerHTML = `<tr><th>Half steps</th><th>Interval</th><th>From ${rootLabel()}</th><th>Sounds</th><th>Remember it by</th><th></th></tr>` +
+    INTERVALS.map(x => `<tr><td class="n">${x.semis}</td><td><b>${x.short}</b> ${x.name}${x.also ? `<br><span class="muted" style="font-size:.8rem">or ${x.also}</span>` : ""}</td>
+      <td>${rootLabel()} → ${spellUp(saved.root, x.semis, x.letters)}</td>
+      <td><span class="feel ${x.feel}">${FEEL[x.feel]}</span></td><td>${x.song}</td>
+      <td><button class="play" data-play="${x.semis}" aria-label="Play the ${x.name}">▶</button></td></tr>`).join("");
+  $("table").querySelectorAll("[data-play]").forEach(b => b.onclick = () => { saved.semis = Number(b.dataset.play); save(); render(); play("up"); });
+}
+
+// ---------- Sound ----------
+function note(midi, when) { if (saved.sound === "guitar") pluck(midi, when); else playPiano(midi, when); }
+function play(how) {
+  const low = 48 + saved.root + (saved.sound === "guitar" ? 0 : 12), high = low + saved.semis; // piano one octave higher (around middle C)
+  if (how === "up") { note(low, 0); note(high, 0.75); }
+  else if (how === "down") { note(high, 0); note(low, 0.75); }
+  else { note(low, 0); note(high, 0); }
+}
+$("playUp").onclick = () => play("up");
+$("playDown").onclick = () => play("down");
+$("playTogether").onclick = () => play("together");
+$("root").onchange = () => { saved.root = Number($("root").value); save(); render(); };
+$("sound").onchange = () => { saved.sound = $("sound").value; save(); };
+
+function render() {
+  buildPick();
+  drawNow();
+  drawKeyboard();
+  drawGuitar();
+  drawTable();
+}
+render();
+</script>
+</body>
+</html>
