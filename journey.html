@@ -228,6 +228,8 @@ const ladderBest = id => Math.max(0, ...((ladder.history || {})[id] || []).map(h
 const anyLadderBest = () => Math.max(0, ...ladderEntries().map(h => h.best || 0));
 // Songs in My songs that have a title or some chords (it makes an empty one for you to start with)
 const songCount = () => storedJson("mySongs", []).filter(s => s.title || (s.chords && s.chords.length >= 2)).length;
+// Songs you've marked "Can play it" or "Performance-ready" in My songs
+const playableCount = () => storedJson("mySongs", []).filter(s => s.status === "canplay" || s.status === "ready").length;
 
 // ---------- The journeys ----------
 // Milestones are about playing, not about this website. When there's a page that helps, `page` links to it,
@@ -245,7 +247,8 @@ const SHARED = {
   firstSong: { id: "first-song", tag: "Songs", title: "Choose a song you really want to learn",
     how: "Something you love is the best motivation. Write down its chords or get the sheet music.", page: "songs.html", auto: () => [songCount(), 1] },
   fullSong: { id: "full-song", tag: "Songs", title: "Play one song from start to finish without stopping",
-    how: "Mistakes are fine, stopping isn't. Record yourself and listen back.", page: "songs.html" },
+    how: "Mistakes are fine, stopping isn't. Record yourself and listen back. Mark it \"Can play it\" in My songs.", page: "songs.html",
+    auto: () => [playableCount(), 1] },
   record: { id: "record-yourself", tag: "Habit", title: "Record yourself playing and listen back honestly",
     how: "You hear timing and tone problems on a recording that you miss while playing." },
   byEar: { id: "by-ear", tag: "Ear", title: "Work out the chords of a song by ear",
@@ -298,7 +301,7 @@ const JOURNEYS = {
       { id: "chords-10", tag: "Chords", title: "Recognise chord shapes at a glance",
         how: "Get a streak of 10 in the Chord trainer.", page: "chords.html", auto: () => [streak("chordTrainerBest"), 10] },
       { id: "g-three-songs", tag: "Songs", title: "Play 3 songs with open chords from start to finish",
-        how: "Singing along, or with a recording. Your first small repertoire.", page: "songs.html", auto: () => [songCount(), 3] },
+        how: "Singing along, or with a recording. Your first small repertoire. Counts the songs marked \"Can play it\" in My songs.", page: "songs.html", auto: () => [playableCount(), 3] },
     ] },
     { name: "Improver", about: "Barre chords, the blues and your first lead playing.", milestones: [
       { id: "f-barre", tag: "Chords", title: "Play a full F barre chord with every string ringing",
@@ -340,7 +343,7 @@ const JOURNEYS = {
       { id: "g-16ths", tag: "Rhythm", title: "Strum funky 16th-note rhythms with muted strums",
         how: "Hand moves in 16ths all the time; mute the strings with your fretting hand for the percussive 'chk'. Get the feel with level 4 of the Rhythm trainer first.", page: "rhythm.html" },
       { id: "g-ten-songs", tag: "Songs", title: "Have 10 songs you can play from memory",
-        how: "Your repertoire for when someone hands you a guitar.", page: "songs.html", auto: () => [songCount(), 10] },
+        how: "Your repertoire for when someone hands you a guitar. Counts the songs marked \"Can play it\" or \"Performance-ready\" in My songs.", page: "songs.html", auto: () => [playableCount(), 10] },
       SHARED.signatures,
       SHARED.intervals,
       SHARED.record,
@@ -396,7 +399,7 @@ const JOURNEYS = {
       { id: "p-g-scale", tag: "Scales", title: "Play G major and F major, each hand on its own",
         how: "Your first scales with a sharp (F♯) and a flat (B♭).", page: "scales.html" },
       { id: "p-three-pieces", tag: "Songs", title: "Play 3 pieces or songs from start to finish",
-        how: "Your first small repertoire.", page: "songs.html", auto: () => [songCount(), 3] },
+        how: "Your first small repertoire. Counts the songs marked \"Can play it\" in My songs.", page: "songs.html", auto: () => [playableCount(), 3] },
     ] },
     { name: "Improver", about: "Hands together with confidence, and playing from chords.", milestones: [
       { id: "c-scale-together", tag: "Scales", title: "Play C, G and F major hands together over 2 octaves",

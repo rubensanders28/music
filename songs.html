@@ -156,6 +156,30 @@
   .song-card .s-chords .more { background: none; color: var(--muted); }
   .song-card .s-empty { font-size: 0.78rem; color: var(--muted); margin-top: auto; }
   .no-match { color: var(--muted); grid-column: 1 / -1; padding: 10px 0; }
+  /* How far you are with a song: each status has its own colour */
+  .st-want { --st: #868e96; }
+  .st-learning { --st: #f08c00; }
+  .st-canplay { --st: #2b8a3e; }
+  .st-ready { --st: #3b5bdb; }
+  @media (prefers-color-scheme: dark) {
+    .st-want { --st: #adb5bd; } .st-learning { --st: #ffa94d; } .st-canplay { --st: #69db7c; } .st-ready { --st: #8ea2ff; }
+  }
+  .song-card .s-status { align-self: flex-start; font-size: 0.72rem; font-weight: 800; padding: 1px 8px; border-radius: 999px;
+    color: var(--st); border: 1.5px solid var(--st); }
+  .song-card { border-left: 5px solid var(--st, transparent); }
+  .song-card.current { border-left-color: var(--st, var(--accent)); }
+  .status-filter { margin-top: 10px; }
+  .status-filter .chip small { font-weight: 600; opacity: .75; }
+  .status-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+  .status-picker button {
+    font: inherit; font-size: 0.85rem; font-weight: 700; padding: 8px 4px; border-radius: 10px; cursor: pointer;
+    border: 2px solid var(--btn); background: transparent; color: var(--muted); line-height: 1.2;
+  }
+  .status-picker button small { display: block; font-size: 0.7rem; font-weight: 500; margin-top: 2px; }
+  .status-picker button:hover { border-color: var(--st); }
+  .status-picker button.reached { color: var(--st); border-color: var(--st); }
+  .status-picker button[aria-pressed="true"] { background: var(--st); border-color: var(--st); color: #fff; }
+  @media (max-width: 520px) { .status-picker { grid-template-columns: 1fr 1fr; } }
   .details-head { justify-content: space-between; }
 
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
@@ -177,10 +201,12 @@
           <option value="title">Title A–Z</option>
           <option value="artist">Artist A–Z</option>
           <option value="added">Newest first</option>
+          <option value="status">Status</option>
         </select>
       </label>
       <button class="btn primary" id="newSong">+ New song</button>
     </div>
+    <div class="chips status-filter" id="statusFilter"></div>
     <div class="song-grid" id="songGrid"></div>
   </div>
 
@@ -190,6 +216,7 @@
       <h2 id="detailsTitle" style="margin:0"></h2>
       <button class="btn" id="deleteSong">Delete song</button>
     </div>
+    <div class="status-picker" id="statusPicker" role="group" aria-label="How far you are with this song"></div>
     <div class="row">
       <label class="field">Song title <input type="text" id="title" placeholder="e.g. Wonderwall"></label>
       <label class="field">Artist <input type="text" id="artist" placeholder="e.g. Oasis"></label>
@@ -315,6 +342,55 @@ let sortBy = "opened";
 try { sortBy = localStorage.getItem("mySongsSort") || "opened"; } catch (e) {}
 $("sort").value = sortBy;
 
+// ---------- How far you are with each song ----------
+// s.status: one of the ids below (a song without one is "want"). s.statusDates: { status id: "2026-11-07" },
+// the day you first reached each status. My journey counts the songs you can play.
+const STATUSES = [
+  { id: "want", name: "Want to learn", short: "Want to learn" },
+  { id: "learning", name: "Learning", short: "Learning" },
+  { id: "canplay", name: "Can play it", short: "Can play" },
+  { id: "ready", name: "Performance-ready", short: "Ready" },
+];
+const statusOf = s => STATUSES.some(x => x.id === s.status) ? s.status : "want";
+const statusIndex = s => STATUSES.findIndex(x => x.id === statusOf(s));
+let statusFilter = "all";
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const niceDate = iso => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: y === new Date().getFullYear() ? undefined : "numeric" });
+};
+
+function setStatus(id) {
+  const s = song();
+  s.status = id;
+  s.statusDates = s.statusDates || {};
+  // Reaching a status also means you've passed the ones before it
+  STATUSES.slice(1, STATUSES.findIndex(x => x.id === id) + 1).forEach(x => { if (!s.statusDates[x.id]) s.statusDates[x.id] = todayIso(); });
+  saveSongs();
+  renderStatusPicker();
+  renderSongList();
+}
+
+function renderStatusPicker() {
+  const s = song(), now = statusIndex(s);
+  $("statusPicker").innerHTML = STATUSES.map((x, i) => {
+    const date = (s.statusDates || {})[x.id];
+    return `<button type="button" class="st-${x.id}${i < now ? " reached" : ""}" data-status="${x.id}" aria-pressed="${i === now}">
+      ${x.name}<small>${date && i <= now ? niceDate(date) : "&nbsp;"}</small></button>`;
+  }).join("");
+  $("statusPicker").querySelectorAll("[data-status]").forEach(b => b.onclick = () => setStatus(b.dataset.status));
+}
+
+function renderStatusFilter() {
+  const count = id => songs.filter(s => id === "all" || statusOf(s) === id).length;
+  $("statusFilter").innerHTML = [{ id: "all", short: "All" }, ...STATUSES].map(x =>
+    `<button type="button" class="chip" data-filter="${x.id}" aria-pressed="${statusFilter === x.id}">${x.short} <small>${count(x.id)}</small></button>`).join("");
+  $("statusFilter").querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { statusFilter = b.dataset.filter; renderSongList(); });
+}
+
 function songSummary(s) {
   const unique = s.chords.filter((c, i, all) => all.findIndex(o => sameChord(o, c)) === i);
   if (!unique.length) return { keyText: "", chordNames: [] };
@@ -333,6 +409,7 @@ function sortedSongs() {
   if (sortBy === "title") list.sort(byText("title"));
   else if (sortBy === "artist") list.sort((a, b) => byText("artist")(a, b) || byText("title")(a, b));
   else if (sortBy === "added") list.sort((a, b) => addedAt(b) - addedAt(a));
+  else if (sortBy === "status") list.sort((a, b) => statusIndex(b) - statusIndex(a) || byText("title")(a, b)); // ready first
   else list.sort((a, b) => (b.opened || addedAt(b)) - (a.opened || addedAt(a)));
   return list;
 }
@@ -340,16 +417,19 @@ function sortedSongs() {
 function renderSongList() {
   const grid = $("songGrid");
   const q = $("search").value.trim().toLowerCase();
-  const shown = sortedSongs().filter(s => !q || `${s.title} ${s.artist}`.toLowerCase().includes(q)
-    || songSummary(s).chordNames.some(n => n.toLowerCase() === q));
-  grid.innerHTML = shown.length ? "" : `<p class="no-match">No songs match "${escapeHtml(q)}".</p>`;
+  renderStatusFilter();
+  const shown = sortedSongs().filter(s => (statusFilter === "all" || statusOf(s) === statusFilter) && (!q
+    || `${s.title} ${s.artist}`.toLowerCase().includes(q) || songSummary(s).chordNames.some(n => n.toLowerCase() === q)));
+  const filterName = statusFilter === "all" ? "" : ` with "${STATUSES.find(x => x.id === statusFilter).name}"`;
+  grid.innerHTML = shown.length ? "" : `<p class="no-match">${q ? `No songs match "${escapeHtml(q)}"${filterName}.` : `No songs${filterName} yet.`}</p>`;
   shown.forEach(s => {
     const { keyText, chordNames } = songSummary(s);
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "song-card" + (s.id === currentId ? " current" : "");
+    card.className = `song-card st-${statusOf(s)}` + (s.id === currentId ? " current" : "");
     const MAX = 8;
     card.innerHTML = `
+      <div class="s-status">${STATUSES[statusIndex(s)].short}</div>
       <div class="s-title${s.title ? "" : " untitled"}">${s.title ? escapeHtml(s.title) : "Untitled song"}</div>
       ${s.artist ? `<div class="s-artist">${escapeHtml(s.artist)}</div>` : ""}
       ${keyText ? `<div class="s-key">${keyText}</div>` : ""}
@@ -374,6 +454,7 @@ function loadSong() {
   $("title").value = song().title;
   $("artist").value = song().artist;
   $("link").value = song().link;
+  renderStatusPicker();
   renderAll();
 }
 
@@ -392,6 +473,7 @@ $("newSong").onclick = () => {
   newSong();
   song().opened = Date.now();
   $("search").value = "";
+  statusFilter = "all";
   saveSongs();
   loadSong();
   $("detailsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
