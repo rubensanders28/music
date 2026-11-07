@@ -349,6 +349,8 @@
       <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
       <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
       <button class="btn" id="editBtn" title="Place and fix chords, rename, move, join or split parts">✎ Edit</button>
+      <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:.85rem" title="Chord diagrams mirrored for left-handed guitar (the same setting as Hand below, and in the Chord library and trainers)">
+        <input type="checkbox" id="sheetLefty"> Left-handed</label>
     </div>
     <p class="sheet-note" id="sheetNote"></p>
     <div class="song-map" id="songMap"></div>
@@ -1743,17 +1745,24 @@ function closeStrip() {
   document.body.classList.remove("strip-open");
 }
 function showChordStrip(name) {
-  const c = chordOf(name);
+  // With a capo, the chord names are the shapes you play; they sound `capo` semitones higher
+  const capo = editing ? 0 : (song().capo || 0);
+  const piano = instrument() === "piano";
+  // On the piano there's no capo: show (and play) the chord you actually hear
+  const shownName = piano && capo ? shiftChord(name, capo) : name;
+  const c = chordOf(shownName);
   if (!c) return;
   stripChord = name;
-  const piano = instrument() === "piano";
   const strip = $("chordStrip");
   strip.hidden = false;
   document.body.classList.add("strip-open");
   const t = typeOf(c.type);
-  const note = [c.bass ? `with ${c.bass} in the bass` : "", c.approx ? `shown as ${pretty(c.root)}${t.suffix}` : ""].filter(Boolean).join(" · ");
+  const notes = [c.bass ? `with ${c.bass} in the bass` : "", c.approx ? `shown as ${pretty(c.root)}${t.suffix}` : ""];
+  if (capo && piano) notes.push(`the guitar shape ${name} with capo ${capo}`);
+  else if (capo) notes.push(`with capo ${capo} it sounds as ${shiftChord(name, capo)}`);
+  const note = notes.filter(Boolean).join(" · ");
   strip.innerHTML = `<div class="diagram${piano ? " piano" : ""}" id="stripDiagram"></div>
-    <div class="grow"><div class="strip-name">${escapeHtml(name)}</div><div class="strip-note">${note || "Tap the diagram to hear it"}</div></div>
+    <div class="grow"><div class="strip-name">${escapeHtml(shownName)}</div><div class="strip-note">${escapeHtml(note) || "Tap the diagram to hear it"}</div></div>
     <button class="btn" type="button" id="stripClose" aria-label="Close">✕</button>`;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   let play = null;
@@ -1766,7 +1775,9 @@ function showChordStrip(name) {
     if (shapes.length) {
       svg.setAttribute("viewBox", "0 0 240 285");
       drawChord(svg, shapes[0], { lefty: lefty(), showRoot: true });
-      play = () => strum(shapes[0]);
+      // The diagram is the shape you finger; the capo raises every string by `capo` frets
+      const withCapo = { ...shapes[0], frets: shapes[0].frets.map(f => f === null ? null : f + capo) };
+      play = () => strum(withCapo);
     }
   }
   $("stripDiagram").appendChild(svg);
@@ -2172,8 +2183,16 @@ $("speed").onchange = saveSettings;
 $("loop").onchange = saveSettings;
 $("hand").onchange = () => {
   try { localStorage.setItem("fretTrainerHand", $("hand").value); } catch (e) {}
+  $("sheetLefty").checked = lefty();
   cards.forEach(drawCard);
   if (!locked) nextQuestion();
+  if (stripChord) showChordStrip(stripChord); // redraw an open diagram the other way round
+};
+// The "Left-handed" switch by the lyrics is the same setting as Hand
+$("sheetLefty").checked = lefty();
+$("sheetLefty").onchange = () => {
+  $("hand").value = $("sheetLefty").checked ? "left" : "right";
+  $("hand").onchange();
 };
 
 loadSong();
