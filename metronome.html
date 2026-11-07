@@ -52,8 +52,10 @@
   input[type=number] { width: 70px; }
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .row + .row { margin-top: 10px; }
-  .row > label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
-  .row select { min-width: 190px; }
+  .row > label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); max-width: 100%; min-width: 0; }
+  /* A long chord switch name shouldn't make the page wider than the screen */
+  .row select { min-width: 190px; max-width: 100%; text-overflow: ellipsis; }
+  .fs-pick select { max-width: 100%; }
   .small { font: inherit; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; padding: 5px 10px; background: var(--btn); color: var(--ink); cursor: pointer; }
   .small:hover { outline: 2px solid var(--accent); }
   .small:disabled { opacity: .4; cursor: default; outline: none; }
@@ -66,6 +68,19 @@
   .editor .buttons-row { display: flex; gap: 8px; }
   .editor .save { background: var(--accent); color: var(--card); }
   .form-msg { margin: 0; font-size: 0.85rem; min-height: 1.2em; }
+  /* "From a song": the chords of a part, line by line; tap them to add them to the switch */
+  .from-song { padding: 10px; border-radius: 10px; background: var(--card); display: grid; gap: 8px; }
+  .fs-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .fs-pick label { display: flex; align-items: center; gap: 6px; }
+  .fs-pick select { min-width: 140px; }
+  .fs-note { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .fs-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 4px 0; border-top: 1px solid var(--btn); }
+  .fs-line:first-child { border-top: none; }
+  .fs-line .fs-words { flex-basis: 100%; font-size: 0.78rem; color: var(--muted); }
+  .fs-chord { font: inherit; font-weight: 800; border: none; border-radius: 8px; padding: 6px 11px; background: var(--btn); color: var(--accent); cursor: pointer; }
+  .fs-chord:hover { outline: 2px solid var(--accent); }
+  .fs-chord.added { animation: added .4s; }
+  @keyframes added { from { background: var(--accent); color: var(--card); } }
   .form-msg.bad { color: var(--bad); }
 
   /* The big tempo display */
@@ -180,6 +195,20 @@
     <form class="editor" id="exForm" hidden>
       <label>Name (optional) <input id="exName" placeholder="e.g. G to C"></label>
       <label>Chords, in order, separated by spaces <input id="exChords" placeholder="e.g. G C   or   Am F C G" autocomplete="off"></label>
+      <div class="buttons-row">
+        <button class="small" type="button" id="fromSongBtn">🎵 From a song</button>
+        <button class="small" type="button" id="chordsBack" title="Remove the last chord">⌫ Last chord</button>
+        <button class="small" type="button" id="chordsClear">Clear chords</button>
+      </div>
+      <!-- Pick chords from one of your songs in My songs -->
+      <div class="from-song" id="fromSong" hidden>
+        <div class="fs-pick">
+          <label>Song <select id="fsSong"></select></label>
+          <label>Part <select id="fsPart"></select></label>
+        </div>
+        <p class="fs-note" id="fsNote"></p>
+        <div id="fsLines"></div>
+      </div>
       <label>Change chord every
         <select id="exBars">
           <option value="1">1 bar</option>
@@ -810,12 +839,110 @@ function openExForm(ex) {
   $("exChords").value = ex ? ex.chords.join(" ") : "";
   $("exBars").value = ex ? ex.bars : 1;
   $("exMsg").textContent = "";
+  $("exName").dataset.auto = "";
+  $("fromSong").hidden = true;
   $("exForm").hidden = false;
   $("exChords").focus();
 }
 $("newEx").onclick = () => openExForm(null);
 $("editEx").onclick = () => openExForm(exercise());
-$("exCancel").onclick = () => { $("exForm").hidden = true; };
+$("exCancel").onclick = () => { $("exForm").hidden = true; $("fromSong").hidden = true; };
+
+// ---------- Chords from one of your songs (My songs) ----------
+// Pick a song and one of its parts; its chords are shown line by line, as you play them (with the song's capo
+// and transpose). Tap the ones you want to practise switching between, in order: they're added to the chords box.
+const songsList = () => { try { return JSON.parse(localStorage.getItem("mySongs")) || []; } catch (e) { return []; } };
+const songsWithChords = () => songsList().filter(s => (s.sheet && s.sheet.sections && s.sheet.sections.length) || (s.chords && s.chords.length >= 2));
+// Names guitarists use: E♭ and B♭ rather than D♯ and A♯ (and G♯m, C♯m for minor chords)
+const MAJOR_ROOTS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+const MINOR_ROOTS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+const ascii = s => s.replace(/♯/g, "#").replace(/♭/g, "b");
+// A chord from a song, moved by `shift` semitones, as a name this page understands (no bass note) — or null
+function songChordName(text, shift) {
+  const c = parseChord(ascii(text.replace(/^\((.*)\)$/, "$1").replace(/\/.*$/, "")));
+  if (!c) return null;
+  if (shift % 12 === 0) return ascii(c.name);
+  const minorish = /^m(?!aj)/.test(c.type.suffix);
+  return (minorish ? MINOR_ROOTS : MAJOR_ROOTS)[(c.root + shift + 120) % 12] + ascii(c.type.suffix);
+}
+// The chords of a lyrics line in order (My songs keeps them by word and letter: "3", "3:2", "3+")
+function lineChords(l) {
+  if (l.o) return l.o;
+  const order = k => { const m = String(k).match(/^(\d+)(?::(\d+)|(\+))?$/); return m ? Number(m[1]) * 1000 + (m[3] ? 999 : Number(m[2] || 0)) : 0; };
+  return Object.keys(l.c || {}).sort((a, b) => order(a) - order(b)).flatMap(k => l.c[k].split(" "));
+}
+
+function fillSongPicker() {
+  const list = songsWithChords();
+  const sel = $("fsSong");
+  sel.innerHTML = "";
+  list.forEach((s, i) => sel.add(new Option((s.title || "Untitled song") + (s.artist ? " – " + s.artist : ""), i)));
+  fillPartPicker();
+}
+function fillPartPicker() {
+  const s = songsWithChords()[Number($("fsSong").value)];
+  const sel = $("fsPart");
+  sel.innerHTML = "";
+  if (!s) return;
+  (s.sheet && s.sheet.sections || []).forEach((sec, i) => { if (sec.lines.some(l => lineChords(l).length)) sel.add(new Option(sec.name, i)); });
+  if (s.chords && s.chords.length) sel.add(new Option("The song's chord list", "list"));
+  drawSongPart();
+}
+function drawSongPart() {
+  const s = songsWithChords()[Number($("fsSong").value)];
+  const box = $("fsLines");
+  box.innerHTML = "";
+  if (!s) return;
+  const shift = (s.sheetCapo || 0) + (s.transpose || 0) - (s.capo || 0); // as you play it
+  const notes = [];
+  if (s.capo) notes.push(`As you play them with capo ${s.capo}.`);
+  notes.push("Tap the chords you want to switch between, in order: they're added to the chords box above. Pick a stretch that repeats, so it loops nicely.");
+  $("fsNote").textContent = notes.join(" ");
+  const part = $("fsPart").value;
+  let rows;
+  if (part === "list") {
+    // The chord list holds the chords as they sound; with a capo you play lower shapes
+    const listShift = (s.transpose || 0) - (s.capo || 0);
+    rows = [{ words: "", chords: s.chords.map(c => songChordName(NOTES[c.root] + TYPES.find(t => t.id === c.type).suffix, listShift)) }];
+  } else {
+    const sec = s.sheet.sections[Number(part)];
+    rows = sec.lines.map(l => ({ words: l.w ? l.w.slice(0, 6).join(" ") + (l.w.length > 6 ? " …" : "") : "", chords: lineChords(l).map(t => songChordName(t, shift)) }));
+  }
+  rows.filter(r => r.chords.some(Boolean)).forEach(r => {
+    const line = document.createElement("div");
+    line.className = "fs-line";
+    if (r.words) line.innerHTML = `<span class="fs-words" dir="auto"></span>`;
+    if (r.words) line.querySelector(".fs-words").textContent = r.words;
+    r.chords.filter(Boolean).forEach(name => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "fs-chord";
+      b.textContent = name.replace(/#/g, "♯").replace(/(^[A-G])b/, "$1♭");
+      b.onclick = () => {
+        const box = $("exChords");
+        box.value = (box.value.trim() ? box.value.trim() + " " : "") + name;
+        b.classList.remove("added"); void b.offsetWidth; b.classList.add("added");
+      };
+      line.appendChild(b);
+    });
+    box.appendChild(line);
+  });
+  // A name for the switch, unless you've typed your own
+  const auto = `${s.title || "Song"}: ${part === "list" ? "chords" : s.sheet.sections[Number(part)].name}`;
+  if (!$("exName").value.trim() || $("exName").dataset.auto === "1") { $("exName").value = auto; $("exName").dataset.auto = "1"; }
+}
+$("exName").addEventListener("input", () => { $("exName").dataset.auto = ""; });
+$("fromSongBtn").onclick = () => {
+  const box = $("fromSong");
+  if (!box.hidden) { box.hidden = true; return; }
+  if (!songsWithChords().length) { $("exMsg").className = "form-msg bad"; $("exMsg").textContent = "None of your songs in My songs has chords yet."; return; }
+  box.hidden = false;
+  fillSongPicker();
+};
+$("fsSong").onchange = fillPartPicker;
+$("fsPart").onchange = drawSongPart;
+$("chordsBack").onclick = () => { const w = $("exChords").value.trim().split(/\s+/).filter(Boolean); w.pop(); $("exChords").value = w.join(" "); };
+$("chordsClear").onclick = () => { $("exChords").value = ""; };
 
 $("exForm").onsubmit = e => {
   e.preventDefault();
@@ -837,6 +964,7 @@ $("exForm").onsubmit = e => {
   }
   saveLib();
   $("exForm").hidden = true;
+  $("fromSong").hidden = true;
   chooseExercise(lib.exerciseId);
 };
 
