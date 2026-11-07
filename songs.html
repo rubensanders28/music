@@ -284,6 +284,22 @@
   .chord-strip .place-row button.letter.used small { color: #fff; }
   body.strip-open { padding-bottom: 280px; }
 
+  /* Chords you still need */
+  .need { margin: 14px 0 4px; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+  .need:empty { display: none; }
+  .need .need-sum { font-weight: 700; margin-bottom: 8px; }
+  .need .need-sum small { font-weight: 500; color: var(--muted); }
+  .need-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .need-chip { font: inherit; font-size: 0.9rem; font-weight: 800; border-radius: 999px; padding: 5px 12px; cursor: pointer;
+    border: 2px solid var(--btn); background: var(--card); color: var(--ink); }
+  .need-chip:hover { outline: 2px solid var(--accent); }
+  .need-chip.know { border-color: var(--good); color: var(--good); }
+  .need-chip.mastered { border-color: #f2b705; background: #fff8e1; color: #8a6d00; }
+  @media (prefers-color-scheme: dark) { .need-chip.mastered { background: #3a3320; color: #fcc419; } }
+  .need .need-help { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+  .song-card .s-need { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+  .song-card .s-need.all { color: var(--good); }
+
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
 </style>
 </head>
@@ -404,6 +420,8 @@
       </label>
       <label class="muted"><input type="checkbox" id="loop"> Repeat</label>
     </div>
+    <!-- Which of this song's chords you know, from your marks in the Chord library -->
+    <div class="need" id="need"></div>
     <div class="grid" id="cards"></div>
   </div>
 
@@ -563,6 +581,7 @@ function renderSongList() {
       <div class="s-title${s.title ? "" : " untitled"}">${s.title ? escapeHtml(s.title) : "Untitled song"}</div>
       ${s.artist ? `<div class="s-artist">${escapeHtml(s.artist)}</div>` : ""}
       ${keyText ? `<div class="s-key">${keyText}</div>` : ""}
+      ${needText(s)}
       ${chordNames.length
         ? `<div class="s-chords">${chordNames.slice(0, MAX).map(n => `<span>${n}</span>`).join("")}${chordNames.length > MAX ? `<span class="more">+${chordNames.length - MAX}</span>` : ""}</div>`
         : `<div class="s-empty">No chords yet</div>`}`;
@@ -1834,6 +1853,8 @@ function stepSong(field, by, min, max) {
   saveSongs();
   closeStrip();
   renderSheet();
+  renderNeed();      // with a capo you play other shapes
+  renderSongList();
 }
 $("tDown").onclick = () => stepSong("transpose", -1, -11, 11);
 $("tUp").onclick = () => stepSong("transpose", 1, -11, 11);
@@ -2218,11 +2239,84 @@ function answer(i, button) {
 }
 
 // ---------- Putting it together ----------
+// ---------- Chords you still need ----------
+// Uses your marks from the Chord library ("chordsKnown": { guitar: { "0-maj-x,3,2,0,1,0": { s, d } }, piano: { "0-maj": ... } }).
+// On guitar a chord counts as known when you've marked any of its shapes.
+const loadKnown = () => { try { return { guitar: {}, piano: {}, ...JSON.parse(localStorage.getItem("chordsKnown")) }; } catch (e) { return { guitar: {}, piano: {} }; } };
+const saveKnown = known => { try { localStorage.setItem("chordsKnown", JSON.stringify(known)); } catch (e) {} };
+const RANK = { "": 0, know: 1, mastered: 2 };
+function knownStatus(known, inst, c) {
+  if (inst === "piano") return (known.piano[`${c.root}-${c.type}`] || {}).s || "";
+  let best = "";
+  Object.entries(known.guitar).forEach(([id, v]) => { if (id.startsWith(`${c.root}-${c.type}-`) && RANK[v.s] > RANK[best]) best = v.s; });
+  return best;
+}
+// The chords you play in a song: the chord list holds how they sound; transpose moves them, and on guitar
+// a capo means you play lower shapes
+function playedChords(s, inst) {
+  const shift = (s.transpose || 0) - (inst === "guitar" ? (s.capo || 0) : 0);
+  const out = [];
+  (s.chords || []).forEach(c => { const p = { root: (c.root + shift + 120) % 12, type: c.type }; if (!out.some(o => sameChord(o, p))) out.push(p); });
+  return out;
+}
+const playedName = c => (/^m(?!aj)/.test(typeOf(c.type).suffix) ? MINOR_NAMES : MAJOR_NAMES)[c.root] + typeOf(c.type).suffix;
+const todayStamp = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+// Tap a chord to change its mark: still to learn → I know it → mastered → still to learn (like in the Chord library)
+function cycleKnown(inst, c) {
+  const known = loadKnown();
+  const next = { "": "know", know: "mastered", mastered: "" }[knownStatus(known, inst, c)];
+  if (inst === "piano") {
+    if (next) known.piano[`${c.root}-${c.type}`] = { s: next, d: todayStamp() }; else delete known.piano[`${c.root}-${c.type}`];
+  } else {
+    // Guitar: change the shapes you've marked; if none, mark the first (most common) shape
+    const mine = Object.keys(known.guitar).filter(id => id.startsWith(`${c.root}-${c.type}-`));
+    if (!next) mine.forEach(id => delete known.guitar[id]);
+    else if (mine.length) mine.forEach(id => { known.guitar[id] = { s: next, d: todayStamp() }; });
+    else {
+      const shape = CHORDS.filter(x => x.root === c.root && x.type.id === c.type).sort((a, b) => a.barre - b.barre)[0];
+      if (shape) known.guitar[`${c.root}-${c.type}-${shape.frets.map(f => f === null ? "x" : f).join(",")}`] = { s: next, d: todayStamp() };
+    }
+  }
+  saveKnown(known);
+}
+
+function renderNeed() {
+  const s = song(), inst = instrument(), known = loadKnown();
+  const chords = playedChords(s, inst);
+  if (!chords.length) { $("need").innerHTML = ""; return; }
+  const status = chords.map(c => knownStatus(known, inst, c));
+  const todo = chords.filter((c, i) => !status[i]);
+  const where = inst === "guitar" ? `on guitar${s.capo ? ` (with capo ${s.capo})` : ""}` : "on piano";
+  $("need").innerHTML = `
+    <div class="need-sum">${todo.length
+      ? `You know ${chords.length - todo.length} of ${chords.length} chords ${where}. <small>Still to learn: ${todo.map(playedName).join(", ")}</small>`
+      : `You know all ${chords.length} chords ${where} ✓`}</div>
+    <div class="need-chips">${chords.map((c, i) => `<button type="button" class="need-chip ${status[i]}" data-need="${i}"
+      title="Tap to mark it: still to learn → I know it → mastered">${status[i] === "mastered" ? "★" : status[i] ? "✓" : "○"} ${playedName(c)}</button>`).join("")}</div>
+    <div class="need-help">Tap a chord to mark it: still to learn → I know it → mastered. These are the same marks as in the
+      <a href="chord-library.html">Chord library</a>, where you can mark each guitar shape separately.</div>`;
+  $("need").querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
+    cycleKnown(inst, chords[Number(b.dataset.need)]);
+    renderNeed();
+    renderSongList();
+  });
+}
+// For the song cards: "2 chords to learn" or "✓ All chords known" (on the instrument chosen below)
+function needText(s) {
+  const inst = instrument(), known = loadKnown();
+  const chords = playedChords(s, inst);
+  if (!chords.length) return "";
+  const todo = chords.filter(c => !knownStatus(known, inst, c)).length;
+  return todo ? `<div class="s-need">${todo} chord${todo === 1 ? "" : "s"} to learn</div>` : `<div class="s-need all">✓ All chords known</div>`;
+}
+
 function renderAll() {
   renderKey();        // first, so chord names can be spelled to suit the key
   renderSongChords();
   renderCards();
   resetPractice();
+  renderNeed();       // which of its chords you know
   renderSongList();   // the overview card shows this song's key and chords too
 }
 
@@ -2237,7 +2331,7 @@ try {
 function saveSettings() {
   try { localStorage.setItem("mySongsSettings", JSON.stringify({ instrument: instrument(), speed: $("speed").value, loop: $("loop").checked })); } catch (e) {}
 }
-$("instrument").onchange = () => { saveSettings(); renderCards(); resetPractice(); };
+$("instrument").onchange = () => { saveSettings(); renderCards(); resetPractice(); renderNeed(); renderSongList(); };
 $("speed").onchange = saveSettings;
 $("loop").onchange = saveSettings;
 $("hand").onchange = () => {
