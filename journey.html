@@ -92,6 +92,7 @@
   .milestone input[type=checkbox] { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--good); cursor: pointer; }
   .auto-mark { width: 20px; height: 20px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--btn); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
   .milestone.done .auto-mark { background: var(--good); border-color: var(--good); color: var(--card); }
+  .auto-tag { padding: 1px 8px; border-radius: 10px; color: var(--accent); font-weight: 600; background: var(--bg); }
   .m-title { font-weight: 600; }
   .milestone.done .m-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--good); }
   .m-how { color: var(--muted); font-size: 0.85rem; line-height: 1.45; margin-top: 2px; }
@@ -169,8 +170,8 @@
   </div>
 
   <p class="sub">Milestones to work towards, from your very first notes to playing like a musician. Go roughly in order:
-    each level builds on the one before. Tick a milestone off when you can honestly do it. The ones with a ● tick
-    themselves off from your progress on the other pages.</p>
+    each level builds on the one before. Tick a milestone off when you can honestly do it. The ones marked
+    ● automatic also tick themselves off from your progress on the other pages.</p>
 
   <div class="tracks" role="group" aria-label="Instrument">
     <button id="guitarBtn" data-track="guitar">Guitar<small id="guitarSmall"></small></button>
@@ -205,6 +206,7 @@
     journey ticks it on the piano journey too.<br>
     The automatic milestones read your best streaks from the trainers, your Tempo ladder history and your songs in My songs.
     Once a milestone is achieved it stays ticked, with the date, even if you later reset a trainer.
+    You can tick or untick any milestone yourself; an automatic one you untick stays unticked until you tick it again.
     Everything is saved on this device, and in your account if you're signed in.<br>
     <button class="reset" id="resetBtn">Start this journey over</button></p>
 </main>
@@ -468,6 +470,7 @@ const PAGE_NAMES = { "index.html": "Note trainer", "guitar.html": "Fretboard tra
 // done: milestone id → the date you achieved it ("2026-11-04"). track: the journey you're looking at.
 let journey = storedJson("journey", {});
 journey.done = journey.done || {};
+journey.off = journey.off || {}; // automatic milestones you've unticked yourself
 if (!journey.track) journey.track = journey.instrument === "piano" ? "piano" : "guitar"; // older saves had "instrument"
 function saveJourney() {
   try { localStorage.setItem("journey", JSON.stringify(journey)); } catch (e) {}
@@ -483,11 +486,12 @@ function niceDate(iso) {
 
 const milestonesOf = track => JOURNEYS[track].flatMap(l => l.milestones);
 
-// Tick off every automatic milestone you've reached (on both journeys), remembering the day we first noticed
+// Tick off every automatic milestone you've reached (on both journeys), remembering the day we first noticed.
+// One you've unticked yourself (journey.off) stays unticked until you tick it again.
 function checkAuto() {
   let changed = false;
   [...milestonesOf("guitar"), ...milestonesOf("piano")].forEach(m => {
-    if (!m.auto || journey.done[m.id]) return;
+    if (!m.auto || journey.done[m.id] || journey.off[m.id]) return;
     const [value, target] = m.auto();
     if (value >= target) { journey.done[m.id] = today(); changed = true; }
   });
@@ -506,15 +510,16 @@ function milestoneEl(m) {
   const done = journey.done[m.id];
   li.className = "milestone" + (done ? " done" : "");
 
-  const mark = m.auto
-    ? `<div class="auto-mark" title="Ticks itself off">${done ? "✓" : "●"}</div>`
-    : `<input type="checkbox" ${done ? "checked" : ""} aria-label="Done">`;
+  // Every milestone can be ticked by hand; the automatic ones (●) also tick themselves off
+  const mark = `<input type="checkbox" ${done ? "checked" : ""} aria-label="Done"${m.auto ? ' title="Ticks itself off when you reach it, or tick it yourself"' : ""}>`;
   let meta = `<span class="tag">${m.tag}</span>`;
+  if (m.auto) meta += `<span class="auto-tag" title="Ticks itself off from your progress on the other pages">● automatic</span>`;
   if (done) {
     meta += `<span class="m-done">✓ ${niceDate(done)}</span>`;
   } else if (m.auto) {
     const [value, target] = m.auto();
     meta += `<span class="m-progress"><span class="bar"><div style="width:${Math.min(100, value / target * 100)}%"></div></span>${Math.min(value, target)} / ${target}</span>`;
+    if (journey.off[m.id] && value >= target) meta += `<span class="muted">unticked by you</span>`;
   }
   const link = m.page ? `<a class="m-link" href="${m.page}">${PAGE_NAMES[m.page]} →</a>` : "<span></span>";
   li.innerHTML = `${mark}
@@ -523,7 +528,11 @@ function milestoneEl(m) {
 
   const box = li.querySelector("input");
   if (box) box.onchange = () => {
-    if (box.checked) journey.done[m.id] = today(); else delete journey.done[m.id];
+    if (box.checked) { journey.done[m.id] = today(); delete journey.off[m.id]; }
+    else {
+      delete journey.done[m.id];
+      if (m.auto) journey.off[m.id] = true; // don't let it tick itself on again straight away
+    }
     saveJourney();
     render();
   };
@@ -921,7 +930,7 @@ document.querySelectorAll(".tracks button").forEach(b => b.onclick = () => {
 $("resetBtn").onclick = () => {
   const name = journey.track === "guitar" ? "guitar" : "piano";
   if (!confirm(`Untick every milestone on the ${name} journey and start over? Milestones shared with the other journey are unticked there too, and automatic ones you've already reached will tick again.`)) return;
-  milestonesOf(journey.track).forEach(m => delete journey.done[m.id]);
+  milestonesOf(journey.track).forEach(m => { delete journey.done[m.id]; delete journey.off[m.id]; });
   saveJourney();
   openLevels = null;
   render();
