@@ -205,6 +205,12 @@
   .sec-verse { background: #4c6ef5; } .sec-chorus { background: #e8590c; } .sec-bridge { background: #7048e8; }
   .sec-intro, .sec-outro, .sec-other { background: #868e96; } .sec-pre { background: #1098ad; } .sec-solo { background: #2b8a3e; }
   .sheet { font-size: var(--sheet-size, 1rem); line-height: 1.3; }
+  /* On a laptop or bigger screen: larger lyrics in a centred column, so they fill the view instead of a strip on
+     the left. The column is measured in letters (em), so it grows along with the A+ / A− text size. */
+  @media (min-width: 800px) {
+    .sheet { font-size: calc(var(--sheet-size, 1rem) * 1.3); max-width: 34em; margin: 0 auto; }
+    .song-map, .sheet-note { max-width: calc(34em * 1.3); margin-left: auto; margin-right: auto; }
+  }
   .sheet .section-name { display: inline-block; font-weight: 800; font-size: 0.78em; text-transform: uppercase; letter-spacing: .06em;
     color: #fff; padding: 2px 8px; border-radius: 6px; margin: 1.1em 0 0.4em; }
   .sheet .section:first-child .section-name { margin-top: 0; }
@@ -226,6 +232,9 @@
   .sheet .chord-name.bad { color: var(--bad); text-decoration: underline wavy; }
   .sheet .chord-row { display: flex; flex-wrap: wrap; gap: 0.2em 0.6em; align-items: center; margin: 0.2em 0 0.5em; font-weight: 800; color: var(--accent); }
   .sheet .chord-row .bar-line { color: var(--muted); font-weight: 400; }
+  /* A Hebrew song: chord rows (written left to right, like chord names) sit on the right, with the lyrics */
+  .sheet[dir="rtl"] .chord-row { justify-content: flex-end; }
+  .sheet[dir="rtl"] .edit-tools { margin-left: 0; margin-right: 8px; }
   /* Editing: words and chords are buttons */
   .sheet.editing .w { cursor: pointer; border-radius: 6px; padding: 0 2px; margin-right: 0.15em; }
   .sheet.editing .w:hover { background: var(--btn); }
@@ -889,7 +898,10 @@ function rowsFromOcr(data) {
 // A "word" of only symbols ("=", "—", "_") in the lyrics is usually a mark on the page the recognition picked up
 // (like the grey box behind a chord): leave it out
 const isJunkWord = text => !/[\p{L}\p{N}]/u.test(text);
-const dropJunk = words => words.filter(w => !isJunkWord(w.text));
+// Stray marks stuck to the start or end of a word ("שרצית=", "|word"): never part of lyrics
+const STRAY = /^[=_|~^*#<>\[\]{}\\+]+|[=_|~^*#<>\[\]{}\\+]+$/g;
+const tidyWord = text => text.replace(STRAY, "");
+const dropJunk = words => words.map(w => ({ ...w, text: tidyWord(w.text) })).filter(w => !isJunkWord(w.text));
 
 // Pieces with (almost) no space between them are one word (the recognition sometimes splits at an apostrophe)
 function mergePieces(words) {
@@ -1096,6 +1108,10 @@ function renderSheet() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
+  // A song that's mostly in Hebrew reads right to left as a whole: part names and chord rows go on the right too
+  const lyricLines = sh.sections.flatMap(sec => sec.lines.filter(l => l.w && l.w.length));
+  const rtlSong = lyricLines.length && lyricLines.filter(l => HEBREW.test(l.w.join(""))).length > lyricLines.length / 2;
+  if (rtlSong) $("sheet").setAttribute("dir", "rtl"); else $("sheet").removeAttribute("dir");
   $("sheet").innerHTML = sh.sections.map((sec, si) => {
     const last = sh.sections.length - 1;
     const tools = editing ? `<span class="edit-tools">
@@ -1110,7 +1126,7 @@ function renderSheet() {
     const lines = sec.lines.map((l, li) => {
       let html;
       if (l.o) {
-        html = `<div class="line chord-row"><span class="bar-line">|</span>${l.o.map((t, oi) =>
+        html = `<div class="line chord-row" dir="ltr"><span class="bar-line">|</span>${l.o.map((t, oi) =>
           `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === oi ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${oi}">${chordHtml(t)}</span><span class="bar-line">|</span>`).join("")}
           ${editing ? `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === l.o.length ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${l.o.length}">＋</span>` : ""}</div>`;
       } else {
@@ -1403,11 +1419,25 @@ function changeWord(line, i, text) {
   if (gapChord) addChordAt(line.c, makeKey(i + words.length - 1, "gap"), gapChord); // the gap chord stays after the last new word
 }
 
-// Clean up songs imported before stray marks were left out: remove "words" of only symbols ("=")
+// Clean up songs imported before stray marks were left out: remove "words" of only symbols ("="),
+// and marks stuck to the start or end of a word ("שרצית=")
 function cleanSheet(sh) {
   let changed = false;
   (sh && sh.sections || []).forEach(sec => sec.lines.forEach(l => {
     if (!l.w) return;
+    l.w.forEach((w, i) => {
+      const t = tidyWord(w);
+      if (t !== w && !isJunkWord(t)) {
+        // A chord on a letter after the removed start moves back with the letters
+        const cut = w.length - w.replace(/^[=_|~^*#<>\[\]{}\\+]+/, "").length;
+        if (cut) Object.keys(l.c || {}).forEach(k => {
+          const p = parseKey(k, l.w.length);
+          if (p && p.i === i && typeof p.at === "number" && p.at > 0) { const c = l.c[k]; delete l.c[k]; addChordAt(l.c, makeKey(i, Math.max(0, p.at - cut)), c); }
+        });
+        l.w[i] = t;
+        changed = true;
+      }
+    });
     for (let i = l.w.length - 1; i >= 0; i--) if (isJunkWord(l.w[i])) { removeWord(l, i); changed = true; }
   }));
   return changed;
