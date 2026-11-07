@@ -135,6 +135,29 @@
   .pk-root { fill: var(--accent); }
   .pk-label { fill: #888; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
 
+  /* The song overview */
+  .overview-bar input[type="search"] {
+    font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--btn);
+    background: var(--card); color: var(--ink); flex: 1 1 180px; min-width: 0;
+  }
+  .song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+  .song-card {
+    text-align: left; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid transparent;
+    border-radius: 12px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-height: 96px;
+  }
+  .song-card:hover { border-color: var(--accent-soft); }
+  .song-card.current { border-color: var(--accent); background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .song-card .s-title { font-weight: 800; font-size: 1rem; line-height: 1.25; }
+  .song-card .s-title.untitled { color: var(--muted); font-style: italic; font-weight: 600; }
+  .song-card .s-artist { color: var(--muted); font-size: 0.85rem; }
+  .song-card .s-key { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+  .song-card .s-chords { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; padding-top: 4px; }
+  .song-card .s-chords span { font-size: 0.75rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--btn); }
+  .song-card .s-chords .more { background: none; color: var(--muted); }
+  .song-card .s-empty { font-size: 0.78rem; color: var(--muted); margin-top: auto; }
+  .no-match { color: var(--muted); grid-column: 1 / -1; padding: 10px 0; }
+  .details-head { justify-content: space-between; }
+
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
 </style>
 </head>
@@ -144,12 +167,28 @@
   <h1>My Songs</h1>
   <p class="sub">Look up a song on Ultimate Guitar or Tab4U, enter its chords here, and practise them.</p>
 
-  <!-- 1. Which song -->
+  <!-- All your songs, as cards -->
   <div class="panel">
-    <div class="row">
-      <select id="songList" aria-label="Choose a song"></select>
-      <button class="btn" id="newSong">+ New song</button>
-      <button class="btn" id="deleteSong">Delete</button>
+    <div class="row overview-bar">
+      <input type="search" id="search" placeholder="Search your songs" aria-label="Search your songs">
+      <label class="muted">Sort
+        <select id="sort">
+          <option value="opened">Last opened</option>
+          <option value="title">Title A–Z</option>
+          <option value="artist">Artist A–Z</option>
+          <option value="added">Newest first</option>
+        </select>
+      </label>
+      <button class="btn primary" id="newSong">+ New song</button>
+    </div>
+    <div class="song-grid" id="songGrid"></div>
+  </div>
+
+  <!-- 1. The song you've opened -->
+  <div class="panel" id="detailsPanel">
+    <div class="row details-head">
+      <h2 id="detailsTitle" style="margin:0"></h2>
+      <button class="btn" id="deleteSong">Delete song</button>
     </div>
     <div class="row">
       <label class="field">Song title <input type="text" id="title" placeholder="e.g. Wonderwall"></label>
@@ -249,7 +288,10 @@ function saveSongs() {
 }
 
 function newSong() {
-  const s = { id: Date.now().toString(36), title: "", artist: "", link: "", chords: [] };
+  // The id is the time it was added (in base 36); never the same as another song's
+  let t = Date.now();
+  while (songs.some(s => s.id === t.toString(36))) t++;
+  const s = { id: t.toString(36), title: "", artist: "", link: "", chords: [] };
   songs.push(s);
   currentId = s.id;
   saveSongs();
@@ -264,18 +306,74 @@ const sameChord = (a, b) => a.root === b.root && a.type === b.type;
 // ---------- 1. Song details ----------
 const $ = id => document.getElementById(id);
 
+// ---------- The overview: one card per song ----------
+// Each card shows the title, artist, key and the song's chords (spelled to suit the key).
+// s.opened (when you last opened it) is used for sorting; the id is when the song was added.
+const escapeHtml = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const addedAt = s => parseInt(s.id, 36) || 0;
+let sortBy = "opened";
+try { sortBy = localStorage.getItem("mySongsSort") || "opened"; } catch (e) {}
+$("sort").value = sortBy;
+
+function songSummary(s) {
+  const unique = s.chords.filter((c, i, all) => all.findIndex(o => sameChord(o, c)) === i);
+  if (!unique.length) return { keyText: "", chordNames: [] };
+  const best = detectKey(s.chords)[0];
+  // label() spells chords for the current song's key; borrow it for this song for a moment
+  const keep = key;
+  key = { ...best, notes: spellScale(keyAscii(best), best.minor ? MINOR : MAJOR) };
+  const chordNames = unique.map(label);
+  key = keep;
+  return { keyText: keyName(best), chordNames };
+}
+
+function sortedSongs() {
+  const byText = f => (a, b) => (a[f] || "￿").localeCompare(b[f] || "￿", undefined, { sensitivity: "base" });
+  const list = [...songs];
+  if (sortBy === "title") list.sort(byText("title"));
+  else if (sortBy === "artist") list.sort((a, b) => byText("artist")(a, b) || byText("title")(a, b));
+  else if (sortBy === "added") list.sort((a, b) => addedAt(b) - addedAt(a));
+  else list.sort((a, b) => (b.opened || addedAt(b)) - (a.opened || addedAt(a)));
+  return list;
+}
+
 function renderSongList() {
-  const list = $("songList");
-  list.innerHTML = "";
-  songs.forEach(s => list.add(new Option((s.title || "Untitled song") + (s.artist ? " – " + s.artist : ""), s.id)));
-  list.value = currentId;
+  const grid = $("songGrid");
+  const q = $("search").value.trim().toLowerCase();
+  const shown = sortedSongs().filter(s => !q || `${s.title} ${s.artist}`.toLowerCase().includes(q)
+    || songSummary(s).chordNames.some(n => n.toLowerCase() === q));
+  grid.innerHTML = shown.length ? "" : `<p class="no-match">No songs match "${escapeHtml(q)}".</p>`;
+  shown.forEach(s => {
+    const { keyText, chordNames } = songSummary(s);
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "song-card" + (s.id === currentId ? " current" : "");
+    const MAX = 8;
+    card.innerHTML = `
+      <div class="s-title${s.title ? "" : " untitled"}">${s.title ? escapeHtml(s.title) : "Untitled song"}</div>
+      ${s.artist ? `<div class="s-artist">${escapeHtml(s.artist)}</div>` : ""}
+      ${keyText ? `<div class="s-key">${keyText}</div>` : ""}
+      ${chordNames.length
+        ? `<div class="s-chords">${chordNames.slice(0, MAX).map(n => `<span>${n}</span>`).join("")}${chordNames.length > MAX ? `<span class="more">+${chordNames.length - MAX}</span>` : ""}</div>`
+        : `<div class="s-empty">No chords yet</div>`}`;
+    card.onclick = () => openSong(s.id);
+    grid.appendChild(card);
+  });
+  $("detailsTitle").textContent = song().title || "Untitled song";
+}
+
+function openSong(id) {
+  currentId = id;
+  song().opened = Date.now();
+  saveSongs();
+  loadSong();
+  $("detailsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function loadSong() {
   $("title").value = song().title;
   $("artist").value = song().artist;
   $("link").value = song().link;
-  renderSongList();
   renderAll();
 }
 
@@ -284,8 +382,21 @@ function loadSong() {
   saveSongs();
   if (field !== "link") renderSongList();
 });
-$("songList").onchange = () => { currentId = $("songList").value; saveSongs(); loadSong(); };
-$("newSong").onclick = () => { newSong(); loadSong(); $("title").focus(); };
+$("search").oninput = renderSongList;
+$("sort").onchange = () => {
+  sortBy = $("sort").value;
+  try { localStorage.setItem("mySongsSort", sortBy); } catch (e) {}
+  renderSongList();
+};
+$("newSong").onclick = () => {
+  newSong();
+  song().opened = Date.now();
+  $("search").value = "";
+  saveSongs();
+  loadSong();
+  $("detailsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("title").focus({ preventScroll: true });
+};
 $("deleteSong").onclick = () => {
   if (!confirm(`Delete "${song().title || "Untitled song"}"?`)) return;
   try { localStorage.removeItem("songRecent:" + currentId); } catch (e) {}
@@ -649,6 +760,7 @@ function renderAll() {
   renderSongChords();
   renderCards();
   resetPractice();
+  renderSongList();   // the overview card shows this song's key and chords too
 }
 
 // Settings, remembered between visits (Hand is shared with the other pages)
