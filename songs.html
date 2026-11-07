@@ -247,6 +247,7 @@
   .quick-names button:hover { outline: 2px solid var(--accent); }
   .edit-tools { flex-wrap: wrap; }
   .line-wrap { display: flex; align-items: flex-end; gap: 6px; }
+  .line-x:disabled { opacity: .35; cursor: default; }
   .line-wrap .line { flex: 1; }
   .chord-strip {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--card); box-shadow: 0 -4px 18px rgba(0,0,0,.18);
@@ -577,6 +578,7 @@ function loadSong() {
   renaming = null;
   typingChord = false;
   typingWord = null;
+  addingLineTo = null;
   selected = null;
   stopScroll();
   closeStrip();
@@ -989,6 +991,7 @@ let selected = null; // while editing: { s, l, i } a word, or { s, l, o } a chor
 let renaming = null;  // the part whose name you're changing
 let typingChord = false; // typing a chord name in the bar at the bottom ("Other…")
 let typingWord = null;   // typing words: "edit" (change the word), "before", "after", or "line" (a new line below)
+let addingLineTo = null; // the part you're adding a new line of lyrics to (with + Line)
 const PART_NAMES = ["Intro", "Verse 1", "Verse 2", "Verse 3", "Pre-chorus", "Chorus", "Bridge", "Solo", "Outro", "פתיחה", "בית", "פזמון", "גשר", "סיום"];
 const shownShift = () => editing ? 0 : (song().transpose || 0) - (song().capo || 0); // with a capo you play lower shapes
 const sectionKind = name => {
@@ -1075,7 +1078,8 @@ function renderSheet() {
   const notes = [];
   if (editing) notes.push("Tap a word, choose the letter the chord goes over (or “after” for between two words), then the chord; " +
     "◂ ▸ move a chord. The bottom bar also lets you change, add or delete words and add lines. Tap a part's name to rename it; ↑ ↓ move a part, " +
-    "⤒ joins it with the part above (handy when a part was split over two screenshots), and ✂ on a line starts a new part there. " +
+    "⤒ joins it with the part above (handy when a part was split over two screenshots). On a line, ↑ ↓ move it (on into the next part " +
+    "at the top or bottom of a part) and ✂ starts a new part there. " +
     "Chords are shown as written (no transpose or capo) while you edit.");
   else {
     if (s.transpose) notes.push(`Transposed ${s.transpose > 0 ? "up" : "down"} ${Math.abs(s.transpose)} semitone${Math.abs(s.transpose) === 1 ? "" : "s"}.`);
@@ -1099,7 +1103,8 @@ function renderSheet() {
         <button type="button" data-act="up" data-s="${si}" title="Move this part up" ${si === 0 ? "disabled" : ""}>↑</button>
         <button type="button" data-act="down" data-s="${si}" title="Move this part down" ${si === last ? "disabled" : ""}>↓</button>
         ${si > 0 ? `<button type="button" data-act="join" data-s="${si}" title="Add these lines to the end of the part above (for a part split over two screenshots)">⤒ Join with part above</button>` : ""}
-        <button type="button" data-act="addrow" data-s="${si}">+ Chords row</button>
+        <button type="button" data-act="addline" data-s="${si}" title="Add a line of lyrics at the end of this part">+ Line</button>
+        <button type="button" data-act="addrow" data-s="${si}" title="Add a row with only chords (an intro, a solo…)">+ Chords row</button>
         <button type="button" data-act="copy" data-s="${si}" title="Copy these chords to every part with the same words">Copy to same</button>
         <button type="button" data-act="delsec" data-s="${si}" title="Remove this part">✕</button></span>` : "";
     const lines = sec.lines.map((l, li) => {
@@ -1111,7 +1116,12 @@ function renderSheet() {
       } else {
         html = lineHtml(l, si, li);
       }
+      const firstLine = si === 0 && li === 0, lastLine = si === sh.sections.length - 1 && li === sec.lines.length - 1;
       return editing ? `<div class="line-wrap">${html}
+        <button type="button" class="line-x" data-act="lineup" data-s="${si}" data-l="${li}" ${firstLine ? "disabled" : ""}
+          title="${li === 0 ? "Move this line to the end of the part above" : "Move this line up"}">↑</button>
+        <button type="button" class="line-x" data-act="linedown" data-s="${si}" data-l="${li}" ${lastLine ? "disabled" : ""}
+          title="${li === sec.lines.length - 1 ? "Move this line to the start of the part below" : "Move this line down"}">↓</button>
         ${li > 0 ? `<button type="button" class="line-x" data-act="split" data-s="${si}" data-l="${li}" title="Start a new part from this line">✂</button>` : ""}
         <button type="button" class="line-x" data-act="delline" data-s="${si}" data-l="${li}" title="Remove this line">✕</button></div>` : html;
     }).join("");
@@ -1438,6 +1448,32 @@ function renderPlaceBar() {
     $("otherText").onkeydown = e => { if (e.key === "Escape") { typingChord = false; renderPlaceBar(); } };
     return;
   }
+  // + Line on a part: type the words of a new line; then its first word is selected, ready for chords
+  if (addingLineTo !== null && sheet().sections[addingLineTo]) {
+    const sec = sheet().sections[addingLineTo];
+    strip.innerHTML = `<form class="place" id="lineForm">
+      <span class="hint-text">New line at the end of “${escapeHtml(sec.name)}”: type the words, then add the chords</span>
+      <input type="text" id="lineText" aria-label="Words of the new line" autocomplete="off" dir="auto"
+        style="font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--btn);background:var(--bg);color:var(--ink);min-width:220px;flex:1">
+      <button type="submit" class="used">Add line</button><button type="button" id="lineCancel">Cancel</button></form>`;
+    $("lineText").focus();
+    $("lineForm").onsubmit = e => {
+      e.preventDefault();
+      const words = $("lineText").value.trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return;
+      sec.lines.push({ w: words, c: {} });
+      selected = { s: addingLineTo, l: sec.lines.length - 1, i: 0, at: 0 };
+      addingLineTo = null;
+      saveSheet();
+      renderSheet();
+      const el = $("sheet").querySelector(`.w[data-s="${selected.s}"][data-l="${selected.l}"][data-i="0"]`);
+      if (el) el.scrollIntoView({ block: "center" });
+    };
+    $("lineCancel").onclick = () => { addingLineTo = null; renderPlaceBar(); };
+    $("lineText").onkeydown = e => { if (e.key === "Escape") { addingLineTo = null; renderPlaceBar(); } };
+    return;
+  }
+
   // Typing words: change the selected word, add words before or after it, or a new line below
   if (selected && typingWord) {
     const l = lineAt(selected), word = l.w[selected.i] || "";
@@ -1559,7 +1595,7 @@ function renderPlaceBar() {
     saveSheet();
     renderSheet();
   };
-  $("doneEditing").onclick = () => { editing = false; selected = null; renaming = null; typingChord = false; typingWord = null; closeStrip(); renderSheet(); };
+  $("doneEditing").onclick = () => { editing = false; selected = null; renaming = null; typingChord = false; typingWord = null; addingLineTo = null; closeStrip(); renderSheet(); };
 }
 
 $("sheet").addEventListener("click", e => {
@@ -1580,10 +1616,37 @@ $("sheet").addEventListener("click", e => {
       secs[si - 1].lines.push(...secs[si].lines);
       secs.splice(si, 1);
       selected = null;
+    } else if (act.dataset.act === "lineup" || act.dataset.act === "linedown") {
+      // Within the part, or across into the part above/below when it's the first/last line
+      const up = act.dataset.act === "lineup", sec = secs[si];
+      const [line] = sec.lines.splice(li, 1);
+      let toS = si, toL;
+      if (up && li > 0) toL = li - 1;
+      else if (!up && li < sec.lines.length) toL = li + 1;
+      else if (up) { toS = si - 1; toL = secs[toS].lines.length; }
+      else { toS = si + 1; toL = 0; }
+      if (!secs[toS]) { sec.lines.splice(li, 0, line); return; } // nowhere to go
+      secs[toS].lines.splice(toL, 0, line);
+      // A part that's now empty goes away
+      if (!sec.lines.length) { secs.splice(si, 1); if (toS > si) toS--; }
+      selected = null;
+      saveSheet();
+      renderSheet();
+      // Keep the moved line in view
+      const moved = $("sheet").querySelector(`.line-wrap [data-act="lineup"][data-s="${toS}"][data-l="${toL}"]`);
+      if (moved) moved.closest(".line-wrap").scrollIntoView({ block: "nearest" });
+      return;
     } else if (act.dataset.act === "split") {
       const moved = secs[si].lines.splice(li);
       secs.splice(si + 1, 0, { name: `${secs[si].name} (2)`, lines: moved });
       selected = null;
+    } else if (act.dataset.act === "addline") {
+      // Type the words in the bar at the bottom; they go at the end of this part
+      addingLineTo = si;
+      selected = null;
+      typingChord = false;
+      typingWord = null;
+      return renderSheet();
     } else if (act.dataset.act === "addrow") {
       secs[si].lines.push({ o: [] });
       selected = { s: si, l: secs[si].lines.length - 1, o: 0 };
@@ -1614,6 +1677,7 @@ $("sheet").addEventListener("click", e => {
     if (!w) return;
     typingChord = false;
     typingWord = null;
+    addingLineTo = null;
     if (w.dataset.o !== undefined) selected = { s: Number(w.dataset.s), l: Number(w.dataset.l), o: Number(w.dataset.o) };
     else {
       // A word: start on its first chord (so you can move or change it right away), or its first letter
@@ -1634,6 +1698,7 @@ $("editBtn").onclick = () => {
   renaming = null;
   typingChord = false;
   typingWord = null;
+  addingLineTo = null;
   stopScroll();
   if (!editing) closeStrip();
   renderSheet();
