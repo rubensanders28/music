@@ -183,6 +183,7 @@
   .details-head { justify-content: space-between; }
 
   /* Lyrics and chords */
+  [hidden] { display: none !important; } /* "hidden" wins over display: flex and friends */
   .sheet-head { justify-content: space-between; }
   .import-start { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .import-box { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg); }
@@ -358,13 +359,13 @@
     </div>
     <input type="file" id="shotFile" accept="image/*" multiple hidden>
     <div id="importBox"></div>
-    <div id="sheetTools" class="sheet-tools" hidden>
+    <div id="sheetTools" class="sheet-tools">
       <span class="stepper">Transpose <button id="tDown" aria-label="Transpose down">−</button><b id="tValue">0</b><button id="tUp" aria-label="Transpose up">+</button></span>
       <span class="stepper" title="Where your capo is. The chords stay the ones you play; they sound that many frets higher.">Capo <button id="capoDown" aria-label="Capo down">−</button><b id="capoValue">0</b><button id="capoUp" aria-label="Capo up">+</button></span>
-      <span class="stepper">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
-      <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
-      <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
-      <button class="btn" id="editBtn" title="Place and fix chords, rename, move, join or split parts">✎ Edit</button>
+      <span class="stepper lyrics-only">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
+      <button class="btn lyrics-only" id="scrollBtn">▶ Auto-scroll</button>
+      <select class="lyrics-only" id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
+      <button class="btn lyrics-only" id="editBtn" title="Place and fix chords, rename, move, join or split parts">✎ Edit</button>
       <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:.85rem" title="Chord diagrams mirrored for left-handed guitar (the same setting as Hand below, and in the Chord library and trainers)">
         <input type="checkbox" id="sheetLefty"> Left-handed</label>
     </div>
@@ -1112,20 +1113,22 @@ function capoLine(sh) {
 function renderSheet() {
   const sh = sheet();
   const has = sh && sh.sections && sh.sections.length;
-  $("sheetTools").hidden = !has;
+  const s = song();
+  // Transpose and Capo also matter for a song without lyrics (its chord list), so the toolbar is always there;
+  // the buttons that only work on lyrics (size, auto-scroll, edit) only when there are lyrics
+  $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
+  $("capoValue").textContent = s.capo || 0;
+  document.querySelectorAll("#sheetTools .lyrics-only").forEach(el => { el.hidden = !has; });
   $("songMap").innerHTML = "";
   $("sheet").innerHTML = "";
   $("sheet").classList.toggle("editing", editing);
   renderSheetActions();
   if (!has) {
-    $("sheetNote").textContent = "";
+    $("sheetNote").textContent = s.capo ? `Capo on fret ${s.capo}: the chords below are the ones you play; they sound ${s.capo} fret${s.capo === 1 ? "" : "s"} higher.` : "";
     if (!$("importBox").innerHTML) showImportStart();
     closeStrip();
     return;
   }
-  const s = song();
-  $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
-  $("capoValue").textContent = s.capo || 0;
   $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit";
   const notes = [];
   let capoOffer = null;
