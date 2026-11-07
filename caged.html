@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAGED System</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --btn: #ece8df;
+    --wood: #f3e6cf;
+    --fret: #b9a789;
+    --string: #6b665e;
+    /* One colour per shape */
+    --sC: #e8590c; --sA: #2b8a3e; --sG: #1971c2; --sE: #c2255c; --sD: #7048e8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --btn: #2f2d35;
+      --wood: #2d2822;
+      --fret: #6e6352;
+      --string: #a29d94;
+      --sC: #ff8c42; --sA: #51cf66; --sG: #4dabf7; --sE: #f06595; --sD: #9775fa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1000px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+  .panel { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .panel p, .panel li { line-height: 1.55; }
+  .panel p:last-child { margin-bottom: 0; }
+  .muted { color: var(--muted); }
+
+  /* The five letters, big */
+  .letters { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .letter-card { flex: 1 1 140px; border-radius: 12px; padding: 10px 12px; color: #fff; }
+  .letter-card b { font-size: 1.6rem; display: block; line-height: 1; }
+  .letter-card span { font-size: 0.82rem; opacity: .95; }
+
+  /* Controls */
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--btn); flex-wrap: wrap; }
+  .seg button { font: inherit; font-weight: 700; padding: 7px 14px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .seg button.shape[aria-pressed=true] { color: #fff; }
+  .btn { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 8px 14px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--card); }
+  .btn:hover { outline: 2px solid var(--accent); }
+
+  /* The fretboard */
+  .board-wrap { overflow-x: auto; padding-bottom: 4px; }
+  #board { display: block; min-width: 820px; width: 100%; height: auto; }
+  #board .wood { fill: var(--wood); }
+  #board .fret { stroke: var(--fret); stroke-width: 2; }
+  #board .nut { stroke: var(--ink); stroke-width: 6; }
+  #board .str { stroke: var(--string); }
+  #board .inlay { fill: var(--fret); opacity: .5; }
+  #board .fretnum { fill: var(--muted); font-size: 12px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  #board .strname { fill: var(--muted); font-size: 12px; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; }
+  #board .zone { opacity: .16; }
+  #board .zone-label { font-size: 13px; font-weight: 800; text-anchor: middle; font-family: system-ui, sans-serif; }
+  #board .dot text { fill: #fff; font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: system-ui, sans-serif; pointer-events: none; }
+  #board .dot { cursor: pointer; }
+  #board .dot.root circle { stroke: var(--ink); stroke-width: 2.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .explain { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); line-height: 1.5; }
+  .explain b { font-weight: 800; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--btn); vertical-align: top; }
+  th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; }
+  .table-wrap { overflow-x: auto; }
+  .chip { display: inline-block; min-width: 28px; text-align: center; padding: 2px 8px; border-radius: 999px; color: #fff; font-weight: 800; }
+  ol, ul { padding-left: 1.3em; margin: 6px 0; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>The CAGED System</h1>
+  <p class="sub">How the five open chords you already know, C, A, G, E and D, cover the whole guitar neck.
+    Once you see it, you can play any chord in five places, and you always know where the root note is.</p>
+
+  <div class="panel">
+    <h2>The idea in one minute</h2>
+    <p>Every major chord can be played with the shape of one of the five open chords: <b>C, A, G, E or D</b>.
+      Take the open shape, slide it up the neck, and let your first finger (or a barre) do the job of the nut.
+      You already know this from barre chords: an F barre chord is the <b>E shape</b> moved up one fret,
+      and a B♭ barre is the <b>A shape</b> moved up one fret.</p>
+    <p>The surprise is that the five shapes <b>fit together like puzzle pieces</b>, always in the same order:
+      C → A → G → E → D → and back to C, an octave (12 frets) higher. Where one shape ends, the next one begins,
+      and they share some notes. Together they cover the whole fretboard for that chord.</p>
+    <div class="letters" id="letterCards"></div>
+  </div>
+
+  <div class="panel">
+    <h2>See it on the neck</h2>
+    <div class="settings">
+      <label>Chord <select id="root"></select></label>
+      <div class="seg" role="group" aria-label="Major or minor">
+        <button data-quality="maj">Major</button>
+        <button data-quality="min">Minor</button>
+      </div>
+      <label>Dots show
+        <select id="labels">
+          <option value="degrees">R, 3, 5</option>
+          <option value="names">Note names</option>
+        </select>
+      </label>
+    </div>
+    <div class="settings">
+      <div class="seg" role="group" aria-label="Which shape" id="shapeButtons"></div>
+      <button class="btn primary" id="playBtn">▶ Play</button>
+    </div>
+    <div class="board-wrap"><svg id="board" role="img" aria-label="Fretboard with the CAGED shapes"></svg></div>
+    <div class="legend" id="legend"></div>
+    <p class="explain" id="explain"></p>
+  </div>
+
+  <div class="panel">
+    <h2>The five shapes</h2>
+    <div class="table-wrap"><table id="shapeTable"></table></div>
+    <p class="muted" style="font-size:.85rem">In practice you rarely play all six strings of every shape: the C, G and D shapes are
+      awkward as full barre chords. Guitarists use parts of them, like 3 or 4 strings near the root.
+      The point of CAGED is to <b>see</b> where the chord notes are, not to fret every note.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Why it's useful</h2>
+    <ul>
+      <li><b>Any chord, five places.</b> Stuck at the 7th fret? There's a shape of the chord you need right there.</li>
+      <li><b>Always know the root.</b> Each shape has its root on known strings, so you can find any chord from its root note.</li>
+      <li><b>Solos that follow the chords.</b> The chord notes in each shape are the safest notes to land on. Scales fit around the
+        shapes too: the minor pentatonic positions on the <a href="scales.html">Scale shapes</a> page line up with them.</li>
+      <li><b>Play a song in one area of the neck,</b> instead of jumping between open chords and barre chords.</li>
+      <li><b>Different sounds.</b> The same chord sounds brighter higher up and fuller lower down, which is great for a second guitar part.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>How to practise it</h2>
+    <ol>
+      <li><b>Start with one chord.</b> Choose C above and press each shape in turn: C, A, G, E, D. Play each one and say its name.</li>
+      <li><b>Find the roots first.</b> For every shape, find the root notes (the dots with a ring) before you play the chord.</li>
+      <li><b>Walk up the neck.</b> Play the chord in all five shapes, from low to high and back, without stopping.</li>
+      <li><b>Change chords without moving.</b> Pick a spot, say around the 5th fret, and play G, C and D there, using whichever
+        shape each chord has nearby. Then try another spot.</li>
+      <li><b>Small pieces.</b> Play just the top 3 or 4 strings of each shape. That's how most players use it.</li>
+      <li><b>Minor too.</b> Switch to Minor: the same idea works with Cm, Am, Gm, Em and Dm shapes.</li>
+    </ol>
+    <p class="muted" style="font-size:.85rem">The <a href="chord-library.html">Chord library</a> has the E, A, C and G shapes as
+      separate chord diagrams, and the <a href="guitar.html">Fretboard trainer</a> helps you learn the notes so the roots come quickly.</p>
+  </div>
+
+  <p class="hint">The fretboard is drawn the way you see it in tabs: thin high E string on top, thick low E at the bottom.
+    It's mirrored if you've chosen left-handed in the Chord library or a trainer.<br>
+    Guitar sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
+    <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- chord-data.js: note names, open strings (OPEN) and the guitar sound (pluck, strum) -->
+<script src="chord-data.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- The five shapes ----------
+// Each shape as the open chord it comes from, for strings low E → high e (null = not played), with the pitch of
+// its root in open position. Moving a shape up n frets turns it into the chord n semitones higher.
+const CAGED = {
+  maj: [
+    { id: "C", openRoot: 0, frets: [null, 3, 2, 0, 1, 0], rootOn: "A string (and B string)" },
+    { id: "A", openRoot: 9, frets: [null, 0, 2, 2, 2, 0], rootOn: "A string (and G string)" },
+    { id: "G", openRoot: 7, frets: [3, 2, 0, 0, 0, 3], rootOn: "low E string (and G and high e)" },
+    { id: "E", openRoot: 4, frets: [0, 2, 2, 1, 0, 0], rootOn: "low E string (and D and high e)" },
+    { id: "D", openRoot: 2, frets: [null, null, 0, 2, 3, 2], rootOn: "D string (and B string)" },
+  ],
+  min: [
+    { id: "C", openRoot: 0, frets: [null, 3, 1, 0, 1, 3], rootOn: "A string (and B string)" },
+    { id: "A", openRoot: 9, frets: [null, 0, 2, 2, 1, 0], rootOn: "A string (and G string)" },
+    { id: "G", openRoot: 7, frets: [3, 1, 0, 0, 3, 3], rootOn: "low E string (and G and high e)" },
+    { id: "E", openRoot: 4, frets: [0, 2, 2, 0, 0, 0], rootOn: "low E string (and D and high e)" },
+    { id: "D", openRoot: 2, frets: [null, null, 0, 2, 3, 1], rootOn: "D string (and B string)" },
+  ],
+};
+const ORDER = ["C", "A", "G", "E", "D"];
+const ABOUT = {
+  C: "Like an open C chord. Root under your ring finger on the A string.",
+  A: "Like an open A chord, the A-shape barre chord. Root on the A string, under the barre.",
+  G: "Like an open G chord. Big stretch as a full chord; usually played in parts.",
+  E: "Like an open E chord, the E-shape barre chord (F at fret 1). Root on the low E string, under the barre.",
+  D: "Like an open D chord. Only the top four strings; root on the D string.",
+};
+const FRETS = 17; // frets shown
+
+// ---------- Settings ----------
+const ROOT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];      // for major chords
+const MINOR_ROOT_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"]; // for minor chords (C♯m, G♯m)
+let saved = { root: 0, quality: "maj", shape: "all", labels: "degrees" };
+try { saved = { ...saved, ...JSON.parse(localStorage.getItem("cagedPage")) }; } catch (e) {}
+const save = () => { try { localStorage.setItem("cagedPage", JSON.stringify(saved)); } catch (e) {} };
+const lefty = () => { try { return localStorage.getItem("fretTrainerHand") === "left"; } catch (e) { return false; } };
+
+const nice = s => s.replace("#", "♯").replace(/^([A-G])b/, "$1♭");
+const rootName = () => (saved.quality === "min" ? MINOR_ROOT_NAMES : ROOT_NAMES)[saved.root];
+const chordTitle = () => nice(rootName()) + (saved.quality === "min" ? "m" : "");
+
+NOTES.forEach((n, i) => $("root").add(new Option(FLATS[n] ? `${nice(n)} / ${FLATS[n]}` : n, i)));
+$("root").value = saved.root;
+$("labels").value = saved.labels;
+
+// The colour cards at the top
+$("letterCards").innerHTML = ORDER.map(id => `<div class="letter-card" style="background:var(--s${id})"><b>${id}</b><span>${id} shape</span></div>`).join("");
+
+// ---------- Where each shape sits for the chosen chord ----------
+// The shape moved up so its root is the chord's root; also an octave higher if that still fits on the board.
+function placements() {
+  const out = [];
+  CAGED[saved.quality].forEach(shape => {
+    const move = (saved.root - shape.openRoot + 12) % 12;
+    [move, move + 12].forEach(m => {
+      const frets = shape.frets.map(f => f === null ? null : f + m);
+      const played = frets.filter(f => f !== null);
+      if (Math.max(...played) > FRETS) return;
+      out.push({ shape, frets, low: Math.min(...played), high: Math.max(...played), move: m });
+    });
+  });
+  return out.sort((a, b) => a.low - b.low);
+}
+
+// Spell a chord note: the root's letter, the 3rd two letters up, the 5th four letters up (C E G, E♭ G B♭, C♯ E G♯)
+function noteName(pc) {
+  const name = rootName(), letter = LETTERS.indexOf(name[0]);
+  const rootPc = (NATURAL[letter] + (name[1] === "#" ? 1 : name[1] === "b" ? -1 : 0) + 12) % 12;
+  const semis = (pc - rootPc + 12) % 12;
+  const steps = { 0: 0, 3: 2, 4: 2, 7: 4 }[semis];
+  if (steps === undefined) return NOTES[pc];
+  const l = (letter + steps) % 7, acc = ((pc - NATURAL[l] + 18) % 12) - 6;
+  return LETTERS[l] + (ACCIDENTAL[acc] || "");
+}
+function degreeOf(pc) {
+  const semis = (pc - saved.root + 12) % 12;
+  return { 0: "R", 3: "♭3", 4: "3", 7: "5" }[semis] || "";
+}
+
+// ---------- Drawing the neck ----------
+const W = 1000, H = 250, BL = 46, RIGHT = 14, BT = 34, GAP = 34; // strings GAP apart, high e on top
+const fretW = (W - BL - RIGHT) / (FRETS + 1);
+// Fret 0 (open) gets its own column left of the nut; fret n sits between fret wires n−1 and n
+const xOfFret = f => { const x = BL + (f + 0.5) * fretW; return lefty() ? W - x : x; };
+const xOfWire = n => { const x = BL + (n + 1) * fretW; return lefty() ? W - x : x; }; // wire after fret n (n = 0: the nut)
+const yOfString = s => BT + (5 - s) * GAP; // s: 0 = low E … 5 = high e
+
+function draw() {
+  document.querySelectorAll("[data-quality]").forEach(b => b.setAttribute("aria-pressed", b.dataset.quality === saved.quality));
+  const all = placements();
+  const show = saved.shape === "all" ? all : all.filter(p => p.shape.id === saved.shape);
+  const svg = $("board");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let g = `<rect class="wood" x="${Math.min(xOfWire(0), xOfWire(FRETS))}" y="${BT - 14}" width="${Math.abs(xOfWire(FRETS) - xOfWire(0))}" height="${5 * GAP + 28}" rx="4"/>`;
+  // Shaded areas: where each shape sits
+  show.forEach(p => {
+    const a = xOfFret(p.low) - fretW / 2 + 3, b = xOfFret(p.high) + fretW / 2 - 3;
+    g += `<rect class="zone" x="${Math.min(a, b)}" y="${BT - 12}" width="${Math.abs(b - a)}" height="${5 * GAP + 24}" rx="8" fill="var(--s${p.shape.id})"/>`;
+    g += `<text class="zone-label" x="${(a + b) / 2}" y="${BT - 18}" fill="var(--s${p.shape.id})">${p.shape.id} shape</text>`;
+  });
+  // Frets, nut, inlays
+  for (let n = 1; n <= FRETS; n++) g += `<line class="fret" x1="${xOfWire(n)}" x2="${xOfWire(n)}" y1="${BT - 14}" y2="${BT + 5 * GAP + 14}"/>`;
+  g += `<line class="nut" x1="${xOfWire(0)}" x2="${xOfWire(0)}" y1="${BT - 14}" y2="${BT + 5 * GAP + 14}"/>`;
+  [3, 5, 7, 9, 15, 17].forEach(f => { g += `<circle class="inlay" cx="${xOfFret(f)}" cy="${BT + 2.5 * GAP}" r="6"/>`; });
+  g += `<circle class="inlay" cx="${xOfFret(12)}" cy="${BT + 1.5 * GAP}" r="6"/><circle class="inlay" cx="${xOfFret(12)}" cy="${BT + 3.5 * GAP}" r="6"/>`;
+  for (let f = 1; f <= FRETS; f++) g += `<text class="fretnum" x="${xOfFret(f)}" y="${H - 6}">${f}</text>`;
+  g += `<text class="fretnum" x="${xOfFret(0)}" y="${H - 6}">open</text>`;
+  // Strings, thicker towards the low E
+  for (let s = 0; s < 6; s++) {
+    g += `<line class="str" x1="${xOfWire(0)}" x2="${xOfWire(FRETS)}" y1="${yOfString(s)}" y2="${yOfString(s)}" stroke-width="${2.6 - s * 0.35}"/>`;
+    g += `<text class="strname" x="${lefty() ? W - 16 : 16}" y="${yOfString(s)}">${STRING_NAMES[s] === "E" && s === 5 ? "e" : STRING_NAMES[s]}</text>`;
+  }
+  // The dots: every note of the shape(s); a note that's in two shapes gets the colour of the first one
+  const dots = new Map();
+  show.forEach(p => p.frets.forEach((f, s) => {
+    if (f === null) return;
+    const key = `${s}:${f}`;
+    if (!dots.has(key)) dots.set(key, { s, f, shape: p.shape.id });
+  }));
+  dots.forEach(d => {
+    const pc = (OPEN[d.s] + d.f) % 12;
+    const deg = degreeOf(pc);
+    const label = saved.labels === "names" ? nice(noteName(pc)) : deg;
+    g += `<g class="dot${deg === "R" ? " root" : ""}" data-s="${d.s}" data-f="${d.f}"><circle cx="${xOfFret(d.f)}" cy="${yOfString(d.s)}" r="13" fill="var(--s${d.shape})"/>
+      <text x="${xOfFret(d.f)}" y="${yOfString(d.s)}">${label}</text></g>`;
+  });
+  svg.innerHTML = g;
+  svg.querySelectorAll(".dot").forEach(el => el.onclick = () => pluck(OPEN[Number(el.dataset.s)] + Number(el.dataset.f), 0));
+
+  // Shape buttons and legend
+  $("shapeButtons").innerHTML = [`<button data-shape="all" aria-pressed="${saved.shape === "all"}">All five</button>`,
+    ...ORDER.map(id => `<button class="shape" data-shape="${id}" aria-pressed="${saved.shape === id}"
+      style="${saved.shape === id ? `background:var(--s${id})` : `color:var(--s${id})`}">${id} shape</button>`)].join("");
+  $("shapeButtons").querySelectorAll("[data-shape]").forEach(b => b.onclick = () => { saved.shape = b.dataset.shape; save(); draw(); });
+  $("legend").innerHTML = ORDER.map(id => `<span><i style="background:var(--s${id})"></i>${id} shape</span>`).join("") +
+    `<span>Ringed dot = root (R)</span><span>Tap a dot to hear that note</span>`;
+
+  // In words
+  const title = chordTitle();
+  if (saved.shape === "all") {
+    const order = all.filter(p => p.move < 12).map(p => p.shape.id);
+    $("explain").innerHTML = `The five shapes of <b>${title}</b>, from the nut up: <b>${order.join(" → ")}</b>, then the first one again
+      12 frets higher. See how each shape's top is the next one's bottom: they share those notes. Tap a shape above to see it on its own.`;
+  } else {
+    const p = all.find(x => x.shape.id === saved.shape);
+    const where = p.low === 0 ? "in open position, at the nut" : `from fret ${p.low} to fret ${p.high}`;
+    $("explain").innerHTML = `<b>${title}</b> with the <b>${p.shape.id} shape</b> sits ${where}. ${ABOUT[p.shape.id]}
+      Its root is on the ${p.shape.rootOn}.`;
+  }
+  $("playBtn").textContent = saved.shape === "all" ? "▶ Play all five, low to high" : `▶ Play the ${saved.shape} shape`;
+  drawTable(all);
+}
+
+function drawTable(all) {
+  $("shapeTable").innerHTML = `<tr><th>Shape</th><th>Comes from</th><th>Root on</th><th>${chordTitle()} with this shape</th></tr>` +
+    ORDER.map(id => {
+      const p = all.find(x => x.shape.id === id);
+      const where = !p ? "–" : p.low === 0 ? "open position" : `frets ${p.low}–${p.high}`;
+      return `<tr><td><span class="chip" style="background:var(--s${id})">${id}</span></td>
+        <td>open ${id}${saved.quality === "min" ? "m" : ""}</td><td>${CAGED[saved.quality].find(s => s.id === id).rootOn}</td><td>${where}</td></tr>`;
+    }).join("");
+}
+
+// ---------- Sound ----------
+$("playBtn").onclick = () => {
+  const all = placements();
+  const list = saved.shape === "all" ? all.filter(p => p.move < 12) : all.filter(p => p.shape.id === saved.shape).slice(0, 1);
+  list.forEach((p, i) => setTimeout(() => strum({ frets: p.frets }), i * 1100));
+};
+
+// ---------- Settings ----------
+$("root").onchange = () => { saved.root = Number($("root").value); save(); draw(); };
+$("labels").onchange = () => { saved.labels = $("labels").value; save(); draw(); };
+document.querySelectorAll("[data-quality]").forEach(b => b.onclick = () => { saved.quality = b.dataset.quality; save(); draw(); });
+
+draw();
+// On a narrow screen the neck scrolls sideways: start at the nut (on the right when left-handed)
+requestAnimationFrame(() => { const w = document.querySelector(".board-wrap"); w.scrollLeft = lefty() ? w.scrollWidth : 0; });
+</script>
+</body>
+</html>

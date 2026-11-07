@@ -17,6 +17,7 @@
     ["songs.html", "My songs"],
     ["circle.html", "Circle of fifths"],
     ["scales.html", "Scale shapes"],
+    ["caged.html", "CAGED system"],
     ["metronome.html", "Tempo ladder"],
   ];
 
