@@ -182,6 +182,70 @@
   @media (max-width: 520px) { .status-picker { grid-template-columns: 1fr 1fr; } }
   .details-head { justify-content: space-between; }
 
+  /* Lyrics and chords */
+  .sheet-head { justify-content: space-between; }
+  .import-start { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .import-box { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg); }
+  .import-box textarea { width: 100%; min-height: 220px; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; padding: 8px;
+    border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .import-box .progress { height: 8px; border-radius: 4px; background: var(--btn); overflow: hidden; margin: 8px 0; }
+  .import-box .progress div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .results { list-style: none; padding: 0; margin: 8px 0 0; }
+  .results li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--btn); }
+  .results li small { color: var(--muted); }
+  .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0 4px; }
+  .stepper { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+  .stepper button { font: inherit; font-weight: 700; min-width: 30px; height: 30px; border: none; border-radius: 8px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .stepper b { min-width: 26px; text-align: center; color: var(--ink); }
+  .sheet-note { font-size: 0.85rem; color: var(--muted); margin: 6px 0; min-height: 0; }
+  .sheet-note:empty { display: none; }
+  .song-map { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 12px; }
+  .song-map:empty { display: none; }
+  .song-map button { font: inherit; font-size: 0.75rem; font-weight: 700; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #fff; }
+  .sec-verse { background: #4c6ef5; } .sec-chorus { background: #e8590c; } .sec-bridge { background: #7048e8; }
+  .sec-intro, .sec-outro, .sec-other { background: #868e96; } .sec-pre { background: #1098ad; } .sec-solo { background: #2b8a3e; }
+  .sheet { font-size: var(--sheet-size, 1rem); line-height: 1.3; }
+  .sheet .section-name { display: inline-block; font-weight: 800; font-size: 0.78em; text-transform: uppercase; letter-spacing: .06em;
+    color: #fff; padding: 2px 8px; border-radius: 6px; margin: 1.1em 0 0.4em; }
+  .sheet .section:first-child .section-name { margin-top: 0; }
+  .sheet .line { margin-bottom: 0.4em; }
+  .sheet .w { display: inline-block; vertical-align: bottom; margin-right: 0.3em; }
+  .sheet .w .c { display: block; min-height: 1.3em; font-weight: 800; color: var(--accent); white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
+  .sheet .line[dir="rtl"] .w { margin-right: 0; margin-left: 0.3em; }
+  .sheet .line[dir="rtl"] .w .c { text-align: right; }
+  .sheet .w .t { display: block; white-space: nowrap; }
+  .sheet .chord-name { cursor: pointer; border-radius: 4px; }
+  .sheet .chord-name:hover { background: var(--btn); }
+  .sheet .chord-name.bad { color: var(--bad); text-decoration: underline wavy; }
+  .sheet .chord-row { display: flex; flex-wrap: wrap; gap: 0.2em 0.6em; align-items: center; margin: 0.2em 0 0.5em; font-weight: 800; color: var(--accent); }
+  .sheet .chord-row .bar-line { color: var(--muted); font-weight: 400; }
+  /* Editing: words and chords are buttons */
+  .sheet.editing .w { cursor: pointer; border-radius: 6px; padding: 0 2px; margin-right: 0.15em; }
+  .sheet.editing .w:hover { background: var(--btn); }
+  .sheet.editing .w.sel { background: var(--accent-soft); outline: 2px solid var(--accent); }
+  .sheet.editing .w .c:empty::before { content: "·"; color: var(--btn); }
+  .sheet.editing .chord-row .ci { cursor: pointer; padding: 0 4px; border-radius: 6px; }
+  .sheet.editing .chord-row .ci.sel { background: var(--accent-soft); outline: 2px solid var(--accent); }
+  .edit-tools { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
+  .edit-tools button, .line-x { font: inherit; font-size: 0.75rem; font-weight: 600; border: none; border-radius: 6px; padding: 2px 7px;
+    background: var(--btn); color: var(--muted); cursor: pointer; }
+  .line-wrap { display: flex; align-items: flex-end; gap: 6px; }
+  .line-wrap .line { flex: 1; }
+  .chord-strip {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--card); box-shadow: 0 -4px 18px rgba(0,0,0,.18);
+    padding: 8px 16px; display: flex; align-items: center; gap: 12px; max-height: 45vh; overflow: auto;
+  }
+  .chord-strip .diagram { width: 110px; flex: none; }
+  .chord-strip .diagram.piano { width: 200px; }
+  .chord-strip .strip-name { font-weight: 800; font-size: 1.2rem; }
+  .chord-strip .strip-note { font-size: 0.8rem; color: var(--muted); }
+  .chord-strip .grow { flex: 1; }
+  .chord-strip .place { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; align-items: center; }
+  .chord-strip .place button { font: inherit; font-weight: 800; border: none; border-radius: 8px; padding: 8px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .chord-strip .place button.used { background: var(--accent); color: #fff; }
+  .chord-strip .place .hint-text { font-size: 0.8rem; color: var(--muted); flex-basis: 100%; }
+  body.strip-open { padding-bottom: 180px; }
+
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
 </style>
 </head>
@@ -189,7 +253,8 @@
 <script src="nav.js"></script><script src="sync.js"></script>
 <main>
   <h1>My Songs</h1>
-  <p class="sub">Look up a song on Ultimate Guitar or Tab4U, enter its chords here, and practise them.</p>
+  <p class="sub">Keep the songs you're learning: their chords, and their lyrics with the chords above them (from a screenshot
+    of a chord site, in a few seconds). Then practise them.</p>
 
   <!-- All your songs, as cards -->
   <div class="panel">
@@ -230,6 +295,29 @@
       <button class="btn" id="searchTab4u">Search Tab4U ↗</button>
     </div>
   </div>
+
+  <!-- Lyrics with the chords above them -->
+  <div class="panel" id="sheetPanel">
+    <div class="row sheet-head">
+      <h2 style="margin:0">Lyrics and chords</h2>
+      <span class="row" style="margin:0" id="sheetActions"></span>
+    </div>
+    <input type="file" id="shotFile" accept="image/*" multiple hidden>
+    <div id="importBox"></div>
+    <div id="sheetTools" class="sheet-tools" hidden>
+      <span class="stepper">Transpose <button id="tDown" aria-label="Transpose down">−</button><b id="tValue">0</b><button id="tUp" aria-label="Transpose up">+</button></span>
+      <span class="stepper">Capo <button id="capoDown" aria-label="Capo down">−</button><b id="capoValue">0</b><button id="capoUp" aria-label="Capo up">+</button></span>
+      <span class="stepper">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
+      <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
+      <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
+      <button class="btn" id="editBtn">✎ Edit chords</button>
+    </div>
+    <p class="sheet-note" id="sheetNote"></p>
+    <div class="song-map" id="songMap"></div>
+    <div class="sheet" id="sheet"></div>
+  </div>
+  <!-- The bar at the bottom of the screen: a chord's diagram, or the chords to place while editing -->
+  <div class="chord-strip" id="chordStrip" hidden></div>
 
   <!-- 2. The chords -->
   <div class="panel">
@@ -455,6 +543,13 @@ function loadSong() {
   $("artist").value = song().artist;
   $("link").value = song().link;
   renderStatusPicker();
+  // The lyrics and chords of this song (and nothing half-done from the previous one)
+  editing = false;
+  selected = null;
+  stopScroll();
+  closeStrip();
+  $("importBox").innerHTML = "";
+  renderSheet();
   renderAll();
 }
 
@@ -509,6 +604,757 @@ $("searchUG").onclick = () => {
 $("searchTab4u").onclick = () => {
   const q = searchText();
   if (q) openTab("https://www.tab4u.com/resultsSimple?tab=songs&q=" + encodeURIComponent(q));
+};
+
+// ---------- Lyrics and chords ----------
+// song.sheet = { sections: [{ name, lines }] }. A line is either
+//   lyrics: { w: ["I", "heard", "there"...], c: { 0: "Am", 3: "F" }, t: 14.12 }  (c: chords by word number; a number
+//           equal to the number of words means "after the last word"; t: when the line is sung, from LRCLIB)
+//   chords only: { o: ["Em", "Am", "Em", "Am"] }  (an intro, an instrumental part...)
+// Chords are kept as written ("C#m7", "D/F#"); transpose and capo only change how they're shown.
+// Ways in: a screenshot of a chord sheet (text recognition in the browser), lyrics from LRCLIB, or pasted text.
+
+// A chord symbol: root, optional ♯/♭, a suffix of chord words and numbers, optional /bass. "Bad" isn't a chord.
+const CHORD_RE = /^([A-G])([#b♯♭]?)((?:maj|min|m|M|dim|aug|sus|add|no|[0-9]|[#b♯♭+°øΔ()])*)(?:\/([A-G])([#b♯♭]?))?$/;
+const FILLER_RE = /^(\|+|:?\|\|?:?|x\d+|\d+x|\(x?\d+x?\)|-+|\.+|%|\/+|N\.?C\.?|\*+)$/i;
+// Section headings, in English or Hebrew (בית = verse, פזמון = chorus, גשר = bridge, פתיחה = intro, סיום = ending,
+// מעבר = interlude). A Hebrew heading may only have a number or letter after it, so a lyric line starting with בית isn't one.
+const SECTION_RE = /^\s*[\[(]?\s*((?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|refrain|hook|coda|instrumental|break|ending|riff|post-?chorus)\b[^\])]*|(?:פתיחה|בית|פזמון|גשר|מעבר|סולו|סיום|קודה)(?:\s*[0-9א-ת]['׳]?)?)\s*[\])]?\s*:?\s*$/i;
+const isChordText = t => CHORD_RE.test(t.replace(/^\((.*)\)$/, "$1"));
+
+// Text recognition often reads a chord's letter as a digit: "8m" is Bm, "6" is G, and "0" (an open circle) is C
+function cleanChordToken(t) {
+  let s = t.replace(/[‎‏‪-‮]/g, "").replace(/^[|.,;:'"`]+|[|.,;:'"`]+$/g, "");
+  if (/^8/.test(s) && isChordText("B" + s.slice(1))) s = "B" + s.slice(1);
+  if (/^6(?![0-9])/.test(s) && isChordText("G" + s.slice(1))) s = "G" + s.slice(1);
+  if (/^[0O](?![0-9])/.test(s) && isChordText("C" + s.slice(1))) s = "C" + s.slice(1);
+  return s.replace(/♯/g, "#").replace(/♭/g, "b");
+}
+
+// Is this row of words a row of chords? Mostly chord names, and anything else short (like "x2" or a misread chord)
+function chordRow(tokens) {
+  const cleaned = tokens.map(cleanChordToken).filter(Boolean);
+  if (!cleaned.length) return null;
+  const chords = cleaned.filter(isChordText).length;
+  const fillers = cleaned.filter(t => FILLER_RE.test(t)).length;
+  const others = cleaned.length - chords - fillers;
+  if (chords === 0 || chords / Math.max(1, cleaned.length - fillers) < 0.6 || cleaned.some(t => !isChordText(t) && !FILLER_RE.test(t) && t.length > 5)) return null;
+  return cleaned;
+}
+
+// Put each chord on the word below it: the first word that isn't entirely to the left of the chord.
+// words and chords: [{ text, x0, x1 }], in screen pixels (screenshot) or character columns (pasted text).
+// Right-to-left lyrics (Hebrew): words are in reading order, from right to left, and each chord goes on the word
+// under the middle of the chord (or the closest word).
+function placeChords(words, chords, rtl = false) {
+  const c = {};
+  chords.forEach(ch => {
+    if (FILLER_RE.test(ch.text)) return;
+    let i;
+    if (rtl) {
+      const mid = (ch.x0 + ch.x1) / 2;
+      i = words.findIndex(w => mid >= w.x0 && mid <= w.x1);
+      if (i < 0 && words.length) {
+        const dist = w => Math.min(Math.abs(mid - w.x0), Math.abs(mid - w.x1));
+        i = words.reduce((best, w, k) => dist(w) < dist(words[best]) ? k : best, 0);
+      }
+      if (i < 0) i = 0;
+    } else {
+      i = words.findIndex(w => w.x1 > ch.x0 + 0.5);
+      if (i < 0) i = words.length;
+    }
+    c[i] = c[i] ? `${c[i]} ${ch.text}` : ch.text;
+  });
+  return c;
+}
+
+// Rows → sections. Each row: { kind: "section" | "chords" | "lyrics", text, tokens, words, gapBefore }
+function rowsToSections(rows) {
+  const sections = [];
+  let cur = null;
+  const start = name => { cur = { name, lines: [] }; sections.push(cur); };
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.kind === "section") { start(r.name); continue; }
+    if (!cur || (r.gapBefore && cur.lines.length)) start("");
+    if (r.kind === "chords") {
+      const next = rows[i + 1];
+      if (next && next.kind === "lyrics" && !next.gapBefore) {
+        cur.lines.push({ w: next.words.map(w => w.text), c: placeChords(next.words, r.words, !!next.rtl) });
+        i++;
+      } else {
+        cur.lines.push({ o: r.words.map(w => w.text).filter(t => !FILLER_RE.test(t)) });
+      }
+    } else {
+      cur.lines.push({ w: r.words.map(w => w.text), c: {} });
+    }
+  }
+  const out = sections.filter(s => s.lines.length);
+  nameSections(out);
+  return out;
+}
+
+// Sections without a heading get a name: a block of words that comes back is the chorus, the rest are verses.
+// A block with only chords is the intro (first), the outro (last) or an instrumental part.
+function nameSections(sections) {
+  // The lines of a section, simplified (no punctuation or capitals), to compare sections with each other
+  const linesOf = s => new Set(s.lines.filter(l => l.w && l.w.length).map(l => l.w.join(" ").toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").trim()));
+  const sets = sections.map(linesOf);
+  // Two sections are "the same part" when most of their lines are the same (choruses often change a word or two)
+  const alike = (a, b) => {
+    if (!a.size || !b.size) return false;
+    let same = 0;
+    a.forEach(x => { if (b.has(x)) same++; });
+    return same / Math.max(a.size, b.size) >= 0.6;
+  };
+  const repeats = sets.map((a, i) => sets.some((b, j) => j !== i && alike(a, b)));
+  let verse = 0;
+  sections.forEach((s, i) => {
+    if (s.name) return;
+    if (!sets[i].size) s.name = i === 0 ? "Intro" : i === sections.length - 1 ? "Outro" : "Instrumental";
+    else if (repeats[i]) s.name = "Chorus";
+    else s.name = `Verse ${++verse}`;
+  });
+}
+
+// ----- From pasted text: chords on their own line above the words, or just lyrics -----
+function rowsFromText(text) {
+  const rows = [];
+  let blank = false;
+  String(text).replace(/\r/g, "").replace(/ /g, " ").replace(/\[\/?(ch|tab)\]/gi, "").split("\n").forEach(raw => {
+    let line = "";
+    for (const ch of raw) line += ch === "\t" ? " ".repeat(8 - (line.length % 8)) : ch;
+    line = line.replace(/\s+$/, "");
+    if (!line.trim()) { blank = true; return; }
+    const words = [];
+    const re = /\S+/g;
+    let m;
+    while ((m = re.exec(line))) words.push({ text: m[0], x0: m.index, x1: m.index + m[0].length });
+    const sec = line.match(SECTION_RE) || line.match(/^\s*\[([^\]]+)\]\s*$/);
+    const asChords = chordRow(words.map(w => w.text));
+    if (sec && !asChords) rows.push({ kind: "section", name: sec[1].trim() });
+    else if (asChords) rows.push({ kind: "chords", words: words.map(w => ({ ...w, text: cleanChordToken(w.text) })).filter(w => w.text), gapBefore: blank });
+    else rows.push({ kind: "lyrics", words, gapBefore: blank });
+    blank = false;
+  });
+  return rows;
+}
+
+// ----- From a screenshot: text recognition with Tesseract.js, running in your browser -----
+// It gives every word with its box on the image. We group the words into rows by their height on the image,
+// then use the boxes to find which word each chord sits above: no counting spaces, so chords land on the right word.
+// The language of the lyrics, for the text recognition. Hebrew also loads English, because the chords are in Latin letters.
+const ocrLang = () => { try { return localStorage.getItem("mySongsOcrLang") || "eng"; } catch (e) { return "eng"; } };
+const HEBREW = /[֐-׿]/;
+let tesseractLoading = null;
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve();
+  if (!tesseractLoading) tesseractLoading = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    s.onload = res;
+    s.onerror = () => { tesseractLoading = null; rej(new Error("The text recognition couldn't be loaded. Are you online?")); };
+    document.head.appendChild(s);
+  });
+  return tesseractLoading;
+}
+
+// Make the image easier to read: at least 1600 px wide, and dark screenshots turned into dark-on-light
+function prepareImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(3, Math.max(1, 1600 / img.width));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const g = canvas.getContext("2d");
+      g.imageSmoothingQuality = "high";
+      g.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const px = g.getImageData(0, 0, canvas.width, canvas.height);
+      let sum = 0;
+      for (let i = 0; i < px.data.length; i += 16) sum += (px.data[i] + px.data[i + 1] + px.data[i + 2]) / 3;
+      if (sum / (px.data.length / 16) < 110) { // mostly dark: a dark-mode screenshot
+        for (let i = 0; i < px.data.length; i += 4) { px.data[i] = 255 - px.data[i]; px.data[i + 1] = 255 - px.data[i + 1]; px.data[i + 2] = 255 - px.data[i + 2]; }
+        g.putImageData(px, 0, 0);
+      }
+      URL.revokeObjectURL(img.src);
+      res(canvas);
+    };
+    img.onerror = () => rej(new Error("That file couldn't be opened as an image."));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function rowsFromOcr(data) {
+  // Every word with its box
+  let words = [];
+  if (data.blocks) data.blocks.forEach(b => b.paragraphs.forEach(p => p.lines.forEach(l => l.words.forEach(w => words.push(w)))));
+  else if (data.words) words = data.words;
+  // Keep every word, even ones the recognition isn't sure about (like "har'chov"): a missing word would move its chord
+  words = words.filter(w => w.text && w.text.replace(/[‎‏‪-‮]/g, "").trim())
+    .map(w => ({ text: w.text.replace(/[‎‏‪-‮]/g, "").trim(), x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1, yc: (w.bbox.y0 + w.bbox.y1) / 2, h: w.bbox.y1 - w.bbox.y0 }))
+    .sort((a, b) => a.yc - b.yc);
+  if (!words.length) return [];
+  // Group into rows: words at the same height on the image
+  const lines = [];
+  words.forEach(w => {
+    const last = lines[lines.length - 1];
+    if (last && Math.abs(w.yc - last.yc) < 0.5 * Math.max(w.h, last.h)) {
+      last.words.push(w);
+      last.yc = last.words.reduce((a, x) => a + x.yc, 0) / last.words.length;
+      last.h = Math.max(last.h, w.h);
+      last.y0 = Math.min(last.y0, w.y0); last.y1 = Math.max(last.y1, w.y1);
+    } else lines.push({ words: [w], yc: w.yc, h: w.h, y0: w.y0, y1: w.y1 });
+  });
+  // "har'chov" can come out as "har" + "'chov": join pieces that touch (in some fonts the apostrophe is a whole letter wide)
+  lines.forEach(l => { l.words = mergePieces(l.words.sort((a, b) => a.x0 - b.x0)); });
+  // A bigger gap than usual between rows means a new section
+  const gaps = lines.slice(1).map((l, i) => l.y0 - lines[i].y1).sort((a, b) => a - b);
+  const heights = lines.map(l => l.h).sort((a, b) => a - b);
+  const medianGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+  const medianH = heights[Math.floor(heights.length / 2)];
+  return lines.map((l, i) => {
+    // Hebrew reads right to left, so its words (sorted left to right on the image) are read the other way round
+    const rtl = HEBREW.test(l.words.map(w => w.text).join(""));
+    const text = (rtl ? [...l.words].reverse() : l.words).map(w => w.text).join(" ").replace(/[‎‏]/g, "");
+    const gapBefore = i > 0 && l.y0 - lines[i - 1].y1 > medianGap + 0.8 * medianH;
+    const sec = text.match(SECTION_RE) || text.match(/^\s*[\[(|]?\s*([A-Za-z][^\]]*?)\s*[\])|]\s*$/);
+    const asChords = chordRow(l.words.map(w => w.text));
+    if (sec && !asChords && text.length < 30 && (/^[\[(]/.test(text) || SECTION_RE.test(text))) return { kind: "section", name: sec[1].trim(), gapBefore };
+    if (asChords) return { kind: "chords", words: l.words.map(w => ({ ...w, text: cleanChordToken(w.text) })).filter(w => w.text), gapBefore };
+    // Keep a Hebrew line's words in reading order
+    return { kind: "lyrics", words: rtl ? [...l.words].reverse() : l.words, gapBefore, rtl, y0: l.y0, y1: l.y1 };
+  });
+}
+
+// Pieces with (almost) no space between them are one word (the recognition sometimes splits at an apostrophe)
+function mergePieces(words) {
+  return words.reduce((out, w) => {
+    const prev = out[out.length - 1];
+    const gap = prev ? w.x0 - prev.x1 : Infinity, size = prev ? Math.max(prev.h, w.h) : 0;
+    const apostrophe = prev && (/^['’]/.test(w.text) || /['’]$/.test(prev.text));
+    if (prev && (gap < 0.22 * size || (apostrophe && gap < 0.7 * size))) { prev.text += w.text; prev.x1 = w.x1; }
+    else out.push({ ...w });
+    return out;
+  }, []);
+}
+
+// Hebrew: with Hebrew and English together (needed for the chords), some Hebrew words come out as look-alike Latin
+// letters ("לך" as "17"). So we read the whole page once more with Hebrew only, and give each Hebrew line the words
+// from that reading that sit at the same height. (Reading just a strip around the line works worse.)
+async function rereadHebrewLines(rows, canvas, worker) {
+  const { data } = await worker.recognize(canvas, {}, { blocks: true });
+  let all = [];
+  (data.blocks || []).forEach(b => b.paragraphs.forEach(p => p.lines.forEach(l => l.words.forEach(w => all.push(w)))));
+  all = all.map(w => ({ text: w.text.replace(/[‎‏‪-‮]/g, "").trim(), x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1,
+    h: w.bbox.y1 - w.bbox.y0, yc: (w.bbox.y0 + w.bbox.y1) / 2 })).filter(w => w.text);
+  rows.forEach(r => {
+    if (r.kind !== "lyrics" || !r.rtl) return;
+    const words = all.filter(w => w.yc >= r.y0 && w.yc <= r.y1);
+    if (!words.some(w => HEBREW.test(w.text))) return;
+    r.words = mergePieces(words.sort((a, b) => a.x0 - b.x0)).reverse();
+  });
+}
+
+// ----- Lyrics from LRCLIB (lrclib.net): free, open, no account. Lyrics only, with when each line is sung. -----
+async function searchLyrics(title, artist) {
+  const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}${artist ? `&artist_name=${encodeURIComponent(artist)}` : ""}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("The lyrics search didn't work right now. Try again later.");
+  return (await r.json()).filter(x => x.plainLyrics || x.syncedLyrics);
+}
+function sectionsFromLrclib(item) {
+  const plain = item.plainLyrics || (item.syncedLyrics || "").replace(/^\[[^\]]*\]\s?/gm, "");
+  const sections = rowsToSections(rowsFromText(plain).map(r => r.kind === "chords" ? { ...r, kind: "lyrics" } : r));
+  // Add the times: walk through the timed lines in order and match them to our lines by their words
+  if (item.syncedLyrics) {
+    const timed = item.syncedLyrics.split("\n").map(l => l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s?(.*)$/)).filter(Boolean)
+      .map(m => ({ t: Number(m[1]) * 60 + Number(m[2]), text: m[3].trim().toLowerCase() })).filter(x => x.text);
+    let k = 0;
+    sections.forEach(s => s.lines.forEach(l => {
+      if (!l.w) return;
+      const text = l.w.join(" ").toLowerCase();
+      for (let j = k; j < Math.min(timed.length, k + 4); j++) if (timed[j].text === text) { l.t = timed[j].t; k = j + 1; break; }
+    }));
+  }
+  return sections;
+}
+
+// ----- Transposing and naming chords -----
+const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const accOf = a => a === "#" || a === "♯" ? 1 : a === "b" || a === "♭" ? -1 : 0;
+const MAJOR_NAMES = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+const MINOR_NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
+const prettySuffix = s => s.replace(/b(?=\d)/g, "♭").replace(/#/g, "♯");
+const prettyNote = (letter, acc) => letter + (accOf(acc) === 1 ? "♯" : accOf(acc) === -1 ? "♭" : "");
+function shiftChord(text, n) {
+  const bare = text.replace(/^\((.*)\)$/, "$1");
+  const m = bare.match(CHORD_RE);
+  if (!m) return text;
+  const [, letter, acc, suffix, bassLetter, bassAcc] = m;
+  let name;
+  if (n % 12 === 0) name = prettyNote(letter, acc) + prettySuffix(suffix) + (bassLetter ? "/" + prettyNote(bassLetter, bassAcc) : "");
+  else {
+    const minorish = /^(m(?!aj)|min)/.test(suffix);
+    const root = (LETTER_PC[letter] + accOf(acc) + n + 120) % 12;
+    name = (minorish ? MINOR_NAMES : MAJOR_NAMES)[root] + prettySuffix(suffix);
+    if (bassLetter) name += "/" + MAJOR_NAMES[(LETTER_PC[bassLetter] + accOf(bassAcc) + n + 120) % 12];
+  }
+  return bare === text ? name : `(${name})`;
+}
+const SUFFIX_TYPES = { "": "maj", M: "maj", maj: "maj", m: "min", min: "min", "7": "7", maj7: "maj7", M7: "maj7", "Δ": "maj7", "Δ7": "maj7",
+  m7: "m7", min7: "m7", sus2: "sus2", "2": "sus2", sus4: "sus4", sus: "sus4", "4": "sus4", dim: "dim", "°": "dim", aug: "aug", "+": "aug",
+  dim7: "dim7", "°7": "dim7", m7b5: "m7b5", "ø": "m7b5", "ø7": "m7b5", "6": "6", "5": "5", add9: "add9", add2: "add9", "7sus4": "7sus4",
+  "7sus": "7sus4", m6: "m6", mmaj7: "mmaj7", "m(maj7)": "mmaj7", mM7: "mmaj7", "9": "9", m9: "m9", maj9: "maj9", "7#9": "7s9", "13": "13" };
+// A chord name → { root, type } for the diagrams (closest type if we don't have that exact one)
+function chordOf(text) {
+  const m = text.replace(/^\((.*)\)$/, "$1").replace(/♯/g, "#").replace(/♭/g, "b").match(CHORD_RE);
+  if (!m) return null;
+  const [, letter, acc, suffix, bassLetter, bassAcc] = m;
+  let type = SUFFIX_TYPES[suffix], approx = false;
+  if (!type) {
+    approx = true;
+    const minorish = /^(m(?!aj)|min)/.test(suffix);
+    type = minorish ? (/7|9|11/.test(suffix) ? "m7" : "min") : /maj/.test(suffix) ? "maj7" : /7|9|11|13/.test(suffix) ? "7" : "maj";
+  }
+  return { root: (LETTER_PC[letter] + accOf(acc) + 12) % 12, type, approx, bass: bassLetter ? prettyNote(bassLetter, bassAcc) : null };
+}
+
+// ----- Showing the sheet -----
+const sheet = () => song().sheet;
+let editing = false;
+let selected = null; // while editing: { s, l, i } a word, or { s, l, o } a chord in a chords-only row
+const shownShift = () => editing ? 0 : (song().transpose || 0) - (song().capo || 0); // with a capo you play lower shapes
+const sectionKind = name => {
+  const n = name.toLowerCase();
+  return /pre/.test(n) ? "pre" : /chorus|refrain|hook|פזמון/.test(n) ? "chorus" : /verse|בית/.test(n) ? "verse" : /bridge|גשר/.test(n) ? "bridge"
+    : /intro|פתיחה/.test(n) ? "intro" : /outro|ending|coda|סיום|קודה/.test(n) ? "outro"
+    : /solo|instrumental|riff|interlude|break|סולו|מעבר/.test(n) ? "solo" : "other";
+};
+
+function chordHtml(text) {
+  return text.split(" ").map(t => {
+    const shown = shiftChord(t, shownShift());
+    return `<span class="chord-name${isChordText(t) ? "" : " bad"}" data-chord="${escapeHtml(shown)}" title="${isChordText(t) ? "Show this chord" : "Not a chord name: fix it in Edit chords"}">${escapeHtml(shown)}</span>`;
+  }).join(" ");
+}
+
+function renderSheet() {
+  const sh = sheet();
+  const has = sh && sh.sections && sh.sections.length;
+  $("sheetTools").hidden = !has;
+  $("songMap").innerHTML = "";
+  $("sheet").innerHTML = "";
+  $("sheet").classList.toggle("editing", editing);
+  renderSheetActions();
+  if (!has) {
+    $("sheetNote").textContent = "";
+    if (!$("importBox").innerHTML) showImportStart();
+    closeStrip();
+    return;
+  }
+  const s = song();
+  $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
+  $("capoValue").textContent = s.capo || 0;
+  $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit chords";
+  const notes = [];
+  if (editing) notes.push("Tap a word, then a chord in the bar at the bottom. Chords are shown as written (no transpose or capo) while you edit.");
+  else {
+    if (s.transpose) notes.push(`Transposed ${s.transpose > 0 ? "up" : "down"} ${Math.abs(s.transpose)} semitone${Math.abs(s.transpose) === 1 ? "" : "s"}.`);
+    if (s.capo) notes.push(`Capo on fret ${s.capo}: the chords are the shapes you play.`);
+    const bad = sh.sections.some(sec => sec.lines.some(l => Object.values(l.c || {}).concat(l.o || []).some(t => t.split(" ").some(x => !isChordText(x)))));
+    if (bad) notes.push("Some chords (red) weren't recognised: fix them with ✎ Edit chords.");
+  }
+  $("sheetNote").textContent = notes.join(" ");
+
+  // The song map: the sections in order, as coloured blocks
+  $("songMap").innerHTML = sh.sections.map((sec, i) => `<button type="button" class="sec-${sectionKind(sec.name)}" data-jump="${i}">${escapeHtml(sec.name)}</button>`).join("");
+  $("songMap").querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
+    const el = $("sheet").querySelector(`[data-sec="${b.dataset.jump}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  $("sheet").innerHTML = sh.sections.map((sec, si) => {
+    const tools = editing ? `<span class="edit-tools">
+        <button type="button" data-act="rename" data-s="${si}">Rename</button>
+        <button type="button" data-act="addrow" data-s="${si}">+ Chords row</button>
+        <button type="button" data-act="copy" data-s="${si}" title="Copy these chords to every section with the same words">Copy to same</button>
+        <button type="button" data-act="delsec" data-s="${si}">✕</button></span>` : "";
+    const lines = sec.lines.map((l, li) => {
+      let html;
+      if (l.o) {
+        html = `<div class="line chord-row"><span class="bar-line">|</span>${l.o.map((t, oi) =>
+          `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === oi ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${oi}">${chordHtml(t)}</span><span class="bar-line">|</span>`).join("")}
+          ${editing ? `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === l.o.length ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${l.o.length}">＋</span>` : ""}</div>`;
+      } else {
+        const words = [...l.w, ""]; // the empty one at the end holds a chord after the last word
+        const rtl = HEBREW.test(l.w.join(" ")); // Hebrew: the line runs right to left
+        html = `<div class="line"${rtl ? ' dir="rtl"' : ""}>${words.map((word, wi) => {
+          const c = (l.c || {})[wi];
+          if (wi === l.w.length && !c && !editing) return "";
+          const sel = selected && selected.s === si && selected.l === li && selected.i === wi;
+          return `<span class="w${sel ? " sel" : ""}" data-s="${si}" data-l="${li}" data-i="${wi}"><span class="c">${c ? chordHtml(c) : ""}</span><span class="t">${escapeHtml(word) || (editing ? "&nbsp;&nbsp;" : "")}</span></span>`;
+        }).join("")}</div>`;
+      }
+      return editing ? `<div class="line-wrap">${html}<button type="button" class="line-x" data-act="delline" data-s="${si}" data-l="${li}" title="Remove this line">✕</button></div>` : html;
+    }).join("");
+    return `<div class="section" data-sec="${si}"><span class="section-name sec-${sectionKind(sec.name)}">${escapeHtml(sec.name)}</span>${tools}${lines}</div>`;
+  }).join("");
+
+  if (editing) renderPlaceBar(); else if (!stripChord) closeStrip();
+}
+
+function saveSheet() { saveSongs(); }
+
+// The buttons above the sheet: add more (another screenshot, lyrics or text), or remove it all
+function renderSheetActions() {
+  const has = sheet() && sheet().sections && sheet().sections.length;
+  $("sheetActions").innerHTML = has
+    ? `<button class="btn" type="button" id="addMore">+ Add more</button><button class="btn" type="button" id="removeSheet">Remove</button>`
+    : "";
+  if (!has) return;
+  $("addMore").onclick = () => showImportStart(true);
+  $("removeSheet").onclick = () => {
+    if (!confirm("Remove the lyrics and chords from this song? The chord list below stays.")) return;
+    delete song().sheet;
+    editing = false; selected = null;
+    saveSheet();
+    $("importBox").innerHTML = "";
+    renderSheet();
+  };
+}
+
+// ----- Importing -----
+let importAppend = false; // add to what's there (another screenshot of the same song) instead of replacing it
+function showImportStart(append = false) {
+  importAppend = append;
+  const box = $("importBox");
+  box.innerHTML = `<div class="${append ? "import-box" : ""}">
+    <p class="muted" style="margin:0">${append ? "Add more to this song (it goes after what's there):" :
+      "Add the lyrics with their chords. A screenshot of a chord site works best: the chords land on the right words by themselves."}</p>
+    <div class="import-start">
+      <label class="muted" style="display:flex;align-items:center;gap:6px">Lyrics in
+        <select id="ocrLang">
+          <option value="eng">English (or another language in the Latin alphabet)</option>
+          <option value="heb">Hebrew (עברית)</option>
+        </select></label>
+      <button class="btn primary" type="button" id="pickShot">📷 From a screenshot</button>
+      <button class="btn" type="button" id="findLyrics">🔎 Find lyrics (no chords)</button>
+      <button class="btn" type="button" id="pasteText">📋 Paste text</button>
+      ${append ? `<button class="btn" type="button" id="cancelImport">Cancel</button>` : ""}
+    </div>
+    <p class="muted" style="font-size:.8rem;margin:8px 0 0">Tip: you can also paste a screenshot here with Ctrl+V. Long song? Add the screenshots one after another.</p></div>`;
+  $("ocrLang").value = ocrLang();
+  $("ocrLang").onchange = () => { try { localStorage.setItem("mySongsOcrLang", $("ocrLang").value); } catch (e) {} };
+  $("pickShot").onclick = () => $("shotFile").click();
+  $("findLyrics").onclick = showLyricsSearch;
+  $("pasteText").onclick = showPaste;
+  if (append) $("cancelImport").onclick = () => { box.innerHTML = ""; };
+}
+
+function addSections(sections, how) {
+  if (!sections.length) return false;
+  const s = song();
+  if (importAppend && s.sheet && s.sheet.sections) s.sheet.sections.push(...sections);
+  else s.sheet = { sections, from: how };
+  // A new song: fill in "Chords in this song" below from the sheet
+  if (!s.chords.length) {
+    const seen = [];
+    s.sheet.sections.forEach(sec => sec.lines.forEach(l => [...Object.keys(l.c || {}).sort((a, b) => a - b).map(k => l.c[k]), ...(l.o || [])]
+      .forEach(t => t.split(" ").forEach(x => { const c = chordOf(x); if (c && !seen.some(o => sameChord(o, c))) seen.push({ root: c.root, type: c.type }); }))));
+    s.chords = seen;
+  }
+  saveSheet();
+  $("importBox").innerHTML = "";
+  importAppend = false;
+  renderAll();
+  renderSheet();
+  return true;
+}
+
+async function importImages(files) {
+  const box = $("importBox");
+  const list = [...files].filter(f => f.type.startsWith("image/"));
+  if (!list.length) return;
+  box.innerHTML = `<div class="import-box"><b id="ocrStatus">Getting the text recognition ready…</b><div class="progress"><div id="ocrBar"></div></div>
+    <p class="muted" style="font-size:.8rem;margin:0">The first time this downloads about 10 MB; after that it's quick. Your screenshot stays on your device.</p></div>`;
+  const status = t => { if ($("ocrStatus")) $("ocrStatus").textContent = t; };
+  const bar = p => { if ($("ocrBar")) $("ocrBar").style.width = Math.round(p * 100) + "%"; };
+  try {
+    await loadTesseract();
+    let part = 0;
+    const worker = await Tesseract.createWorker(ocrLang() === "heb" ? "heb+eng" : "eng", 1, {
+      logger: m => { if (m.status === "recognizing text") bar((part + m.progress) / list.length); },
+    });
+    const hebrew = ocrLang() === "heb" ? await Tesseract.createWorker("heb", 1) : null;
+    const sections = [];
+    for (const file of list) {
+      status(list.length > 1 ? `Reading screenshot ${part + 1} of ${list.length}…` : "Reading the screenshot…");
+      const canvas = await prepareImage(file);
+      const { data } = await worker.recognize(canvas, {}, { blocks: true });
+      const rows = rowsFromOcr(data);
+      if (hebrew) { status("Reading the Hebrew lines once more…"); await rereadHebrewLines(rows, canvas, hebrew); }
+      sections.push(...rowsToSections(rows));
+      part++;
+    }
+    await worker.terminate();
+    if (hebrew) await hebrew.terminate();
+    if (!addSections(sections, "screenshot")) throw new Error("No text found in that image. Try a sharper screenshot, with just the chords and lyrics.");
+    editing = true; // straight into checking it
+    renderSheet();
+    $("sheetPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    box.innerHTML = `<div class="import-box"><b style="color:var(--bad)">${escapeHtml(e.message || "Something went wrong.")}</b>
+      <div class="import-start"><button class="btn" type="button" id="backImport">Back</button></div></div>`;
+    $("backImport").onclick = () => showImportStart(importAppend);
+  }
+}
+$("shotFile").onchange = e => { importImages(e.target.files); e.target.value = ""; };
+// Paste a screenshot with Ctrl+V anywhere on the page (not in a text box)
+document.addEventListener("paste", e => {
+  if (e.target.matches && e.target.matches("input, textarea")) return;
+  const files = [...(e.clipboardData || {}).files || []].filter(f => f.type.startsWith("image/"));
+  if (files.length) { e.preventDefault(); importImages(files); }
+});
+
+function showLyricsSearch() {
+  const box = $("importBox");
+  box.innerHTML = `<div class="import-box">
+    <div class="row" style="margin:0"><input type="text" id="lyrTitle" placeholder="Title" value="${escapeHtml(song().title)}">
+      <input type="text" id="lyrArtist" placeholder="Artist" value="${escapeHtml(song().artist)}">
+      <button class="btn primary" type="button" id="lyrGo">Search</button><button class="btn" type="button" id="lyrBack">Back</button></div>
+    <p class="muted" style="font-size:.8rem;margin:6px 0 0">From <a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a>: lyrics only, without chords. You place the chords yourself with ✎ Edit chords.</p>
+    <ul class="results" id="lyrResults"></ul></div>`;
+  $("lyrBack").onclick = () => showImportStart(importAppend);
+  $("lyrGo").onclick = async () => {
+    const title = $("lyrTitle").value.trim();
+    if (!title) return;
+    $("lyrResults").innerHTML = `<li class="muted">Searching…</li>`;
+    try {
+      const found = await searchLyrics(title, $("lyrArtist").value.trim());
+      if (!found.length) { $("lyrResults").innerHTML = `<li class="muted">Nothing found. Try another spelling, or without the artist.</li>`; return; }
+      const mins = d => d ? `${Math.floor(d / 60)}:${String(Math.round(d % 60)).padStart(2, "0")}` : "";
+      $("lyrResults").innerHTML = found.slice(0, 10).map((x, i) => `<li><span><b>${escapeHtml(x.trackName)}</b> · ${escapeHtml(x.artistName)}
+        <small>${escapeHtml(x.albumName || "")} ${mins(x.duration)}${x.syncedLyrics ? " · timed" : ""}</small></span>
+        <button class="btn" type="button" data-pick="${i}">Use</button></li>`).join("");
+      $("lyrResults").querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
+        if (addSections(sectionsFromLrclib(found[Number(b.dataset.pick)]), "lrclib")) { editing = true; renderSheet(); }
+      });
+    } catch (e) {
+      $("lyrResults").innerHTML = `<li style="color:var(--bad)">${escapeHtml(e.message || "The search didn't work. Are you online?")}</li>`;
+    }
+  };
+  $("lyrGo").click();
+}
+
+function showPaste() {
+  const box = $("importBox");
+  box.innerHTML = `<div class="import-box">
+    <p class="muted" style="margin:0 0 6px">Paste lyrics, with or without chords. Chords on their own line above the words are placed on the word below them.</p>
+    <textarea id="pasteArea" spellcheck="false"></textarea>
+    <div class="import-start"><button class="btn primary" type="button" id="pasteGo">Add</button><button class="btn" type="button" id="pasteBack">Back</button></div></div>`;
+  $("pasteBack").onclick = () => showImportStart(importAppend);
+  $("pasteGo").onclick = () => {
+    if (addSections(rowsToSections(rowsFromText($("pasteArea").value)), "text")) { editing = true; renderSheet(); }
+  };
+  $("pasteArea").focus();
+}
+
+// ----- Editing: tap a word, then a chord -----
+function sheetChordList() {
+  const list = [];
+  (sheet() ? sheet().sections : []).forEach(sec => sec.lines.forEach(l => [...Object.values(l.c || {}), ...(l.o || [])]
+    .forEach(t => t.split(" ").forEach(x => { if (isChordText(x) && !list.includes(x)) list.push(x); }))));
+  song().chords.forEach(c => { const n = (NOTES[c.root] + typeOf(c.type).suffix).replace(/♭/g, "b").replace(/♯/g, "#"); if (!list.includes(n)) list.push(n); });
+  return list;
+}
+function currentChordAt(sel) {
+  if (!sel) return "";
+  const l = sheet().sections[sel.s].lines[sel.l];
+  return sel.o !== undefined ? (l.o[sel.o] || "") : ((l.c || {})[sel.i] || "");
+}
+function setChordAt(sel, text) {
+  const l = sheet().sections[sel.s].lines[sel.l];
+  if (sel.o !== undefined) {
+    if (text) { if (sel.o >= l.o.length) l.o.push(text); else l.o[sel.o] = text; }
+    else l.o.splice(sel.o, 1);
+  } else {
+    l.c = l.c || {};
+    if (text) l.c[sel.i] = text; else delete l.c[sel.i];
+  }
+  saveSheet();
+}
+// Move to the next word (or chord box) after placing a chord, so you can keep tapping chords
+function nextSelection(sel) {
+  const l = sheet().sections[sel.s].lines[sel.l];
+  if (sel.o !== undefined) return { ...sel, o: Math.min(sel.o + 1, l.o.length) };
+  return sel;
+}
+
+function renderPlaceBar() {
+  const strip = $("chordStrip");
+  strip.hidden = false;
+  document.body.classList.add("strip-open");
+  const cur = currentChordAt(selected);
+  strip.innerHTML = `<div class="place">
+    ${selected ? sheetChordList().map(c => `<button type="button" data-place="${escapeHtml(c)}" class="${c === cur ? "used" : ""}">${escapeHtml(shiftChord(c, 0))}</button>`).join("") +
+      `<button type="button" data-place="?">Other…</button>${cur ? `<button type="button" data-place="">Remove</button>` : ""}`
+      : `<span class="hint-text">Tap a word in the lyrics (or a box in a chords row) to put a chord on it.</span>`}
+    <button type="button" id="doneEditing" style="margin-left:auto">✓ Done</button></div>`;
+  strip.querySelectorAll("[data-place]").forEach(b => b.onclick = () => {
+    let text = b.dataset.place;
+    if (text === "?") {
+      text = (prompt("Chord name (for example Am, F#m7, D/F#):", cur) || "").trim().replace(/♯/g, "#").replace(/♭/g, "b");
+      if (!text) return;
+      if (!text.split(" ").every(isChordText)) return alert(`"${text}" isn't a chord name the site knows. Try for example Am, C#m7 or D/F#.`);
+    }
+    setChordAt(selected, text);
+    selected = text ? nextSelection(selected) : selected;
+    renderSheet();
+  });
+  $("doneEditing").onclick = () => { editing = false; selected = null; closeStrip(); renderSheet(); };
+}
+
+$("sheet").addEventListener("click", e => {
+  const act = e.target.closest("[data-act]");
+  if (act && editing) {
+    const si = Number(act.dataset.s), li = Number(act.dataset.l);
+    const secs = sheet().sections;
+    if (act.dataset.act === "rename") {
+      const name = (prompt("Name of this part (Verse 1, Chorus, Bridge…):", secs[si].name) || "").trim();
+      if (name) secs[si].name = name;
+    } else if (act.dataset.act === "addrow") {
+      secs[si].lines.push({ o: [] });
+      selected = { s: si, l: secs[si].lines.length - 1, o: 0 };
+    } else if (act.dataset.act === "copy") {
+      const words = sec => sec.lines.map(l => (l.w || []).join(" ").toLowerCase()).join("/");
+      let n = 0;
+      secs.forEach((other, oi) => {
+        if (oi === si || words(other) !== words(secs[si])) return;
+        other.lines = JSON.parse(JSON.stringify(secs[si].lines.map(l => ({ ...l, t: undefined }))))
+          .map((l, k) => ({ ...l, t: other.lines[k] && other.lines[k].t }));
+        n++;
+      });
+      if (!n) alert("There's no other part with exactly the same words.");
+    } else if (act.dataset.act === "delsec") {
+      if (!confirm(`Remove "${secs[si].name}" from the song?`)) return;
+      secs.splice(si, 1);
+      selected = null;
+    } else if (act.dataset.act === "delline") {
+      secs[si].lines.splice(li, 1);
+      if (!secs[si].lines.length) secs.splice(si, 1);
+      selected = null;
+    }
+    saveSheet();
+    return renderSheet();
+  }
+  if (editing) {
+    const w = e.target.closest("[data-i], [data-o]");
+    if (!w) return;
+    selected = w.dataset.o !== undefined
+      ? { s: Number(w.dataset.s), l: Number(w.dataset.l), o: Number(w.dataset.o) }
+      : { s: Number(w.dataset.s), l: Number(w.dataset.l), i: Number(w.dataset.i) };
+    return renderSheet();
+  }
+  const ch = e.target.closest(".chord-name");
+  if (ch) showChordStrip(ch.dataset.chord);
+});
+
+$("editBtn").onclick = () => {
+  editing = !editing;
+  selected = null;
+  stopScroll();
+  if (!editing) closeStrip();
+  renderSheet();
+};
+
+// ----- Tap a chord: its diagram in the bar at the bottom (so it never covers the lyrics you're reading) -----
+let stripChord = null;
+function closeStrip() {
+  stripChord = null;
+  $("chordStrip").hidden = true;
+  $("chordStrip").innerHTML = "";
+  document.body.classList.remove("strip-open");
+}
+function showChordStrip(name) {
+  const c = chordOf(name);
+  if (!c) return;
+  stripChord = name;
+  const piano = instrument() === "piano";
+  const strip = $("chordStrip");
+  strip.hidden = false;
+  document.body.classList.add("strip-open");
+  const t = typeOf(c.type);
+  const note = [c.bass ? `with ${c.bass} in the bass` : "", c.approx ? `shown as ${pretty(c.root)}${t.suffix}` : ""].filter(Boolean).join(" · ");
+  strip.innerHTML = `<div class="diagram${piano ? " piano" : ""}" id="stripDiagram"></div>
+    <div class="grow"><div class="strip-name">${escapeHtml(name)}</div><div class="strip-note">${note || "Tap the diagram to hear it"}</div></div>
+    <button class="btn" type="button" id="stripClose" aria-label="Close">✕</button>`;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  let play = null;
+  if (piano) {
+    const keys = pianoChord(c.root, c.type);
+    drawPianoChord(svg, keys, 48 + c.root);
+    play = () => keys.forEach((m, i) => playPiano(m, i * 0.02));
+  } else {
+    const shapes = CHORDS.filter(s => s.root === c.root && s.type.id === c.type).sort((a, b) => a.barre - b.barre);
+    if (shapes.length) {
+      svg.setAttribute("viewBox", "0 0 240 285");
+      drawChord(svg, shapes[0], { lefty: lefty(), showRoot: true });
+      play = () => strum(shapes[0]);
+    }
+  }
+  $("stripDiagram").appendChild(svg);
+  if (play) { svg.style.cursor = "pointer"; svg.onclick = play; play(); }
+  $("stripClose").onclick = closeStrip;
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !editing) closeStrip(); });
+
+// ----- Transpose, capo, size, auto-scroll -----
+function stepSong(field, by, min, max) {
+  song()[field] = Math.max(min, Math.min(max, (song()[field] || 0) + by));
+  saveSongs();
+  closeStrip();
+  renderSheet();
+}
+$("tDown").onclick = () => stepSong("transpose", -1, -11, 11);
+$("tUp").onclick = () => stepSong("transpose", 1, -11, 11);
+$("capoDown").onclick = () => stepSong("capo", -1, 0, 11);
+$("capoUp").onclick = () => stepSong("capo", 1, 0, 11);
+let sheetSize = 1;
+try { sheetSize = Number(localStorage.getItem("mySongsSheetSize")) || 1; } catch (e) {}
+const applySize = () => $("sheet").style.setProperty("--sheet-size", sheetSize + "rem");
+function resizeSheet(by) {
+  sheetSize = Math.max(0.8, Math.min(1.8, Math.round((sheetSize + by) * 10) / 10));
+  try { localStorage.setItem("mySongsSheetSize", sheetSize); } catch (e) {}
+  applySize();
+}
+$("sizeDown").onclick = () => resizeSheet(-0.1);
+$("sizeUp").onclick = () => resizeSheet(0.1);
+applySize();
+
+let scrolling = null;
+function stopScroll() {
+  if (scrolling) cancelAnimationFrame(scrolling.frame);
+  scrolling = null;
+  $("scrollBtn").textContent = "▶ Auto-scroll";
+}
+$("scrollBtn").onclick = () => {
+  if (scrolling) return stopScroll();
+  const top = $("sheet").getBoundingClientRect().top;
+  if (top > innerHeight * 0.5 || top < 0) scrollTo({ top: scrollY + top - 70 });
+  scrolling = { last: performance.now(), carry: 0 };
+  $("scrollBtn").textContent = "■ Stop scrolling";
+  const tick = now => {
+    if (!scrolling) return;
+    scrolling.carry += (now - scrolling.last) / 1000 * Number($("scrollSpeed").value);
+    scrolling.last = now;
+    const whole = Math.floor(scrolling.carry);
+    if (whole) { scrollBy(0, whole); scrolling.carry -= whole; }
+    if ($("sheet").getBoundingClientRect().bottom < innerHeight - 20) return stopScroll();
+    scrolling.frame = requestAnimationFrame(tick);
+  };
+  scrolling.frame = requestAnimationFrame(tick);
 };
 
 // ---------- 2. Picking chords ----------
