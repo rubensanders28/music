@@ -345,6 +345,8 @@
     <div id="sheetTools" class="sheet-tools" hidden>
       <span class="stepper">Transpose <button id="tDown" aria-label="Transpose down">−</button><b id="tValue">0</b><button id="tUp" aria-label="Transpose up">+</button></span>
       <span class="stepper">Capo <button id="capoDown" aria-label="Capo down">−</button><b id="capoValue">0</b><button id="capoUp" aria-label="Capo up">+</button></span>
+      <span class="stepper" title="If the chord sheet you copied says 'Capo 6', its chords are the shapes to play with a capo on fret 6. Set that here, so the site knows how they really sound.">Chords written for capo
+        <button id="wcDown" aria-label="Written for a lower capo">−</button><b id="wcValue">0</b><button id="wcUp" aria-label="Written for a higher capo">+</button></span>
       <span class="stepper">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
       <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
       <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
@@ -1007,7 +1009,9 @@ let typingChord = false; // typing a chord name in the bar at the bottom ("Other
 let typingWord = null;   // typing words: "edit" (change the word), "before", "after", or "line" (a new line below)
 let addingLineTo = null; // the part you're adding a new line of lyrics to (with + Line)
 const PART_NAMES = ["Intro", "Verse 1", "Verse 2", "Verse 3", "Pre-chorus", "Chorus", "Bridge", "Solo", "Outro", "פתיחה", "בית", "פזמון", "גשר", "סיום"];
-const shownShift = () => editing ? 0 : (song().transpose || 0) - (song().capo || 0); // with a capo you play lower shapes
+// How far the shown chords are from the written ones. The written chords sound song.sheetCapo semitones higher
+// (if the sheet was written for a capo); transpose moves the sound; with your capo you play shapes that much lower.
+const shownShift = () => editing ? 0 : (song().sheetCapo || 0) + (song().transpose || 0) - (song().capo || 0);
 const sectionKind = name => {
   const n = name.toLowerCase();
   return /pre/.test(n) ? "pre" : /chorus|refrain|hook|פזמון/.test(n) ? "chorus" : /verse|בית/.test(n) ? "verse" : /bridge|גשר/.test(n) ? "bridge"
@@ -1071,6 +1075,20 @@ function lineHtml(l, si, li) {
   return `<div class="line"${rtl ? ' dir="rtl"' : ""}>${words || (editing ? `<span class="muted" data-s="${si}" data-l="${li}" data-i="0">(empty line)</span>` : "")}</div>`;
 }
 
+// A line like "Capo 6", "Capo on fret 3", "קאפו 6" or "קאפו בסריג 6": { s, l, fret }, or null
+function capoLine(sh) {
+  for (let s = 0; s < sh.sections.length; s++) {
+    for (let l = 0; l < sh.sections[s].lines.length; l++) {
+      const line = sh.sections[s].lines[l];
+      if (!line.w || line.w.length > 6) continue;
+      const text = line.w.join(" ");
+      const m = text.match(/(?:capo|קאפו|קפו)\D{0,15}?(\d{1,2})/i) || text.match(/(\d{1,2})\D{0,15}?(?:capo|קאפו|קפו)/i);
+      if (m && Number(m[1]) >= 1 && Number(m[1]) <= 11) return { s, l, fret: Number(m[1]) };
+    }
+  }
+  return null;
+}
+
 function renderSheet() {
   const sh = sheet();
   const has = sh && sh.sections && sh.sections.length;
@@ -1088,8 +1106,10 @@ function renderSheet() {
   const s = song();
   $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
   $("capoValue").textContent = s.capo || 0;
+  $("wcValue").textContent = s.sheetCapo || 0;
   $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit";
   const notes = [];
+  let capoOffer = null;
   if (editing) notes.push("Tap a word, choose the letter the chord goes over (or “after” for between two words), then the chord; " +
     "◂ ▸ move a chord. The bottom bar also lets you change, add or delete words and add lines. Tap a part's name to rename it; ↑ ↓ move a part, " +
     "⤒ joins it with the part above (handy when a part was split over two screenshots). On a line, ↑ ↓ move it (on into the next part " +
@@ -1097,11 +1117,29 @@ function renderSheet() {
     "Chords are shown as written (no transpose or capo) while you edit.");
   else {
     if (s.transpose) notes.push(`Transposed ${s.transpose > 0 ? "up" : "down"} ${Math.abs(s.transpose)} semitone${Math.abs(s.transpose) === 1 ? "" : "s"}.`);
+    if (s.sheetCapo) notes.push(`The chords were written for capo ${s.sheetCapo}.`);
+    else if (capoLine(sh)) capoOffer = capoLine(sh);
     if (s.capo) notes.push(`Capo on fret ${s.capo}: the chords are the shapes you play.`);
+    else if (s.sheetCapo) notes.push("No capo: these are the chords as they really sound.");
     const bad = sh.sections.some(sec => sec.lines.some(l => Object.values(l.c || {}).concat(l.o || []).some(t => t.split(" ").some(x => !isChordText(x)))));
     if (bad) notes.push("Some chords (red) weren't recognised: fix them with ✎ Edit.");
   }
   $("sheetNote").textContent = notes.join(" ");
+  // The sheet says "Capo 6" (or "קאפו בסריג 6") but the site doesn't know yet: offer to use it
+  if (capoOffer) {
+    const offer = capoOffer;
+    $("sheetNote").insertAdjacentHTML("beforeend", ` <span>This sheet says <b>capo ${offer.fret}</b>.</span>
+      <button class="btn" type="button" id="useCapo" style="padding:4px 10px">Use capo ${offer.fret}</button>`);
+    $("useCapo").onclick = () => {
+      stepSheetCapo(offer.fret - (song().sheetCapo || 0));
+      // The line itself isn't lyrics: take it out (and its part, if that was all there was)
+      const sec = sh.sections[offer.s];
+      sec.lines.splice(offer.l, 1);
+      if (!sec.lines.length) sh.sections.splice(offer.s, 1);
+      saveSheet();
+      renderSheet();
+    };
+  }
 
   // The song map: the sections in order, as coloured blocks
   $("songMap").innerHTML = sh.sections.map((sec, i) => `<button type="button" class="sec-${sectionKind(sec.name)}" data-jump="${i}">${escapeHtml(sec.name)}</button>`).join("");
@@ -1233,7 +1271,11 @@ function addSections(sections, how) {
     const seen = [];
     s.sheet.sections.forEach(sec => sec.lines.forEach(l => [...Object.keys(l.c || {})
       .sort((a, b) => keyOrder(parseKey(a, (l.w || []).length) || { i: 0, at: 0 }, parseKey(b, (l.w || []).length) || { i: 0, at: 0 })).map(k => l.c[k]), ...(l.o || [])]
-      .forEach(t => t.split(" ").forEach(x => { const c = chordOf(x); if (c && !seen.some(o => sameChord(o, c))) seen.push({ root: c.root, type: c.type }); }))));
+      .forEach(t => t.split(" ").forEach(x => {
+        // As they sound: a sheet written for a capo sounds that many semitones higher
+        const c = chordOf(x), sounding = c && { root: (c.root + (s.sheetCapo || 0)) % 12, type: c.type };
+        if (sounding && !seen.some(o => sameChord(o, sounding))) seen.push(sounding);
+      }))));
     s.chords = seen;
   }
   saveSheet();
@@ -1797,6 +1839,23 @@ $("tDown").onclick = () => stepSong("transpose", -1, -11, 11);
 $("tUp").onclick = () => stepSong("transpose", 1, -11, 11);
 $("capoDown").onclick = () => stepSong("capo", -1, 0, 11);
 $("capoUp").onclick = () => stepSong("capo", 1, 0, 11);
+// "Chords written for capo": the sheet's chords are shapes for that capo. Changing it keeps the chords on the
+// sheet looking the same (your capo moves along), and the chord list below moves to how the song really sounds.
+function stepSheetCapo(by) {
+  const s = song();
+  const from = s.sheetCapo || 0, to = Math.max(0, Math.min(11, from + by));
+  if (to === from) return;
+  const d = to - from;
+  s.sheetCapo = to;
+  s.capo = Math.max(0, Math.min(11, (s.capo || 0) + d));
+  s.chords = s.chords.map(c => ({ ...c, root: (c.root + d + 12) % 12 }));
+  saveSongs();
+  closeStrip();
+  renderSheet();
+  renderAll();
+}
+$("wcDown").onclick = () => stepSheetCapo(-1);
+$("wcUp").onclick = () => stepSheetCapo(1);
 let sheetSize = 1;
 try { sheetSize = Number(localStorage.getItem("mySongsSheetSize")) || 1; } catch (e) {}
 const applySize = () => $("sheet").style.setProperty("--sheet-size", sheetSize + "rem");
