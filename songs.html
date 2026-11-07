@@ -209,11 +209,18 @@
     color: #fff; padding: 2px 8px; border-radius: 6px; margin: 1.1em 0 0.4em; }
   .sheet .section:first-child .section-name { margin-top: 0; }
   .sheet .line { margin-bottom: 0.4em; }
-  .sheet .w { display: inline-block; vertical-align: bottom; margin-right: 0.3em; }
-  .sheet .w .c { display: block; min-height: 1.3em; font-weight: 800; color: var(--accent); white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
-  .sheet .line[dir="rtl"] .w { margin-right: 0; margin-left: 0.3em; }
-  .sheet .line[dir="rtl"] .w .c { text-align: right; }
-  .sheet .w .t { display: block; white-space: nowrap; }
+  .sheet .w { display: inline-block; vertical-align: bottom; margin-right: 0.3em; white-space: nowrap; }
+  /* A word is made of pieces; a piece's chord floats over its first letter (so the word stays whole),
+     unless it's "wide": then the chord takes its own room and the piece widens */
+  .sheet .wp, .sheet .gap-chord { display: inline-block; vertical-align: bottom; position: relative; padding-top: 1.3em; }
+  .sheet .gap-chord { margin-right: 0.3em; min-width: 1.6em; }
+  .sheet .c { position: absolute; top: 0; left: 0; min-height: 1.3em; font-weight: 800; color: var(--accent); white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
+  .sheet .wp.wide, .sheet .gap-chord.wide { padding-top: 0; }
+  .sheet .wp.wide .c, .sheet .gap-chord.wide .c { position: static; display: block; padding-right: 0.3em; }
+  .sheet .line[dir="rtl"] .w, .sheet .line[dir="rtl"] .gap-chord { margin-right: 0; margin-left: 0.3em; }
+  .sheet .line[dir="rtl"] .c { left: auto; right: 0; text-align: right; }
+  .sheet .line[dir="rtl"] .wp.wide .c { padding-right: 0; padding-left: 0.3em; }
+  .sheet .t { display: block; white-space: pre; }
   .sheet .chord-name { cursor: pointer; border-radius: 4px; }
   .sheet .chord-name:hover { background: var(--btn); }
   .sheet .chord-name.bad { color: var(--bad); text-decoration: underline wavy; }
@@ -223,12 +230,22 @@
   .sheet.editing .w { cursor: pointer; border-radius: 6px; padding: 0 2px; margin-right: 0.15em; }
   .sheet.editing .w:hover { background: var(--btn); }
   .sheet.editing .w.sel { background: var(--accent-soft); outline: 2px solid var(--accent); }
-  .sheet.editing .w .c:empty::before { content: "·"; color: var(--btn); }
+  .sheet.editing .w .wp:first-child .c:empty::before { content: "·"; color: var(--btn); }
+  /* The letter (or gap) a chord goes on, while editing */
+  .sheet .at-letter { background: var(--accent); color: #fff; border-radius: 3px; }
+  .sheet .gap-chord.at-gap .t { background: var(--accent); border-radius: 3px; }
   .sheet.editing .chord-row .ci { cursor: pointer; padding: 0 4px; border-radius: 6px; }
   .sheet.editing .chord-row .ci.sel { background: var(--accent-soft); outline: 2px solid var(--accent); }
   .edit-tools { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
   .edit-tools button, .line-x { font: inherit; font-size: 0.75rem; font-weight: 600; border: none; border-radius: 6px; padding: 2px 7px;
     background: var(--btn); color: var(--muted); cursor: pointer; }
+  .edit-tools button:disabled { opacity: .4; cursor: default; }
+  .rename-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 1em 0 0.5em; font-size: 1rem; }
+  .rename-form input { font: inherit; padding: 7px 10px; border-radius: 8px; border: 2px solid var(--accent); background: var(--card); color: var(--ink); min-width: 160px; }
+  .quick-names { display: flex; flex-wrap: wrap; gap: 4px; flex-basis: 100%; }
+  .quick-names button { font: inherit; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 999px; padding: 4px 10px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .quick-names button:hover { outline: 2px solid var(--accent); }
+  .edit-tools { flex-wrap: wrap; }
   .line-wrap { display: flex; align-items: flex-end; gap: 6px; }
   .line-wrap .line { flex: 1; }
   .chord-strip {
@@ -244,7 +261,18 @@
   .chord-strip .place button { font: inherit; font-weight: 800; border: none; border-radius: 8px; padding: 8px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
   .chord-strip .place button.used { background: var(--accent); color: #fff; }
   .chord-strip .place .hint-text { font-size: 0.8rem; color: var(--muted); flex-basis: 100%; }
-  body.strip-open { padding-bottom: 180px; }
+  .chord-strip .place-col { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .chord-strip .place-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chord-strip .place-row:empty { display: none; }
+  .chord-strip .place-row .hint-text { font-size: 0.8rem; color: var(--muted); }
+  .chord-strip .place-row button { font: inherit; font-weight: 800; border: none; border-radius: 8px; padding: 8px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .chord-strip .place-row button.used { background: var(--accent); color: #fff; }
+  .chord-strip .words-row button { font-weight: 600; font-size: 0.85rem; padding: 6px 10px; }
+  .chord-strip .letters { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+  .chord-strip .place-row button.letter { display: inline-flex; flex-direction: column; align-items: center; min-width: 34px; padding: 3px 6px; font-size: 1rem; line-height: 1.1; }
+  .chord-strip .place-row button.letter small { font-size: 0.7rem; color: var(--accent); min-height: 1em; }
+  .chord-strip .place-row button.letter.used small { color: #fff; }
+  body.strip-open { padding-bottom: 280px; }
 
   .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
 </style>
@@ -310,7 +338,7 @@
       <span class="stepper">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
       <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
       <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
-      <button class="btn" id="editBtn">✎ Edit chords</button>
+      <button class="btn" id="editBtn" title="Place and fix chords, rename, move, join or split parts">✎ Edit</button>
     </div>
     <p class="sheet-note" id="sheetNote"></p>
     <div class="song-map" id="songMap"></div>
@@ -544,7 +572,11 @@ function loadSong() {
   $("link").value = song().link;
   renderStatusPicker();
   // The lyrics and chords of this song (and nothing half-done from the previous one)
+  if (cleanSheet(song().sheet)) saveSongs();
   editing = false;
+  renaming = null;
+  typingChord = false;
+  typingWord = null;
   selected = null;
   stopScroll();
   closeStrip();
@@ -642,34 +674,56 @@ function chordRow(tokens) {
   return cleaned;
 }
 
-// Put each chord on the word below it: the first word that isn't entirely to the left of the chord.
+// Where a chord sits in a line of lyrics, saved as the key in line.c:
+//   "3"   at the start of word 3          "3:2"  over letter 2 of word 3 (counting from 0)
+//   "3+"  after word 3, in the gap before the next word (or at the end of the line)
+// (Older songs may have a key equal to the number of words: that's the end of the line, like "last+".)
+function parseKey(key, wordCount) {
+  const m = String(key).match(/^(\d+)(?::(\d+)|(\+))?$/);
+  if (!m) return null;
+  const i = Number(m[1]);
+  if (!m[3] && !m[2] && wordCount !== undefined && i >= wordCount && wordCount > 0) return { i: wordCount - 1, at: "gap" };
+  return { i, at: m[3] ? "gap" : m[2] ? Number(m[2]) : 0 };
+}
+const makeKey = (i, at) => at === "gap" ? `${i}+` : at ? `${i}:${at}` : String(i);
+// Keys in reading order: by word, then letter, then the gap after the word
+const keyOrder = (a, b) => (a.i - b.i) || ((a.at === "gap" ? 1e6 : a.at) - (b.at === "gap" ? 1e6 : b.at));
+const addChordAt = (c, key, text) => { c[key] = c[key] ? `${c[key]} ${text}` : text; };
+
+// Put each chord where it sits above the words: on the letter under it, or between two words.
 // words and chords: [{ text, x0, x1 }], in screen pixels (screenshot) or character columns (pasted text).
-// Right-to-left lyrics (Hebrew): words are in reading order, from right to left, and each chord goes on the word
-// under the middle of the chord (or the closest word).
+// Left-to-right, a chord's left edge marks where it's played. Right-to-left (Hebrew, words in reading order),
+// we use the middle of the chord and count letters from the right edge of the word.
 function placeChords(words, chords, rtl = false) {
   const c = {};
+  if (!words.length) return c;
   chords.forEach(ch => {
     if (FILLER_RE.test(ch.text)) return;
-    let i;
-    if (rtl) {
-      const mid = (ch.x0 + ch.x1) / 2;
-      i = words.findIndex(w => mid >= w.x0 && mid <= w.x1);
-      if (i < 0 && words.length) {
-        const dist = w => Math.min(Math.abs(mid - w.x0), Math.abs(mid - w.x1));
-        i = words.reduce((best, w, k) => dist(w) < dist(words[best]) ? k : best, 0);
-      }
-      if (i < 0) i = 0;
-    } else {
-      i = words.findIndex(w => w.x1 > ch.x0 + 0.5);
-      if (i < 0) i = words.length;
+    const x = rtl ? (ch.x0 + ch.x1) / 2 : ch.x0;
+    const letterWidth = w => (w.x1 - w.x0) / Math.max(1, w.text.length);
+    // Over a word: which letter
+    // (a little room before the word's first letter: left of it, or right of it in Hebrew)
+    const i = words.findIndex(w => x >= w.x0 - (rtl ? 0 : 0.35 * letterWidth(w)) && x < w.x1 + (rtl ? 0.35 * letterWidth(w) : 0));
+    if (i >= 0) {
+      const w = words[i], lw = letterWidth(w);
+      const k = Math.max(0, Math.min(w.text.length - 1, Math.round((rtl ? w.x1 - x : x - w.x0) / lw - (rtl ? 0.5 : 0))));
+      return addChordAt(c, makeKey(i, k), ch.text);
     }
-    c[i] = c[i] ? `${c[i]} ${ch.text}` : ch.text;
+    // In a gap: the next word starts right after it (then it's that word), otherwise it's between the words
+    const inOrder = words.map((w, k) => ({ w, k }));
+    const after = rtl ? inOrder.filter(o => o.w.x1 <= x) : inOrder.filter(o => o.w.x0 > x); // words still to come
+    const before = rtl ? inOrder.filter(o => o.w.x0 > x) : inOrder.filter(o => o.w.x1 <= x);
+    const next = after.length ? after[0] : null, prev = before.length ? before[before.length - 1] : null;
+    if (!prev) return addChordAt(c, "0", ch.text);
+    if (next && Math.abs((rtl ? next.w.x1 : next.w.x0) - x) < 1.2 * letterWidth(next.w)) return addChordAt(c, String(next.k), ch.text);
+    addChordAt(c, `${prev.k}+`, ch.text);
   });
   return c;
 }
 
 // Rows → sections. Each row: { kind: "section" | "chords" | "lyrics", text, tokens, words, gapBefore }
 function rowsToSections(rows) {
+  rows = rows.filter(r => r.kind !== "junk"); // rows of only stray marks
   const sections = [];
   let cur = null;
   const start = name => { cur = { name, lines: [] }; sections.push(cur); };
@@ -734,7 +788,7 @@ function rowsFromText(text) {
     const asChords = chordRow(words.map(w => w.text));
     if (sec && !asChords) rows.push({ kind: "section", name: sec[1].trim() });
     else if (asChords) rows.push({ kind: "chords", words: words.map(w => ({ ...w, text: cleanChordToken(w.text) })).filter(w => w.text), gapBefore: blank });
-    else rows.push({ kind: "lyrics", words, gapBefore: blank });
+    else if (dropJunk(words).length) rows.push({ kind: "lyrics", words: dropJunk(words), gapBefore: blank });
     blank = false;
   });
   return rows;
@@ -824,9 +878,16 @@ function rowsFromOcr(data) {
     if (sec && !asChords && text.length < 30 && (/^[\[(]/.test(text) || SECTION_RE.test(text))) return { kind: "section", name: sec[1].trim(), gapBefore };
     if (asChords) return { kind: "chords", words: l.words.map(w => ({ ...w, text: cleanChordToken(w.text) })).filter(w => w.text), gapBefore };
     // Keep a Hebrew line's words in reading order
-    return { kind: "lyrics", words: rtl ? [...l.words].reverse() : l.words, gapBefore, rtl, y0: l.y0, y1: l.y1 };
+    const words = dropJunk(l.words);
+    if (!words.length) return { kind: "junk" };
+    return { kind: "lyrics", words: rtl ? [...words].reverse() : words, gapBefore, rtl, y0: l.y0, y1: l.y1 };
   });
 }
+
+// A "word" of only symbols ("=", "—", "_") in the lyrics is usually a mark on the page the recognition picked up
+// (like the grey box behind a chord): leave it out
+const isJunkWord = text => !/[\p{L}\p{N}]/u.test(text);
+const dropJunk = words => words.filter(w => !isJunkWord(w.text));
 
 // Pieces with (almost) no space between them are one word (the recognition sometimes splits at an apostrophe)
 function mergePieces(words) {
@@ -851,7 +912,7 @@ async function rereadHebrewLines(rows, canvas, worker) {
     h: w.bbox.y1 - w.bbox.y0, yc: (w.bbox.y0 + w.bbox.y1) / 2 })).filter(w => w.text);
   rows.forEach(r => {
     if (r.kind !== "lyrics" || !r.rtl) return;
-    const words = all.filter(w => w.yc >= r.y0 && w.yc <= r.y1);
+    const words = dropJunk(all.filter(w => w.yc >= r.y0 && w.yc <= r.y1));
     if (!words.some(w => HEBREW.test(w.text))) return;
     r.words = mergePieces(words.sort((a, b) => a.x0 - b.x0)).reverse();
   });
@@ -925,6 +986,10 @@ function chordOf(text) {
 const sheet = () => song().sheet;
 let editing = false;
 let selected = null; // while editing: { s, l, i } a word, or { s, l, o } a chord in a chords-only row
+let renaming = null;  // the part whose name you're changing
+let typingChord = false; // typing a chord name in the bar at the bottom ("Other…")
+let typingWord = null;   // typing words: "edit" (change the word), "before", "after", or "line" (a new line below)
+const PART_NAMES = ["Intro", "Verse 1", "Verse 2", "Verse 3", "Pre-chorus", "Chorus", "Bridge", "Solo", "Outro", "פתיחה", "בית", "פזמון", "גשר", "סיום"];
 const shownShift = () => editing ? 0 : (song().transpose || 0) - (song().capo || 0); // with a capo you play lower shapes
 const sectionKind = name => {
   const n = name.toLowerCase();
@@ -936,8 +1001,57 @@ const sectionKind = name => {
 function chordHtml(text) {
   return text.split(" ").map(t => {
     const shown = shiftChord(t, shownShift());
-    return `<span class="chord-name${isChordText(t) ? "" : " bad"}" data-chord="${escapeHtml(shown)}" title="${isChordText(t) ? "Show this chord" : "Not a chord name: fix it in Edit chords"}">${escapeHtml(shown)}</span>`;
+    return `<span class="chord-name${isChordText(t) ? "" : " bad"}" data-chord="${escapeHtml(shown)}" title="${isChordText(t) ? "Show this chord" : "Not a chord name: fix it with ✎ Edit"}">${escapeHtml(shown)}</span>`;
   }).join(" ");
+}
+
+// One line of lyrics. Each word is cut into pieces where its chords start (a chord on letter 3 starts a new piece
+// there), so every chord sits exactly over its letter. A chord between two words gets a small spot of its own.
+function lineHtml(l, si, li) {
+  const rtl = HEBREW.test(l.w.join(" ")); // Hebrew: the line runs right to left
+  const byWord = l.w.map(() => ({ at: {}, gap: "" }));
+  Object.entries(l.c || {}).forEach(([key, chord]) => {
+    const p = parseKey(key, l.w.length);
+    if (!p || !byWord[p.i]) return;
+    if (p.at === "gap") byWord[p.i].gap = byWord[p.i].gap ? `${byWord[p.i].gap} ${chord}` : chord;
+    else {
+      const k = Math.min(p.at, Math.max(0, l.w[p.i].length - 1));
+      byWord[p.i].at[k] = byWord[p.i].at[k] ? `${byWord[p.i].at[k]} ${chord}` : chord;
+    }
+  });
+  const isSel = wi => editing && selected && selected.s === si && selected.l === li && selected.i === wi;
+  // All pieces of the line in order: { word, text, chord, gap (a chord between words) }
+  const flat = [];
+  // While editing, the letter (or gap) you've chosen is marked, so you see where the chord goes
+  const selAt = wi => isSel(wi) ? (selected.at || 0) : null;
+  l.w.forEach((word, wi) => {
+    const at = byWord[wi].at, mark = selAt(wi);
+    const cuts = [...new Set([0, ...Object.keys(at).map(Number), ...(typeof mark === "number" ? [mark] : [])].filter(k => k >= 0 && k < word.length))].sort((a, b) => a - b);
+    cuts.forEach((from, n) => flat.push({ wi, text: word.slice(from, n + 1 < cuts.length ? cuts[n + 1] : word.length), chord: at[from] || "",
+      last: n === cuts.length - 1, marked: mark === from }));
+    if (byWord[wi].gap || mark === "gap") flat.push({ wi, text: "", chord: byWord[wi].gap || "", gap: true, last: true, marked: mark === "gap" });
+  });
+  // A chord normally floats over its letter without pushing the word apart. Only when the next chord comes
+  // too soon for it to fit (counting letters, and a space between words) does its piece widen to make room.
+  flat.forEach((p, n) => {
+    if (!p.chord) return;
+    const shown = shiftChord(p.chord.split(" ")[0], shownShift()).length + (p.chord.includes(" ") ? 3 : 0);
+    let room = 0;
+    for (let m = n; m < flat.length; m++) {
+      if (m > n && flat[m].chord) { p.wide = room < shown + 2; return; } // (chords are bold, so a bit wider than letters)
+      room += flat[m].text.length + (flat[m].last ? 1 : 0);
+    }
+  });
+  const pieceText = p => p.marked && p.text
+    ? `<span class="at-letter">${escapeHtml([...p.text][0])}</span>${escapeHtml([...p.text].slice(1).join(""))}` : escapeHtml(p.text);
+  const piece = p => `<span class="wp${p.chord ? " has" : ""}${p.wide ? " wide" : ""}"><span class="c">${p.chord ? chordHtml(p.chord) : ""}</span><span class="t">${pieceText(p)}</span></span>`;
+  let words = "";
+  l.w.forEach((word, wi) => {
+    const mine = flat.filter(p => p.wi === wi && !p.gap), gap = flat.find(p => p.wi === wi && p.gap);
+    words += `<span class="w${isSel(wi) ? " sel" : ""}" data-s="${si}" data-l="${li}" data-i="${wi}">${mine.map(piece).join("")}</span>`;
+    if (gap) words += `<span class="gap-chord${gap.wide ? " wide" : ""}${gap.marked ? " at-gap" : ""}"><span class="c">${gap.chord ? chordHtml(gap.chord) : ""}</span><span class="t">&nbsp;</span></span>`;
+  });
+  return `<div class="line"${rtl ? ' dir="rtl"' : ""}>${words || (editing ? `<span class="muted" data-s="${si}" data-l="${li}" data-i="0">(empty line)</span>` : "")}</div>`;
 }
 
 function renderSheet() {
@@ -957,14 +1071,17 @@ function renderSheet() {
   const s = song();
   $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
   $("capoValue").textContent = s.capo || 0;
-  $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit chords";
+  $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit";
   const notes = [];
-  if (editing) notes.push("Tap a word, then a chord in the bar at the bottom. Chords are shown as written (no transpose or capo) while you edit.");
+  if (editing) notes.push("Tap a word, choose the letter the chord goes over (or “after” for between two words), then the chord; " +
+    "◂ ▸ move a chord. The bottom bar also lets you change, add or delete words and add lines. Tap a part's name to rename it; ↑ ↓ move a part, " +
+    "⤒ joins it with the part above (handy when a part was split over two screenshots), and ✂ on a line starts a new part there. " +
+    "Chords are shown as written (no transpose or capo) while you edit.");
   else {
     if (s.transpose) notes.push(`Transposed ${s.transpose > 0 ? "up" : "down"} ${Math.abs(s.transpose)} semitone${Math.abs(s.transpose) === 1 ? "" : "s"}.`);
     if (s.capo) notes.push(`Capo on fret ${s.capo}: the chords are the shapes you play.`);
     const bad = sh.sections.some(sec => sec.lines.some(l => Object.values(l.c || {}).concat(l.o || []).some(t => t.split(" ").some(x => !isChordText(x)))));
-    if (bad) notes.push("Some chords (red) weren't recognised: fix them with ✎ Edit chords.");
+    if (bad) notes.push("Some chords (red) weren't recognised: fix them with ✎ Edit.");
   }
   $("sheetNote").textContent = notes.join(" ");
 
@@ -976,11 +1093,15 @@ function renderSheet() {
   });
 
   $("sheet").innerHTML = sh.sections.map((sec, si) => {
+    const last = sh.sections.length - 1;
     const tools = editing ? `<span class="edit-tools">
-        <button type="button" data-act="rename" data-s="${si}">Rename</button>
+        <button type="button" data-act="rename" data-s="${si}">✎ Rename</button>
+        <button type="button" data-act="up" data-s="${si}" title="Move this part up" ${si === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" data-act="down" data-s="${si}" title="Move this part down" ${si === last ? "disabled" : ""}>↓</button>
+        ${si > 0 ? `<button type="button" data-act="join" data-s="${si}" title="Add these lines to the end of the part above (for a part split over two screenshots)">⤒ Join with part above</button>` : ""}
         <button type="button" data-act="addrow" data-s="${si}">+ Chords row</button>
-        <button type="button" data-act="copy" data-s="${si}" title="Copy these chords to every section with the same words">Copy to same</button>
-        <button type="button" data-act="delsec" data-s="${si}">✕</button></span>` : "";
+        <button type="button" data-act="copy" data-s="${si}" title="Copy these chords to every part with the same words">Copy to same</button>
+        <button type="button" data-act="delsec" data-s="${si}" title="Remove this part">✕</button></span>` : "";
     const lines = sec.lines.map((l, li) => {
       let html;
       if (l.o) {
@@ -988,19 +1109,40 @@ function renderSheet() {
           `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === oi ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${oi}">${chordHtml(t)}</span><span class="bar-line">|</span>`).join("")}
           ${editing ? `<span class="ci${selected && selected.s === si && selected.l === li && selected.o === l.o.length ? " sel" : ""}" data-s="${si}" data-l="${li}" data-o="${l.o.length}">＋</span>` : ""}</div>`;
       } else {
-        const words = [...l.w, ""]; // the empty one at the end holds a chord after the last word
-        const rtl = HEBREW.test(l.w.join(" ")); // Hebrew: the line runs right to left
-        html = `<div class="line"${rtl ? ' dir="rtl"' : ""}>${words.map((word, wi) => {
-          const c = (l.c || {})[wi];
-          if (wi === l.w.length && !c && !editing) return "";
-          const sel = selected && selected.s === si && selected.l === li && selected.i === wi;
-          return `<span class="w${sel ? " sel" : ""}" data-s="${si}" data-l="${li}" data-i="${wi}"><span class="c">${c ? chordHtml(c) : ""}</span><span class="t">${escapeHtml(word) || (editing ? "&nbsp;&nbsp;" : "")}</span></span>`;
-        }).join("")}</div>`;
+        html = lineHtml(l, si, li);
       }
-      return editing ? `<div class="line-wrap">${html}<button type="button" class="line-x" data-act="delline" data-s="${si}" data-l="${li}" title="Remove this line">✕</button></div>` : html;
+      return editing ? `<div class="line-wrap">${html}
+        ${li > 0 ? `<button type="button" class="line-x" data-act="split" data-s="${si}" data-l="${li}" title="Start a new part from this line">✂</button>` : ""}
+        <button type="button" class="line-x" data-act="delline" data-s="${si}" data-l="${li}" title="Remove this line">✕</button></div>` : html;
     }).join("");
-    return `<div class="section" data-sec="${si}"><span class="section-name sec-${sectionKind(sec.name)}">${escapeHtml(sec.name)}</span>${tools}${lines}</div>`;
+    // Renaming: a text field with quick picks, right where the name was
+    if (editing && renaming === si) {
+      return `<div class="section" data-sec="${si}"><form class="rename-form" id="renameForm">
+          <input type="text" id="renameText" maxlength="40" aria-label="Name of this part">
+          <button type="submit" class="btn primary">Save</button><button type="button" class="btn" id="renameCancel">Cancel</button>
+          <div class="quick-names">${PART_NAMES.map(n => `<button type="button" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join("")}</div>
+        </form>${lines}</div>`;
+    }
+    // While editing, tapping the name renames the part too
+    const nameAttrs = editing ? ` data-act="rename" data-s="${si}" role="button" title="Tap to rename" style="cursor:pointer"` : "";
+    return `<div class="section" data-sec="${si}"><span class="section-name sec-${sectionKind(sec.name)}"${nameAttrs}>${escapeHtml(sec.name)}${editing ? " ✎" : ""}</span>${tools}${lines}</div>`;
   }).join("");
+
+  if (renaming !== null && $("renameForm")) {
+    const input = $("renameText");
+    input.value = sh.sections[renaming].name;
+    input.focus();
+    input.select();
+    const done = name => {
+      if (name !== undefined && name.trim()) { sh.sections[renaming].name = name.trim(); saveSheet(); }
+      renaming = null;
+      renderSheet();
+    };
+    $("renameForm").onsubmit = e => { e.preventDefault(); done(input.value); };
+    $("renameCancel").onclick = () => done();
+    input.onkeydown = e => { if (e.key === "Escape") done(); };
+    $("renameForm").querySelectorAll("[data-name]").forEach(b => b.onclick = () => done(b.dataset.name));
+  }
 
   if (editing) renderPlaceBar(); else if (!stripChord) closeStrip();
 }
@@ -1061,7 +1203,8 @@ function addSections(sections, how) {
   // A new song: fill in "Chords in this song" below from the sheet
   if (!s.chords.length) {
     const seen = [];
-    s.sheet.sections.forEach(sec => sec.lines.forEach(l => [...Object.keys(l.c || {}).sort((a, b) => a - b).map(k => l.c[k]), ...(l.o || [])]
+    s.sheet.sections.forEach(sec => sec.lines.forEach(l => [...Object.keys(l.c || {})
+      .sort((a, b) => keyOrder(parseKey(a, (l.w || []).length) || { i: 0, at: 0 }, parseKey(b, (l.w || []).length) || { i: 0, at: 0 })).map(k => l.c[k]), ...(l.o || [])]
       .forEach(t => t.split(" ").forEach(x => { const c = chordOf(x); if (c && !seen.some(o => sameChord(o, c))) seen.push({ root: c.root, type: c.type }); }))));
     s.chords = seen;
   }
@@ -1124,7 +1267,7 @@ function showLyricsSearch() {
     <div class="row" style="margin:0"><input type="text" id="lyrTitle" placeholder="Title" value="${escapeHtml(song().title)}">
       <input type="text" id="lyrArtist" placeholder="Artist" value="${escapeHtml(song().artist)}">
       <button class="btn primary" type="button" id="lyrGo">Search</button><button class="btn" type="button" id="lyrBack">Back</button></div>
-    <p class="muted" style="font-size:.8rem;margin:6px 0 0">From <a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a>: lyrics only, without chords. You place the chords yourself with ✎ Edit chords.</p>
+    <p class="muted" style="font-size:.8rem;margin:6px 0 0">From <a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a>: lyrics only, without chords. You place the chords yourself with ✎ Edit.</p>
     <ul class="results" id="lyrResults"></ul></div>`;
   $("lyrBack").onclick = () => showImportStart(importAppend);
   $("lyrGo").onclick = async () => {
@@ -1169,22 +1312,97 @@ function sheetChordList() {
   song().chords.forEach(c => { const n = (NOTES[c.root] + typeOf(c.type).suffix).replace(/♭/g, "b").replace(/♯/g, "#"); if (!list.includes(n)) list.push(n); });
   return list;
 }
+// While editing, `selected` is a word ({ s, l, i, at }: at = the letter, or "gap" for after the word) or a box in a
+// chords-only row ({ s, l, o }).
+const lineAt = sel => sheet().sections[sel.s].lines[sel.l];
+// The key a chord at word i, letter `at` is saved under (older songs may use a different but equal key)
+function findKey(l, i, at) {
+  const found = Object.keys(l.c || {}).find(k => { const p = parseKey(k, l.w.length); return p && p.i === i && p.at === at; });
+  return found !== undefined ? found : makeKey(i, at);
+}
 function currentChordAt(sel) {
   if (!sel) return "";
-  const l = sheet().sections[sel.s].lines[sel.l];
-  return sel.o !== undefined ? (l.o[sel.o] || "") : ((l.c || {})[sel.i] || "");
+  const l = lineAt(sel);
+  if (sel.o !== undefined) return l.o[sel.o] || "";
+  return (l.c || {})[findKey(l, sel.i, sel.at || 0)] || "";
 }
 function setChordAt(sel, text) {
-  const l = sheet().sections[sel.s].lines[sel.l];
+  const l = lineAt(sel);
   if (sel.o !== undefined) {
     if (text) { if (sel.o >= l.o.length) l.o.push(text); else l.o[sel.o] = text; }
     else l.o.splice(sel.o, 1);
   } else {
     l.c = l.c || {};
-    if (text) l.c[sel.i] = text; else delete l.c[sel.i];
+    const key = findKey(l, sel.i, sel.at || 0);
+    if (text) l.c[key] = text; else delete l.c[key];
   }
   saveSheet();
 }
+// Every place a chord can go in a line, in reading order: each letter of each word, then the gap after it
+function chordSpots(l) {
+  const out = [];
+  l.w.forEach((w, i) => { for (let k = 0; k < Math.max(1, w.length); k++) out.push({ i, at: k }); out.push({ i, at: "gap" }); });
+  return out;
+}
+// ◂ ▸: move the chord one letter back or forward (into the gap between words, and on into the next word)
+function moveChord(dir) {
+  const l = lineAt(selected), text = currentChordAt(selected);
+  if (!text) return;
+  const spots = chordSpots(l);
+  const from = spots.findIndex(p => p.i === selected.i && p.at === (selected.at || 0));
+  const to = spots[from + dir];
+  if (!to) return;
+  delete l.c[findKey(l, selected.i, selected.at || 0)];
+  addChordAt(l.c, findKey(l, to.i, to.at), text);
+  selected = { ...selected, i: to.i, at: to.at };
+  saveSheet();
+}
+// Take word i out of a lyrics line. Its chords move to the start of the next word (or the end of the line), so none is lost.
+function removeWord(line, i) {
+  const c = {}, n = line.w.length;
+  Object.entries(line.c || {}).forEach(([k, chord]) => {
+    const p = parseKey(k, n);
+    if (!p) return;
+    let key;
+    if (p.i < i) key = makeKey(p.i, p.at);
+    else if (p.i === i) key = i < n - 1 ? makeKey(i, 0) : i > 0 ? makeKey(i - 1, "gap") : "0";
+    else key = makeKey(p.i - 1, p.at);
+    addChordAt(c, key, chord);
+  });
+  line.w.splice(i, 1);
+  line.c = c;
+}
+// Put new words in before word i; the chords after them move along
+function insertWords(line, i, words) {
+  const c = {}, n = line.w.length;
+  Object.entries(line.c || {}).forEach(([k, chord]) => {
+    const p = parseKey(k, n);
+    if (p) addChordAt(c, makeKey(p.i >= i ? p.i + words.length : p.i, p.at), chord);
+  });
+  line.w.splice(i, 0, ...words);
+  line.c = c;
+}
+// Change word i into the text you typed (which may be several words, or nothing to remove it)
+function changeWord(line, i, text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return removeWord(line, i);
+  const gapKey = findKey(line, i, "gap"), gapChord = (line.c || {})[gapKey];
+  if (gapChord) delete line.c[gapKey];
+  line.w[i] = words[0];
+  if (words.length > 1) insertWords(line, i + 1, words.slice(1));
+  if (gapChord) addChordAt(line.c, makeKey(i + words.length - 1, "gap"), gapChord); // the gap chord stays after the last new word
+}
+
+// Clean up songs imported before stray marks were left out: remove "words" of only symbols ("=")
+function cleanSheet(sh) {
+  let changed = false;
+  (sh && sh.sections || []).forEach(sec => sec.lines.forEach(l => {
+    if (!l.w) return;
+    for (let i = l.w.length - 1; i >= 0; i--) if (isJunkWord(l.w[i])) { removeWord(l, i); changed = true; }
+  }));
+  return changed;
+}
+
 // Move to the next word (or chord box) after placing a chord, so you can keep tapping chords
 function nextSelection(sel) {
   const l = sheet().sections[sel.s].lines[sel.l];
@@ -1197,23 +1415,151 @@ function renderPlaceBar() {
   strip.hidden = false;
   document.body.classList.add("strip-open");
   const cur = currentChordAt(selected);
-  strip.innerHTML = `<div class="place">
-    ${selected ? sheetChordList().map(c => `<button type="button" data-place="${escapeHtml(c)}" class="${c === cur ? "used" : ""}">${escapeHtml(shiftChord(c, 0))}</button>`).join("") +
-      `<button type="button" data-place="?">Other…</button>${cur ? `<button type="button" data-place="">Remove</button>` : ""}`
-      : `<span class="hint-text">Tap a word in the lyrics (or a box in a chords row) to put a chord on it.</span>`}
-    <button type="button" id="doneEditing" style="margin-left:auto">✓ Done</button></div>`;
-  strip.querySelectorAll("[data-place]").forEach(b => b.onclick = () => {
-    let text = b.dataset.place;
-    if (text === "?") {
-      text = (prompt("Chord name (for example Am, F#m7, D/F#):", cur) || "").trim().replace(/♯/g, "#").replace(/♭/g, "b");
+  // "Other…": type a chord name right here (pop-up boxes don't work in every browser)
+  if (selected && typingChord) {
+    strip.innerHTML = `<form class="place" id="otherForm">
+      <input type="text" id="otherText" placeholder="Chord, e.g. F#m7 or D/F#" aria-label="Chord name" autocomplete="off"
+        style="font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--btn);background:var(--bg);color:var(--ink);min-width:160px">
+      <button type="submit" class="used">Add</button><button type="button" id="otherCancel">Cancel</button>
+      <span class="hint-text" id="otherMsg"></span></form>`;
+    $("otherText").value = cur;
+    $("otherText").focus();
+    $("otherForm").onsubmit = e => {
+      e.preventDefault();
+      const text = $("otherText").value.trim().replace(/♯/g, "#").replace(/♭/g, "b").replace(/\s+/g, " ");
       if (!text) return;
-      if (!text.split(" ").every(isChordText)) return alert(`"${text}" isn't a chord name the site knows. Try for example Am, C#m7 or D/F#.`);
-    }
+      if (!text.split(" ").every(isChordText)) { $("otherMsg").textContent = `"${text}" isn't a chord name the site knows. Try for example Am, C#m7 or D/F#.`; return; }
+      typingChord = false;
+      setChordAt(selected, text);
+      selected = nextSelection(selected);
+      renderSheet();
+    };
+    $("otherCancel").onclick = () => { typingChord = false; renderPlaceBar(); };
+    $("otherText").onkeydown = e => { if (e.key === "Escape") { typingChord = false; renderPlaceBar(); } };
+    return;
+  }
+  // Typing words: change the selected word, add words before or after it, or a new line below
+  if (selected && typingWord) {
+    const l = lineAt(selected), word = l.w[selected.i] || "";
+    const label = { edit: "Change the word", before: `New word(s) before “${word}”`, after: `New word(s) after “${word}”`, line: "New line below" }[typingWord];
+    strip.innerHTML = `<form class="place" id="wordForm">
+      <span class="hint-text">${escapeHtml(label)}</span>
+      <input type="text" id="wordText" aria-label="${escapeHtml(label)}" autocomplete="off" dir="auto"
+        style="font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--btn);background:var(--bg);color:var(--ink);min-width:200px;flex:1">
+      <button type="submit" class="used">Save</button><button type="button" id="wordCancel">Cancel</button></form>`;
+    $("wordText").value = typingWord === "edit" ? word : "";
+    $("wordText").focus();
+    $("wordForm").onsubmit = e => {
+      e.preventDefault();
+      const text = $("wordText").value.trim();
+      const words = text.split(/\s+/).filter(Boolean);
+      const sec = sheet().sections[selected.s];
+      if (typingWord === "edit") {
+        changeWord(l, selected.i, text);
+        if (!l.w.length && !Object.keys(l.c).length) { sec.lines.splice(selected.l, 1); selected = null; }
+        else selected = { ...selected, i: Math.min(selected.i, l.w.length - 1), at: 0 };
+      } else if (words.length && typingWord === "before") {
+        insertWords(l, selected.i, words);
+        selected = { ...selected, i: selected.i, at: 0 };
+      } else if (words.length && typingWord === "after") {
+        // Into the gap after this word: a chord that was between the words stays right after this word
+        const gapKey = findKey(l, selected.i, "gap"), gapChord = (l.c || {})[gapKey];
+        if (gapChord) delete l.c[gapKey];
+        insertWords(l, selected.i + 1, words);
+        if (gapChord) addChordAt(l.c, makeKey(selected.i, "gap"), gapChord);
+        selected = { ...selected, i: selected.i + 1, at: 0 };
+      } else if (words.length && typingWord === "line") {
+        sec.lines.splice(selected.l + 1, 0, { w: words, c: {} });
+        selected = { s: selected.s, l: selected.l + 1, i: 0, at: 0 };
+      }
+      typingWord = null;
+      saveSheet();
+      renderSheet();
+    };
+    $("wordCancel").onclick = () => { typingWord = null; renderPlaceBar(); };
+    $("wordText").onkeydown = e => { if (e.key === "Escape") { typingWord = null; renderPlaceBar(); } };
+    return;
+  }
+
+  const chordButtons = () => sheetChordList().map(c => `<button type="button" data-place="${escapeHtml(c)}" class="${c === cur ? "used" : ""}">${escapeHtml(shiftChord(c, 0))}</button>`).join("") +
+    `<button type="button" data-place="?">Other…</button>${cur ? `<button type="button" data-place="">Remove chord</button>` : ""}`;
+  let rows;
+  if (!selected) {
+    rows = `<div class="place-row"><span class="hint-text">Tap a word in the lyrics (or a box in a chords row) to put a chord on it or change the word.</span>
+      <button type="button" id="doneEditing" style="margin-left:auto">✓ Done</button></div>`;
+  } else if (selected.o !== undefined) {
+    rows = `<div class="place-row">${chordButtons()}<button type="button" id="doneEditing" style="margin-left:auto">✓ Done</button></div>`;
+  } else {
+    // A word: first choose where the chord goes (a letter, or after the word), then the chord
+    const l = lineAt(selected), word = l.w[selected.i] || "";
+    const chordOn = at => (l.c || {})[findKey(l, selected.i, at)] || "";
+    const here = at => (selected.at || 0) === at;
+    const letters = word ? [...word].map((ch, k) => `<button type="button" class="letter${here(k) ? " used" : ""}" data-at="${k}" title="Chord over “${escapeHtml(ch)}”">
+        <small>${escapeHtml(chordOn(k)) || "&nbsp;"}</small>${escapeHtml(ch)}</button>`).join("") : "";
+    rows = (word ? `<div class="place-row"><span class="hint-text" style="flex-basis:auto">${cur ? "Move the chord to:" : "Chord over:"}</span>
+        <span class="letters"${HEBREW.test(word) ? ' dir="rtl"' : ""}>${letters}</span>
+        <button type="button" class="letter${here("gap") ? " used" : ""}" data-at="gap" title="Between this word and the next"><small>${escapeHtml(chordOn("gap")) || "&nbsp;"}</small>after ␣</button>
+        ${cur ? `<button type="button" id="moveBack" title="Move the chord one letter to the left">◂</button><button type="button" id="moveOn" title="Move the chord one letter to the right">▸</button>
+          <button type="button" id="anotherChord" title="Put a second chord in this word">+ Another chord</button>` : ""}</div>` : "") +
+      `<div class="place-row">${word ? chordButtons() : ""}</div>
+      <div class="place-row words-row">
+        ${word ? `<button type="button" data-word="edit">✎ Change word</button><button type="button" data-word="before">+ Word before</button>` : ""}
+        <button type="button" data-word="after">${word ? "+ Word after" : "+ Words"}</button>
+        <button type="button" data-word="line">+ Line below</button>
+        ${word ? `<button type="button" id="deleteWord" title="Remove this word (its chords move to the next word)">Delete word</button>` : ""}
+        <button type="button" id="doneEditing" style="margin-left:auto">✓ Done</button></div>`;
+  }
+  strip.innerHTML = `<div class="place-col">${rows}</div>`;
+
+  strip.querySelectorAll("[data-place]").forEach(b => b.onclick = () => {
+    const text = b.dataset.place;
+    if (text === "?") { typingChord = true; return renderPlaceBar(); }
     setChordAt(selected, text);
     selected = text ? nextSelection(selected) : selected;
     renderSheet();
   });
-  $("doneEditing").onclick = () => { editing = false; selected = null; closeStrip(); renderSheet(); };
+  // Tapping a letter: if the selected spot has a chord, the chord moves there; otherwise that letter is chosen
+  // for the next chord you tap
+  strip.querySelectorAll("[data-at]").forEach(b => b.onclick = () => {
+    const at = b.dataset.at === "gap" ? "gap" : Number(b.dataset.at);
+    const l = lineAt(selected), text = currentChordAt(selected);
+    const targetKey = findKey(l, selected.i, at);
+    if (text && !(l.c || {})[targetKey] && at !== (selected.at || 0)) {
+      delete l.c[findKey(l, selected.i, selected.at || 0)];
+      l.c[targetKey] = text;
+      saveSheet();
+    }
+    selected = { ...selected, at };
+    renderSheet();
+  });
+  // Another chord in the same word: choose the first letter that has no chord yet
+  if ($("anotherChord")) $("anotherChord").onclick = () => {
+    const l = lineAt(selected), word = l.w[selected.i] || "";
+    const free = [...Array(word.length).keys(), "gap"].find(at => !(l.c || {})[findKey(l, selected.i, at)]);
+    if (free !== undefined) selected = { ...selected, at: free };
+    renderSheet();
+  };
+  // ◂ moves the chord to the left and ▸ to the right, as you see it. In Hebrew the text runs right to left,
+  // so "left" is further on in the text.
+  if ($("moveBack") || $("moveOn")) {
+    const rtlLine = HEBREW.test((lineAt(selected).w || []).join(""));
+    if ($("moveBack")) $("moveBack").onclick = () => { moveChord(rtlLine ? 1 : -1); renderSheet(); };
+    if ($("moveOn")) $("moveOn").onclick = () => { moveChord(rtlLine ? -1 : 1); renderSheet(); };
+  }
+  strip.querySelectorAll("[data-word]").forEach(b => b.onclick = () => {
+    const l = lineAt(selected);
+    typingWord = b.dataset.word === "after" && !l.w.length ? "before" : b.dataset.word; // an empty line: just add words
+    renderPlaceBar();
+  });
+  if ($("deleteWord")) $("deleteWord").onclick = () => {
+    const line = lineAt(selected);
+    removeWord(line, selected.i);
+    if (!line.w.length && !Object.keys(line.c).length) { sheet().sections[selected.s].lines.splice(selected.l, 1); selected = null; }
+    else selected = { ...selected, i: Math.min(selected.i, line.w.length - 1), at: 0 };
+    saveSheet();
+    renderSheet();
+  };
+  $("doneEditing").onclick = () => { editing = false; selected = null; renaming = null; typingChord = false; typingWord = null; closeStrip(); renderSheet(); };
 }
 
 $("sheet").addEventListener("click", e => {
@@ -1222,8 +1568,22 @@ $("sheet").addEventListener("click", e => {
     const si = Number(act.dataset.s), li = Number(act.dataset.l);
     const secs = sheet().sections;
     if (act.dataset.act === "rename") {
-      const name = (prompt("Name of this part (Verse 1, Chorus, Bridge…):", secs[si].name) || "").trim();
-      if (name) secs[si].name = name;
+      renaming = si;
+      return renderSheet();
+    } else if (act.dataset.act === "up" || act.dataset.act === "down") {
+      const to = act.dataset.act === "up" ? si - 1 : si + 1;
+      if (to < 0 || to >= secs.length) return;
+      [secs[si], secs[to]] = [secs[to], secs[si]];
+      selected = null;
+    } else if (act.dataset.act === "join") {
+      if (si === 0) return;
+      secs[si - 1].lines.push(...secs[si].lines);
+      secs.splice(si, 1);
+      selected = null;
+    } else if (act.dataset.act === "split") {
+      const moved = secs[si].lines.splice(li);
+      secs.splice(si + 1, 0, { name: `${secs[si].name} (2)`, lines: moved });
+      selected = null;
     } else if (act.dataset.act === "addrow") {
       secs[si].lines.push({ o: [] });
       selected = { s: si, l: secs[si].lines.length - 1, o: 0 };
@@ -1252,9 +1612,16 @@ $("sheet").addEventListener("click", e => {
   if (editing) {
     const w = e.target.closest("[data-i], [data-o]");
     if (!w) return;
-    selected = w.dataset.o !== undefined
-      ? { s: Number(w.dataset.s), l: Number(w.dataset.l), o: Number(w.dataset.o) }
-      : { s: Number(w.dataset.s), l: Number(w.dataset.l), i: Number(w.dataset.i) };
+    typingChord = false;
+    typingWord = null;
+    if (w.dataset.o !== undefined) selected = { s: Number(w.dataset.s), l: Number(w.dataset.l), o: Number(w.dataset.o) };
+    else {
+      // A word: start on its first chord (so you can move or change it right away), or its first letter
+      const s = Number(w.dataset.s), li = Number(w.dataset.l), i = Number(w.dataset.i);
+      const l = sheet().sections[s].lines[li];
+      const own = Object.keys(l.c || {}).map(k => parseKey(k, l.w.length)).filter(p => p && p.i === i).sort(keyOrder);
+      selected = { s, l: li, i, at: own.length ? own[0].at : 0 };
+    }
     return renderSheet();
   }
   const ch = e.target.closest(".chord-name");
@@ -1264,6 +1631,9 @@ $("sheet").addEventListener("click", e => {
 $("editBtn").onclick = () => {
   editing = !editing;
   selected = null;
+  renaming = null;
+  typingChord = false;
+  typingWord = null;
   stopScroll();
   if (!editing) closeStrip();
   renderSheet();
