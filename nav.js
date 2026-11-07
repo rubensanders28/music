@@ -5,6 +5,7 @@
 (() => {
   const PAGES = [
     ["journey.html", "My journey"],
+    ["warmup.html", "Warm-up"],
     ["index.html", "Piano trainer"],
     ["keyboard.html", "Keyboard"],
     ["guitar.html", "Fretboard trainer"],

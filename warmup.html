@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warm-up</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --accent: #3b5bdb;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --hl: #f08c00;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --accent: #8ea2ff;
+      --good: #69db7c;
+      --bad: #ff8787;
+      --hl: #ffc078;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; }
+
+  .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 12px; background: var(--btn); margin-bottom: 16px; }
+  .tracks button { font: inherit; font-size: 1.05rem; font-weight: 700; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+  .tracks button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .btn { font: inherit; font-weight: 600; border: none; border-radius: 10px; padding: 9px 16px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .btn:hover { outline: 2px solid var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--card); }
+  .btn.big { font-size: 1.1rem; padding: 14px 24px; }
+  .total { font-weight: 700; }
+
+  /* The list of exercises */
+  .ex { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: start; padding: 12px 0; border-top: 1px solid var(--btn); }
+  .ex:first-of-type { border-top: none; }
+  .ex input[type=checkbox] { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .ex.off .ex-title, .ex.off .ex-how { opacity: .5; }
+  .ex-title { font-weight: 700; }
+  .ex-title small { font-weight: 600; color: var(--muted); }
+  .ex-how { color: var(--muted); font-size: 0.88rem; line-height: 1.45; margin-top: 2px; }
+  .ex-time { font-size: 0.85rem; color: var(--muted); white-space: nowrap; text-align: right; }
+  pre.tab { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; line-height: 1.3; margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--bg); overflow-x: auto; }
+
+  /* The guided routine */
+  .run { text-align: center; }
+  .run .which { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+  .run .name { font-size: 1.4rem; font-weight: 800; margin: 4px 0; }
+  .clock { font-size: 3.4rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin: 6px 0; }
+  .clock.ending { color: var(--hl); }
+  .bar { height: 8px; border-radius: 4px; background: var(--btn); overflow: hidden; margin: 6px auto 12px; max-width: 420px; }
+  .bar div { height: 100%; background: var(--accent); transition: width .3s linear; }
+  .run .how { text-align: left; color: var(--ink); line-height: 1.5; max-width: 620px; margin: 0 auto; }
+  .run pre.tab { text-align: left; max-width: 620px; margin: 8px auto 0; }
+  .tempo { display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 0; font-size: 0.95rem; color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .tempo button.step { font: inherit; font-weight: 800; width: 34px; height: 34px; border: none; border-radius: 8px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .tempo b { color: var(--ink); font-size: 1.15rem; min-width: 64px; display: inline-block; }
+  .beat { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--btn); vertical-align: middle; transition: background .05s; }
+  .beat.on { background: var(--hl); }
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+  .upnext { color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+  .done-box { text-align: center; }
+  .done-box .big-text { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+  .logged { color: var(--good); font-weight: 700; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>Warm-up</h1>
+  <p class="sub">A few minutes of warming up before you practise loosens your hands, wakes up your fingers and makes
+    everything after it feel easier. Choose the exercises you want, press Start, and the page walks you through them with a timer.</p>
+
+  <div class="tracks" role="group" aria-label="Instrument">
+    <button data-inst="guitar">Guitar</button>
+    <button data-inst="piano">Piano</button>
+  </div>
+
+  <!-- Choosing the routine -->
+  <div id="setup">
+    <div class="panel">
+      <div class="settings">
+        <label>Length
+          <select id="length">
+            <option value="0.5">Short</option>
+            <option value="1" selected>Normal</option>
+            <option value="1.5">Long</option>
+          </select>
+        </label>
+        <label>Click
+          <select id="click">
+            <option value="on">On, at each exercise's tempo</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <span class="total" id="total"></span>
+      </div>
+      <div style="margin-top:14px"><button class="btn primary big" id="startBtn">▶ Start warm-up</button></div>
+    </div>
+    <div class="panel">
+      <h2>Exercises</h2>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <!-- While warming up -->
+  <div class="panel run" id="run" hidden>
+    <div class="which" id="which"></div>
+    <div class="name" id="exName"></div>
+    <div class="clock" id="clock">0:00</div>
+    <div class="bar"><div id="barFill"></div></div>
+    <div class="how" id="exHow"></div>
+    <pre class="tab" id="exTab" hidden></pre>
+    <div class="tempo" id="tempoBox">
+      Tempo <button class="step" id="slower" aria-label="Slower">−</button><b id="bpm"></b><button class="step" id="faster" aria-label="Faster">+</button>
+      <span class="beat" id="beat"></span>
+      <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="clickOn"> click</label>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prevBtn">⏮ Back</button>
+      <button class="btn primary" id="pauseBtn">⏸ Pause</button>
+      <button class="btn" id="nextBtn">⏭ Next</button>
+      <button class="btn" id="stopBtn">■ Stop</button>
+    </div>
+    <div class="upnext" id="upNext"></div>
+  </div>
+
+  <!-- Finished -->
+  <div class="panel done-box" id="done" hidden>
+    <div class="big-text">Warmed up! 🎉</div>
+    <p class="muted" id="doneText"></p>
+    <div class="controls">
+      <button class="btn primary" id="logBtn">+ Add to my practice calendar</button>
+      <button class="btn" id="againBtn">Back to the exercises</button>
+    </div>
+    <p id="loggedText"></p>
+  </div>
+
+  <p class="hint"><b>Go easy:</b> a warm-up should feel relaxed, never strained. If anything hurts, stop. Play slower than you can,
+    with a light touch, and let the tempo come later.<br>
+    Each exercise remembers the tempo you last used, so you can nudge it up a little over the weeks.
+    The screen stays on while the warm-up runs (on browsers that allow it).</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- The exercises ----------
+// secs: how long at "Normal" length. bpm: a starting tempo for the click (null = no click: stretches).
+// tab: a short pattern to show (guitar tab, or piano fingering).
+const EXERCISES = {
+  guitar: [
+    { id: "g-stretch", name: "Loosen up", secs: 60, bpm: null,
+      how: "Without the guitar: shake your hands out, make slow fists and open them wide, and roll your wrists both ways. Then gently pull each finger back for a few seconds. Relaxed shoulders." },
+    { id: "g-spider", name: "1-2-3-4 across the strings", secs: 120, bpm: 60,
+      how: "One finger per fret, starting at fret 5 on the low E: fingers 1, 2, 3, 4, then the same on the next string, up to the high E and back down. Alternate picking (down, up). One note per click, or two once it's easy.",
+      tab: "e|---------------------5-6-7-8-|\nB|-----------------5-6-7-8-----|\nG|-------------5-6-7-8---------|\nD|---------5-6-7-8-------------|\nA|-----5-6-7-8-----------------|\nE|-5-6-7-8---------------------|" },
+    { id: "g-independence", name: "Finger independence: 1-3-2-4", secs: 90, bpm: 60,
+      how: "The same idea in a mixed order, which makes each finger move on its own: frets 5, 7, 6, 8 on every string. Keep the fingers you're not using close to the strings.",
+      tab: "e|-------------------------5-7-6-8-|\nB|---------------------5-7-6-8-----|\n  ...and the same on G, D, A and E" },
+    { id: "g-picking", name: "Alternate picking on one string", secs: 60, bpm: 70,
+      how: "Pick one open string steadily: down-up eighths (two per click), then four per click if that's easy. Small movements from the wrist, every note equally loud. Then try it on another string.",
+      tab: "D|-0-0-0-0-0-0-0-0-|   (D U D U D U D U)" },
+    { id: "g-legato", name: "Hammer-ons and pull-offs", secs: 90, bpm: 60,
+      how: "On the G string: pick fret 5, hammer on to 7, pull off back to 5. Then 5 to 8 with your little finger. Without picking, both notes should sound as loud as a picked one.",
+      tab: "G|-5h7p5---5h8p5---|" },
+    { id: "g-chords", name: "Chord changes", secs: 120, bpm: 60,
+      how: "G – C – D – Em, one strum per click, four strums on each chord. Change on the last beat without stopping the rhythm. Lift your fingers only just off the strings and move them together." },
+    { id: "g-scale", name: "Scale up and down", secs: 90, bpm: 60,
+      how: "A minor pentatonic, position 1 (frets 5 to 8), one note per click, up and down. Then try it with two notes per click. You can see the shape on the Scale shapes page.",
+      tab: "e|---------------------5-8-|\nB|-----------------5-8-----|\nG|-------------5-7---------|\nD|---------5-7-------------|\nA|-----5-7-----------------|\nE|-5-8---------------------|" },
+    { id: "g-strum", name: "Muted strumming", secs: 60, bpm: 70,
+      how: "Lay your fretting hand lightly across the strings so they don't ring, and strum steady down-ups, accenting beat 1 and 3 (or 2 and 4). It warms up the strumming hand and your sense of time." },
+  ],
+  piano: [
+    { id: "p-stretch", name: "Loosen up", secs: 60, bpm: null,
+      how: "Away from the keys: shake out your hands, roll your shoulders and wrists, make slow fists and spread your fingers wide. Then let your arms hang heavy for a moment." },
+    { id: "p-five", name: "Five-finger pattern", secs: 90, bpm: 70,
+      how: "Right hand on C to G, thumb on C: play 1 2 3 4 5 4 3 2 1, one note per click, every note equally loud. Then the left hand (little finger on C). Then both hands together.",
+      tab: "Notes:   C D E F G F E D C\nRight:   1 2 3 4 5 4 3 2 1\nLeft:    5 4 3 2 1 2 3 4 5" },
+    { id: "p-climb", name: "Climbing pattern", secs: 90, bpm: 60,
+      how: "Play C E F G A G F E, then start one key higher (D F G A B A G F) and keep climbing for an octave, then come back down. Fingers stay curved; the hand moves as a whole.",
+      tab: "C E F G A G F E | D F G A B A G F | E G A B C B A G ...\n1 2 3 4 5 4 3 2   (the same fingers every time)" },
+    { id: "p-thumb", name: "Thumb under", secs: 60, bpm: 60,
+      how: "Right hand: play C D E with fingers 1 2 3, then pass the thumb under to play F, and back. Keep the wrist level and the elbow relaxed; only the thumb moves under. Then the left hand going down from C.",
+      tab: "Right hand:  C D E F  →  1 2 3 1\nLeft hand:   C B A G  →  1 2 3 1" },
+    { id: "p-scale", name: "Scale", secs: 120, bpm: 60,
+      how: "C major over two octaves: each hand on its own, then both together. Right hand 1 2 3 1 2 3 4 5 up; left hand 5 4 3 2 1 3 2 1. One note per click, then two.",
+      tab: "Right: 1 2 3 1 2 3 4 1 2 3 1 2 3 4 5\nLeft:  5 4 3 2 1 3 2 1 4 3 2 1 3 2 1" },
+    { id: "p-arpeggio", name: "Broken chords", secs: 90, bpm: 60,
+      how: "The notes of C major one by one (C E G C and back), then F major and G major. Right hand 1 2 3 5, left hand 5 3 2 1. Let your wrist follow the hand smoothly." },
+    { id: "p-chords", name: "Chords with inversions", secs: 90, bpm: 60,
+      how: "C (C E G) – F (C F A) – G (B D G) – C: the closest way to play each chord, so the hand hardly moves. Two clicks per chord. The Keyboard page can show you each inversion." },
+    { id: "p-dynamics", name: "Soft and loud", secs: 60, bpm: 70,
+      how: "The five-finger pattern again, starting very soft and getting a bit louder each time up, then softer again. Control from the fingers, not by slamming the arm." },
+  ],
+};
+
+// ---------- Settings ----------
+let saved = { inst: "guitar", length: "1", click: "on", on: {}, bpm: {} };
+try { saved = { ...saved, ...JSON.parse(localStorage.getItem("warmup")) }; } catch (e) {}
+// The first time: every exercise is in
+if (!saved.on.guitar) saved.on.guitar = EXERCISES.guitar.map(e => e.id);
+if (!saved.on.piano) saved.on.piano = EXERCISES.piano.map(e => e.id);
+const save = () => { try { localStorage.setItem("warmup", JSON.stringify(saved)); } catch (e) {} };
+$("length").value = saved.length;
+$("click").value = saved.click;
+
+const list = () => EXERCISES[saved.inst];
+const chosen = () => list().filter(e => saved.on[saved.inst].includes(e.id));
+const lengthOf = e => Math.round(e.secs * Number(saved.length) / 15) * 15 || 15; // rounded to 15 seconds
+const bpmOf = e => saved.bpm[e.id] || e.bpm;
+const clockText = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const escapeHtml = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+function renderSetup() {
+  document.querySelectorAll("[data-inst]").forEach(b => b.setAttribute("aria-pressed", b.dataset.inst === saved.inst));
+  const box = $("list");
+  box.innerHTML = "";
+  list().forEach(e => {
+    const on = saved.on[saved.inst].includes(e.id);
+    const row = document.createElement("div");
+    row.className = "ex" + (on ? "" : " off");
+    row.innerHTML = `<input type="checkbox" ${on ? "checked" : ""} aria-label="Include ${escapeHtml(e.name)}">
+      <div><div class="ex-title">${escapeHtml(e.name)}${e.bpm ? ` <small>· ${bpmOf(e)} BPM</small>` : ""}</div>
+        <div class="ex-how">${escapeHtml(e.how)}</div>${e.tab ? `<pre class="tab">${escapeHtml(e.tab)}</pre>` : ""}</div>
+      <div class="ex-time">${clockText(lengthOf(e))}</div>`;
+    row.querySelector("input").onchange = ev => {
+      const ids = saved.on[saved.inst];
+      saved.on[saved.inst] = ev.target.checked ? list().map(x => x.id).filter(id => id === e.id || ids.includes(id)) : ids.filter(id => id !== e.id);
+      save();
+      renderSetup();
+    };
+    box.appendChild(row);
+  });
+  const secs = chosen().reduce((a, e) => a + lengthOf(e), 0);
+  $("total").textContent = chosen().length ? `${chosen().length} exercises · about ${Math.round(secs / 60)} min` : "Tick at least one exercise";
+  $("startBtn").disabled = !chosen().length;
+}
+
+document.querySelectorAll("[data-inst]").forEach(b => b.onclick = () => { if (running()) return; saved.inst = b.dataset.inst; save(); showView("setup"); renderSetup(); });
+$("length").onchange = () => { saved.length = $("length").value; save(); renderSetup(); };
+$("click").onchange = () => { saved.click = $("click").value; save(); };
+
+// ---------- The click ----------
+const audio = new AudioContext();
+let clickTimer = null, nextClick = 0, beatNo = 0;
+function tick(time, first) {
+  const osc = audio.createOscillator(), gain = audio.createGain();
+  osc.frequency.value = first ? 1500 : 1000;
+  gain.gain.setValueAtTime(first ? 0.5 : 0.35, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(time);
+  osc.stop(time + 0.06);
+  const delay = Math.max(0, (time - audio.currentTime) * 1000);
+  setTimeout(() => { $("beat").classList.add("on"); setTimeout(() => $("beat").classList.remove("on"), 90); }, delay);
+}
+function startClick() {
+  stopClick();
+  const ex = current();
+  if (!ex || !ex.bpm || !$("clickOn").checked || paused) return;
+  audio.resume();
+  nextClick = audio.currentTime + 0.1;
+  beatNo = 0;
+  clickTimer = setInterval(() => {
+    while (nextClick < audio.currentTime + 0.12) {
+      tick(nextClick, beatNo % 4 === 0);
+      beatNo++;
+      nextClick += 60 / bpmOf(ex);
+    }
+  }, 25);
+}
+function stopClick() { clearInterval(clickTimer); clickTimer = null; }
+// A soft two-note chime when an exercise ends
+function chime() {
+  audio.resume();
+  [880, 1320].forEach((f, i) => {
+    const t = audio.currentTime + i * 0.16;
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    osc.type = "sine";
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + 0.55);
+  });
+}
+
+// ---------- Running the warm-up ----------
+let routine = [], index = 0, left = 0, paused = false, timer = null, startedAt = 0, playedSecs = 0, wakeLock = null;
+const current = () => routine[index];
+const running = () => timer !== null;
+
+function showView(v) {
+  $("setup").hidden = v !== "setup";
+  $("run").hidden = v !== "run";
+  $("done").hidden = v !== "done";
+}
+
+async function keepScreenOn(on) {
+  try {
+    if (on && "wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen");
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (running() && document.visibilityState === "visible") keepScreenOn(true); });
+
+function start() {
+  routine = chosen();
+  if (!routine.length) return;
+  audio.resume();
+  index = 0;
+  playedSecs = 0;
+  paused = false;
+  $("clickOn").checked = saved.click === "on";
+  showView("run");
+  keepScreenOn(true);
+  loadExercise();
+  clearInterval(timer);
+  timer = setInterval(second, 1000);
+}
+
+function loadExercise() {
+  const ex = current();
+  left = lengthOf(ex);
+  $("which").textContent = `Exercise ${index + 1} of ${routine.length}`;
+  $("exName").textContent = ex.name;
+  $("exHow").textContent = ex.how;
+  $("exTab").hidden = !ex.tab;
+  $("exTab").textContent = ex.tab || "";
+  $("tempoBox").hidden = !ex.bpm;
+  $("bpm").textContent = ex.bpm ? `${bpmOf(ex)} BPM` : "";
+  const next = routine[index + 1];
+  $("upNext").textContent = next ? `Up next: ${next.name}` : "Last one!";
+  $("prevBtn").disabled = index === 0;
+  drawClock();
+  startClick();
+}
+
+function drawClock() {
+  const ex = current();
+  $("clock").textContent = clockText(left);
+  $("clock").classList.toggle("ending", left <= 5);
+  $("barFill").style.width = `${(1 - left / lengthOf(ex)) * 100}%`;
+}
+
+function second() {
+  if (paused) return;
+  left--;
+  playedSecs++;
+  if (left <= 0) { chime(); return next(); }
+  drawClock();
+}
+
+function next() {
+  if (index + 1 >= routine.length) return finish();
+  index++;
+  loadExercise();
+}
+
+function finish() {
+  clearInterval(timer);
+  timer = null;
+  stopClick();
+  keepScreenOn(false);
+  const min = Math.max(1, Math.round(playedSecs / 60));
+  $("doneText").textContent = `${routine.length} exercise${routine.length === 1 ? "" : "s"}, ${min} minute${min === 1 ? "" : "s"}. Now your hands are ready to practise.`;
+  $("logBtn").hidden = false;
+  $("loggedText").textContent = "";
+  showView("done");
+}
+
+$("startBtn").onclick = start;
+$("nextBtn").onclick = () => { chime(); next(); };
+$("prevBtn").onclick = () => { if (index > 0) { index--; loadExercise(); } };
+$("pauseBtn").onclick = () => {
+  paused = !paused;
+  $("pauseBtn").textContent = paused ? "▶ Go on" : "⏸ Pause";
+  if (paused) stopClick(); else startClick();
+};
+$("stopBtn").onclick = () => {
+  if (playedSecs >= 60 && confirm("Stop the warm-up here? Press OK to finish it (you can still add it to your calendar), or Cancel to keep going.")) return finish();
+  if (playedSecs < 60) { clearInterval(timer); timer = null; stopClick(); keepScreenOn(false); showView("setup"); renderSetup(); }
+};
+$("againBtn").onclick = () => { showView("setup"); renderSetup(); };
+
+function changeTempo(by) {
+  const ex = current();
+  if (!ex || !ex.bpm) return;
+  saved.bpm[ex.id] = Math.max(30, Math.min(240, bpmOf(ex) + by));
+  save();
+  $("bpm").textContent = `${bpmOf(ex)} BPM`;
+  startClick();
+}
+$("slower").onclick = () => changeTempo(-4);
+$("faster").onclick = () => changeTempo(4);
+$("clickOn").onchange = startClick;
+
+// Space pauses, arrow right skips
+document.addEventListener("keydown", e => {
+  if (!running() || (e.target.matches && e.target.matches("input, select, textarea"))) return;
+  if (e.key === " ") { e.preventDefault(); $("pauseBtn").click(); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); $("nextBtn").click(); }
+});
+
+// ---------- Into the practice calendar (My journey) ----------
+// Same format as the journey's "Log practice": "practice:2026-11:<device>" = { "07": { extra: [{ min, inst, note }] } }
+function myDevice() {
+  try {
+    let id = localStorage.getItem("sync:device");
+    if (!id) { id = Math.random().toString(36).slice(2, 10); localStorage.setItem("sync:device", id); }
+    return id;
+  } catch (e) { return "local"; }
+}
+$("logBtn").onclick = () => {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const key = `practice:${d.getFullYear()}-${pad(d.getMonth() + 1)}:${myDevice()}`;
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) {}
+  const day = data[pad(d.getDate())] = data[pad(d.getDate())] || {};
+  day.extra = day.extra || [];
+  day.extra.push({ min: Math.max(1, Math.round(playedSecs / 60)), inst: saved.inst, note: "Warm-up" });
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
+  $("logBtn").hidden = true;
+  $("loggedText").innerHTML = `<span class="logged">✓ Added to today in your <a href="journey.html">practice calendar</a>.</span>`;
+};
+
+showView("setup");
+renderSetup();
+</script>
+</body>
+</html>
