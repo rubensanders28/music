@@ -318,7 +318,7 @@ function makeChips(group, items) {
 }
 
 const CHIP_ITEMS = {
-  types: TYPES.map(t => ({ id: t.id, label: t.label })),
+  types: [...TYPES.map(t => ({ id: t.id, label: t.label })), { id: "slash", label: "slash chords (G/B…)" }],
   roots: NOTES.map((n, i) => ({ id: String(i), label: FLATS[n] ? `${pretty(i)}/${FLATS[n]}` : n })),
   positions: POSITIONS,
 };
@@ -429,6 +429,7 @@ function chordCard(id, html, svg, play) {
 
 // ---------- The library ----------
 function where(c) {
+  if (c.slash) return `${pretty(c.bass)} in the bass`;
   if (position(c) === "open") return "open";
   return "fret " + Math.min(...c.frets.filter(f => f !== null && f > 0));
 }
@@ -441,7 +442,8 @@ function render() {
   document.querySelectorAll(".guitar-only").forEach(e => e.style.display = piano() ? "none" : "");
   $("hint").innerHTML = (piano()
     ? "The dark blue key is the root note; the light blue keys are the other notes of the chord. Notes like the 9th sit above the octave, the way pianists usually play them."
-    : "○ means play the string open, × means don't play it, and \"5fr\" means the diagram starts at the 5th fret. The blue dot is the root note.")
+    : "○ means play the string open, × means don't play it, and \"5fr\" means the diagram starts at the 5th fret. The blue dot is the lowest note: the root, or for a slash chord its bass note.")
+    + "<br><b>Slash chords:</b> G/B means a G chord with B as its lowest note. They let the bass walk smoothly from one chord to the next (G – G/B – C), or keep one bass note under changing chords."
     + `<br>${piano() ? "Piano" : "Guitar"} sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
 
@@ -457,8 +459,11 @@ function renderGuitar() {
   const library = $("library");
   library.innerHTML = "";
 
-  const shown = CHORDS.filter(c =>
-    selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)) && passesKnown(guitarId(c)));
+  // Slash chords (from chord-data.js) are all played near the nut; they're grouped under the chord on top (G/B under G)
+  const slash = selected.types.has("slash")
+    ? SLASH_CHORDS.filter(c => selected.roots.has(String(c.root)) && selected.positions.has("open") && passesKnown(guitarId(c))) : [];
+  const shown = [...CHORDS.filter(c =>
+    selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)) && passesKnown(guitarId(c))), ...slash];
 
   $("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
   if (shown.length === 0) {
@@ -470,8 +475,9 @@ function renderGuitar() {
 
   // Group by root note (C first), and within a root keep the order of the chord types, lowest on the neck first
   NOTES.forEach((_, root) => {
+    const order = c => c.slash ? TYPES.length + SLASH_CHORDS.indexOf(c) : TYPES.indexOf(c.type); // slash chords last
     const here = shown.filter(c => c.root === root)
-      .sort((a, b) => TYPES.indexOf(a.type) - TYPES.indexOf(b.type) || a.barre - b.barre);
+      .sort((a, b) => order(a) - order(b) || a.barre - b.barre);
     if (here.length === 0) return;
 
     const { section, grid } = rootSection(root);
@@ -492,7 +498,8 @@ function renderPiano() {
   library.innerHTML = "";
   const types = TYPES.filter(t => selected.types.has(t.id));
   const roots = NOTES.map((_, i) => i).filter(i => selected.roots.has(String(i)));
-  const total = roots.reduce((n, root) => n + types.filter(t => passesKnown(pianoId(root, t.id))).length, 0);
+  const slashHere = root => selected.types.has("slash") ? SLASH_CHORDS.filter(s => s.root === root && passesKnown(pianoId(root, s.type.id))) : [];
+  const total = roots.reduce((n, root) => n + types.filter(t => passesKnown(pianoId(root, t.id))).length + slashHere(root).length, 0);
   $("count").textContent = `Showing ${total} chord${total === 1 ? "" : "s"}`;
   if (total === 0) {
     library.innerHTML = settings.known !== "all" && types.length && roots.length
@@ -503,7 +510,8 @@ function renderPiano() {
 
   roots.forEach(root => {
     const here = types.filter(t => passesKnown(pianoId(root, t.id)));
-    if (!here.length) return;
+    const slashes = slashHere(root);
+    if (!here.length && !slashes.length) return;
     const { section, grid } = rootSection(root);
     grid.classList.add("piano");
     here.forEach(t => {
@@ -512,6 +520,16 @@ function renderPiano() {
       drawPianoChord(svg, pianoChord(root, t.id), showRoot ? 48 + root : null);
       grid.appendChild(chordCard(pianoId(root, t.id),
         `<div class="name">${names[0]}${t.suffix}</div><div class="where">${names.join(" · ")}</div>`, svg, () => playChordNotes(root, t.id)));
+    });
+    // Slash chords: the chord with its bass note an octave lower (left hand)
+    slashes.forEach(s => {
+      const keys = pianoSlashChord(s);
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      drawPianoChord(svg, keys, showRoot ? 48 + root : null);
+      const names = spellChord(root, s.chordType.id);
+      grid.appendChild(chordCard(pianoId(root, s.type.id),
+        `<div class="name">${s.name}</div><div class="where">${s.name.split("/")[1]} (bass) · ${names.join(" · ")}</div>`, svg,
+        () => keys.forEach((m, i) => playPiano(m, i * 0.03))));
     });
     library.appendChild(section);
   });

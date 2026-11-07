@@ -80,6 +80,8 @@ const SHAPES = [
   { openRoot: 11, movable: false, chords: { // B7, a common open chord
     "7": [x,2,1,2,0,2] } },
 ];
+// The usual open Emaj7 and Esus2 use all six strings; they go first, so they're the shape shown by default
+SHAPES.unshift({ openRoot: 4, movable: false, chords: { maj7: [0,2,1,1,0,0], sus2: [0,2,4,4,0,0] } });
 
 // Turn every shape into real chords: one per root note it can reach.
 // Each chord is { root, type, frets, barre } where barre is the fret the shape was slid to.
@@ -89,6 +91,10 @@ function allChords() {
     for (const typeId in shape.chords) {
       for (let r = 0; r <= (shape.movable ? 11 : 0); r++) {
         const frets = shape.chords[typeId].map(f => f === null ? null : f + r);
+        // Some open shapes become a 4-fret stretch when you slide them up (the E-shape sus2, the A-shape 9th):
+        // nobody plays those as barre chords, so leave them out. (Open, with the nut's help, they're fine.)
+        const fretted = frets.filter(f => f !== null && f > 0);
+        if (r > 0 && Math.max(...fretted) - Math.min(...fretted) > 3) continue;
         list.push({ root: (shape.openRoot + r) % 12, type: TYPES.find(t => t.id === typeId), frets, barre: r });
       }
     }
@@ -97,7 +103,46 @@ function allChords() {
 }
 const CHORDS = allChords();
 
-function chordName(c) { return pretty(c.root) + c.type.suffix; }
+function chordName(c) { return c.name || pretty(c.root) + c.type.suffix; }
+
+// ---------- Slash chords ----------
+// A chord with a different note in the bass, written chord/bass: G/B is a G chord with B as its lowest note.
+// They make a bass line walk smoothly between chords (G – G/B – C) or hold one bass note under changing chords.
+// These are the most common ones, as they're usually played on the guitar (frets low E → high e, x = not played).
+//   root, type: the chord on top; bass: the bass note (as an index in NOTES)
+const SLASH_CHORDS = [
+  { name: "C/E", root: 0, type: "maj", bass: 4, frets: [0, 3, 2, 0, 1, 0] },
+  { name: "C/G", root: 0, type: "maj", bass: 7, frets: [3, 3, 2, 0, 1, 0] },
+  { name: "C/B", root: 0, type: "maj", bass: 11, frets: [x, 2, 2, 0, 1, 0] },
+  { name: "C/D", root: 0, type: "maj", bass: 2, frets: [x, x, 0, 0, 1, 0] },
+  { name: "D/F♯", root: 2, type: "maj", bass: 6, frets: [2, 0, 0, 2, 3, 2] },
+  { name: "D/A", root: 2, type: "maj", bass: 9, frets: [x, 0, 0, 2, 3, 2] },
+  { name: "D/C", root: 2, type: "maj", bass: 0, frets: [x, 3, 0, 2, 3, 2] },
+  { name: "Dm/C", root: 2, type: "min", bass: 0, frets: [x, 3, 0, 2, 3, 1] },
+  { name: "Dm/F", root: 2, type: "min", bass: 5, frets: [1, 0, 0, 2, 3, 1] },
+  { name: "E/G♯", root: 4, type: "maj", bass: 8, frets: [4, x, 2, 1, 0, 0] },
+  { name: "E/B", root: 4, type: "maj", bass: 11, frets: [x, 2, 2, 1, 0, 0] },
+  { name: "Em/D", root: 4, type: "min", bass: 2, frets: [x, x, 0, 0, 0, 0] },
+  { name: "Em/G", root: 4, type: "min", bass: 7, frets: [3, 2, 2, 0, 0, 0] },
+  { name: "F/A", root: 5, type: "maj", bass: 9, frets: [x, 0, 3, 2, 1, 1] },
+  { name: "F/C", root: 5, type: "maj", bass: 0, frets: [x, 3, 3, 2, 1, 1] },
+  { name: "F/G", root: 5, type: "maj", bass: 7, frets: [3, x, 3, 2, 1, 1] },
+  { name: "G/B", root: 7, type: "maj", bass: 11, frets: [x, 2, 0, 0, 3, 3] },
+  { name: "G/D", root: 7, type: "maj", bass: 2, frets: [x, x, 0, 0, 0, 3] },
+  { name: "G/F♯", root: 7, type: "maj", bass: 6, frets: [2, x, 0, 0, 0, 3] },
+  { name: "G/A", root: 7, type: "maj", bass: 9, frets: [x, 0, 0, 0, 0, 3] },
+  { name: "A/C♯", root: 9, type: "maj", bass: 1, frets: [x, 4, 2, 2, 2, 0] },
+  { name: "A/E", root: 9, type: "maj", bass: 4, frets: [0, 0, 2, 2, 2, 0] },
+  { name: "Am/G", root: 9, type: "min", bass: 7, frets: [3, 0, 2, 2, 1, 0] },
+  { name: "Am/E", root: 9, type: "min", bass: 4, frets: [0, 0, 2, 2, 1, 0] },
+  { name: "Am/C", root: 9, type: "min", bass: 0, frets: [x, 3, 2, 2, 1, 0] },
+  { name: "Am/F♯", root: 9, type: "min", bass: 6, frets: [2, 0, 2, 2, 1, 0] },
+].map(s => ({ ...s, chordType: TYPES.find(t => t.id === s.type), type: { id: "slash" + s.bass, label: "slash", suffix: "" }, barre: 0, slash: true }));
+
+// A slash chord on the piano: the chord in the octave below middle C, with the bass note an octave lower
+function pianoSlashChord(s) {
+  return [36 + s.bass, ...pianoChord(s.root, s.chordType.id)];
+}
 
 // ---------- Keys and scales ----------
 const MAJOR = [0, 2, 4, 5, 7, 9, 11];        // the major scale, in semitones from the key note
