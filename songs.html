@@ -360,9 +360,7 @@
     <div id="importBox"></div>
     <div id="sheetTools" class="sheet-tools" hidden>
       <span class="stepper">Transpose <button id="tDown" aria-label="Transpose down">−</button><b id="tValue">0</b><button id="tUp" aria-label="Transpose up">+</button></span>
-      <span class="stepper">Capo <button id="capoDown" aria-label="Capo down">−</button><b id="capoValue">0</b><button id="capoUp" aria-label="Capo up">+</button></span>
-      <span class="stepper" title="If the chord sheet you copied says 'Capo 6', its chords are the shapes to play with a capo on fret 6. Set that here, so the site knows how they really sound.">Chords written for capo
-        <button id="wcDown" aria-label="Written for a lower capo">−</button><b id="wcValue">0</b><button id="wcUp" aria-label="Written for a higher capo">+</button></span>
+      <span class="stepper" title="Where your capo is. The chords stay the ones you play; they sound that many frets higher.">Capo <button id="capoDown" aria-label="Capo down">−</button><b id="capoValue">0</b><button id="capoUp" aria-label="Capo up">+</button></span>
       <span class="stepper">Size <button id="sizeDown" aria-label="Smaller text">A−</button><button id="sizeUp" aria-label="Bigger text">A+</button></span>
       <button class="btn" id="scrollBtn">▶ Auto-scroll</button>
       <select id="scrollSpeed" aria-label="Scroll speed"><option value="12">Slow</option><option value="22" selected>Medium</option><option value="38">Fast</option></select>
@@ -1028,9 +1026,12 @@ let typingChord = false; // typing a chord name in the bar at the bottom ("Other
 let typingWord = null;   // typing words: "edit" (change the word), "before", "after", or "line" (a new line below)
 let addingLineTo = null; // the part you're adding a new line of lyrics to (with + Line)
 const PART_NAMES = ["Intro", "Verse 1", "Verse 2", "Verse 3", "Pre-chorus", "Chorus", "Bridge", "Solo", "Outro", "פתיחה", "בית", "פזמון", "גשר", "סיום"];
-// How far the shown chords are from the written ones. The written chords sound song.sheetCapo semitones higher
-// (if the sheet was written for a capo); transpose moves the sound; with your capo you play shapes that much lower.
-const shownShift = () => editing ? 0 : (song().sheetCapo || 0) + (song().transpose || 0) - (song().capo || 0);
+// One rule for the capo: the chords you enter or import are the chords you play (on a chord site that says
+// "Capo 5", the shapes). song.capo says where your capo is, so they sound that many frets higher; it never changes
+// the chords on screen. Only transpose moves the chords you see.
+const shownShift = () => editing ? 0 : (song().transpose || 0);
+// How a chord as shown really sounds: the capo raises it (for the piano, the key, the sound)
+const capoOf = () => song().capo || 0;
 const sectionKind = name => {
   const n = name.toLowerCase();
   return /pre/.test(n) ? "pre" : /chorus|refrain|hook|פזמון/.test(n) ? "chorus" : /verse|בית/.test(n) ? "verse" : /bridge|גשר/.test(n) ? "bridge"
@@ -1125,7 +1126,6 @@ function renderSheet() {
   const s = song();
   $("tValue").textContent = (s.transpose > 0 ? "+" : "") + (s.transpose || 0);
   $("capoValue").textContent = s.capo || 0;
-  $("wcValue").textContent = s.sheetCapo || 0;
   $("editBtn").textContent = editing ? "✓ Done editing" : "✎ Edit";
   const notes = [];
   let capoOffer = null;
@@ -1136,10 +1136,8 @@ function renderSheet() {
     "Chords are shown as written (no transpose or capo) while you edit.");
   else {
     if (s.transpose) notes.push(`Transposed ${s.transpose > 0 ? "up" : "down"} ${Math.abs(s.transpose)} semitone${Math.abs(s.transpose) === 1 ? "" : "s"}.`);
-    if (s.sheetCapo) notes.push(`The chords were written for capo ${s.sheetCapo}.`);
-    else if (capoLine(sh)) capoOffer = capoLine(sh);
-    if (s.capo) notes.push(`Capo on fret ${s.capo}: the chords are the shapes you play.`);
-    else if (s.sheetCapo) notes.push("No capo: these are the chords as they really sound.");
+    if (!s.capo && capoLine(sh)) capoOffer = capoLine(sh);
+    if (s.capo) notes.push(`Capo on fret ${s.capo}: these are the chords you play; they sound ${s.capo} fret${s.capo === 1 ? "" : "s"} higher.`);
     const bad = sh.sections.some(sec => sec.lines.some(l => Object.values(l.c || {}).concat(l.o || []).some(t => t.split(" ").some(x => !isChordText(x)))));
     if (bad) notes.push("Some chords (red) weren't recognised: fix them with ✎ Edit.");
   }
@@ -1150,7 +1148,9 @@ function renderSheet() {
     $("sheetNote").insertAdjacentHTML("beforeend", ` <span>This sheet says <b>capo ${offer.fret}</b>.</span>
       <button class="btn" type="button" id="useCapo" style="padding:4px 10px">Use capo ${offer.fret}</button>`);
     $("useCapo").onclick = () => {
-      stepSheetCapo(offer.fret - (song().sheetCapo || 0));
+      song().capo = offer.fret;
+      saveSongs();
+      renderAll();
       // The line itself isn't lyrics: take it out (and its part, if that was all there was)
       const sec = sh.sections[offer.s];
       sec.lines.splice(offer.l, 1);
@@ -1291,9 +1291,9 @@ function addSections(sections, how) {
     s.sheet.sections.forEach(sec => sec.lines.forEach(l => [...Object.keys(l.c || {})
       .sort((a, b) => keyOrder(parseKey(a, (l.w || []).length) || { i: 0, at: 0 }, parseKey(b, (l.w || []).length) || { i: 0, at: 0 })).map(k => l.c[k]), ...(l.o || [])]
       .forEach(t => t.split(" ").forEach(x => {
-        // As they sound: a sheet written for a capo sounds that many semitones higher
-        const c = chordOf(x), sounding = c && { root: (c.root + (s.sheetCapo || 0)) % 12, type: c.type };
-        if (sounding && !seen.some(o => sameChord(o, sounding))) seen.push(sounding);
+        // The chords as you play them, like everywhere else (the capo only changes how they sound)
+        const c = chordOf(x), played = c && { root: c.root, type: c.type };
+        if (played && !seen.some(o => sameChord(o, played))) seen.push(played);
       }))));
     s.chords = seen;
   }
@@ -1853,30 +1853,26 @@ function stepSong(field, by, min, max) {
   saveSongs();
   closeStrip();
   renderSheet();
-  renderNeed();      // with a capo you play other shapes
-  renderSongList();
+  renderAll();       // the key, the chord cards and "chords you still need" follow the capo and transpose
 }
 $("tDown").onclick = () => stepSong("transpose", -1, -11, 11);
 $("tUp").onclick = () => stepSong("transpose", 1, -11, 11);
 $("capoDown").onclick = () => stepSong("capo", -1, 0, 11);
 $("capoUp").onclick = () => stepSong("capo", 1, 0, 11);
-// "Chords written for capo": the sheet's chords are shapes for that capo. Changing it keeps the chords on the
-// sheet looking the same (your capo moves along), and the chord list below moves to how the song really sounds.
-function stepSheetCapo(by) {
-  const s = song();
-  const from = s.sheetCapo || 0, to = Math.max(0, Math.min(11, from + by));
-  if (to === from) return;
-  const d = to - from;
-  s.sheetCapo = to;
-  s.capo = Math.max(0, Math.min(11, (s.capo || 0) + d));
-  s.chords = s.chords.map(c => ({ ...c, root: (c.root + d + 12) % 12 }));
-  saveSongs();
-  closeStrip();
-  renderSheet();
-  renderAll();
+
+// Songs saved with the old "Chords written for capo" setting: turn them into the one rule (chords as you play
+// them, capo = where your capo is) without changing what you saw or heard. What was shown was written + written-for
+// − capo, so that difference becomes transpose; the chord list held how the chords sounded, so it moves back down.
+function convertOldCapo(s) {
+  if (!s.sheetCapo) return false;
+  s.transpose = (s.transpose || 0) + s.sheetCapo - (s.capo || 0);
+  if (s.transpose > 11) s.transpose -= 12;
+  if (s.transpose < -11) s.transpose += 12;
+  s.chords = (s.chords || []).map(c => ({ ...c, root: (c.root - s.sheetCapo + 24) % 12 }));
+  delete s.sheetCapo;
+  return true;
 }
-$("wcDown").onclick = () => stepSheetCapo(-1);
-$("wcUp").onclick = () => stepSheetCapo(1);
+if (songs.map(convertOldCapo).some(Boolean)) saveSongs();
 let sheetSize = 1;
 try { sheetSize = Number(localStorage.getItem("mySongsSheetSize")) || 1; } catch (e) {}
 const applySize = () => $("sheet").style.setProperty("--sheet-size", sheetSize + "rem");
@@ -2068,6 +2064,8 @@ function renderKey() {
       ${alt && !homeHint ? `It could also be <b>${keyName(alt)}</b>: same notes, but a different home chord. Trust your ear: the chord that sounds like “home” is the key.` : ""}
       ${homeHint ? `The song starts and ends on <b>${label(first)}</b>, so that chord may feel like “home”. If it does, the song is really in ${label(first)} and borrows a chord or two.` : ""}</p>
     <p class="numerals">${chords.map(numeral).join(" – ")}</p>
+    ${song().capo ? `<p class="muted">These are the chords you play. With the capo on fret ${song().capo} the song sounds in
+      <b>${keyName({ ...best, pc: (best.pc + song().capo) % 12 })}</b>.</p>` : ""}
     <button class="btn" id="seeKey">See all chords in ${keyName(best)} →</button>`;
 
   // Open the Chords in a Key page with this key already selected
@@ -2081,13 +2079,19 @@ function renderKey() {
 let cards = []; // one per different chord in the song: { chord, shapes, shapeIndex, el }
 
 // Piano: the chord's notes (pianoChord and drawPianoChord are in chord-data.js, shared with the Chord library)
-function pianoNotes(c) { return pianoChord(c.root, c.type); }
+// With a capo, the piano plays the chord as it really sounds (the capo raises it)
+const soundingRoot = c => (c.root + (song().capo || 0)) % 12;
+function pianoNotes(c) { return pianoChord(soundingRoot(c), c.type); }
 
 const instrument = () => $("instrument").value;
 const lefty = () => $("hand").value === "left";
 
 function playChord(card) {
-  if (instrument() === "guitar") return strum(card.shapes[card.shapeIndex]);
+  if (instrument() === "guitar") {
+    // The diagram is the shape you finger; the capo raises every string
+    const shape = card.shapes[card.shapeIndex], capo = song().capo || 0;
+    return strum(capo ? { ...shape, frets: shape.frets.map(f => f === null ? null : f + capo) } : shape);
+  }
   pianoNotes(card.chord).forEach((m, i) => playPiano(m, i * 0.02));
 }
 
@@ -2110,14 +2114,19 @@ function renderCards() {
 }
 
 function drawCard(card) {
-  card.el.innerHTML = `<div class="numeral">${key ? numeral(card.chord) : ""}</div><div class="name">${label(card.chord)}</div>`;
+  const capo = song().capo || 0, piano = instrument() === "piano";
+  // On the piano with a capo song: the chord you hear, with the guitar shape it comes from
+  const name = piano && capo
+    ? `${playedName({ root: soundingRoot(card.chord), type: card.chord.type })}<div class="muted" style="font-size:.72rem;font-weight:500">${label(card.chord)} with capo ${capo}</div>`
+    : label(card.chord);
+  card.el.innerHTML = `<div class="numeral">${key ? numeral(card.chord) : ""}</div><div class="name">${name}</div>`;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  if (instrument() === "guitar") {
+  if (!piano) {
     svg.setAttribute("viewBox", "0 0 240 285");
     drawChord(svg, card.shapes[card.shapeIndex], { lefty: lefty(), showRoot: true });
   } else {
     const notes = pianoNotes(card.chord);
-    drawPianoChord(svg, notes, 48 + card.chord.root); // colour the root key
+    drawPianoChord(svg, notes, 48 + soundingRoot(card.chord)); // colour the root key
   }
   svg.onclick = () => playChord(card);
   card.el.appendChild(svg);
@@ -2251,10 +2260,10 @@ function knownStatus(known, inst, c) {
   Object.entries(known.guitar).forEach(([id, v]) => { if (id.startsWith(`${c.root}-${c.type}-`) && RANK[v.s] > RANK[best]) best = v.s; });
   return best;
 }
-// The chords you play in a song: the chord list holds how they sound; transpose moves them, and on guitar
-// a capo means you play lower shapes
+// The chords you play in a song: on guitar the chord list as entered (moved by transpose); on the piano,
+// which has no capo, the chords as they sound (the capo raises them)
 function playedChords(s, inst) {
-  const shift = (s.transpose || 0) - (inst === "guitar" ? (s.capo || 0) : 0);
+  const shift = (s.transpose || 0) + (inst === "piano" ? (s.capo || 0) : 0);
   const out = [];
   (s.chords || []).forEach(c => { const p = { root: (c.root + shift + 120) % 12, type: c.type }; if (!out.some(o => sameChord(o, p))) out.push(p); });
   return out;
@@ -2287,7 +2296,7 @@ function renderNeed() {
   if (!chords.length) { $("need").innerHTML = ""; return; }
   const status = chords.map(c => knownStatus(known, inst, c));
   const todo = chords.filter((c, i) => !status[i]);
-  const where = inst === "guitar" ? `on guitar${s.capo ? ` (with capo ${s.capo})` : ""}` : "on piano";
+  const where = inst === "guitar" ? `on guitar${s.capo ? ` (with capo ${s.capo})` : ""}` : `on piano${s.capo ? " (as they sound with the capo)" : ""}`;
   $("need").innerHTML = `
     <div class="need-sum">${todo.length
       ? `You know ${chords.length - todo.length} of ${chords.length} chords ${where}. <small>Still to learn: ${todo.map(playedName).join(", ")}</small>`

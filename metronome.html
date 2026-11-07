@@ -893,7 +893,9 @@ function drawSongPart() {
   const box = $("fsLines");
   box.innerHTML = "";
   if (!s) return;
-  const shift = (s.sheetCapo || 0) + (s.transpose || 0) - (s.capo || 0); // as you play it
+  // As you play it: the song's chords are the chords you play (moved by transpose); the capo only changes the sound.
+  // (A song still saved with the old "Chords written for capo" setting works out the same way as it looked then.)
+  const shift = s.sheetCapo ? s.sheetCapo + (s.transpose || 0) - (s.capo || 0) : (s.transpose || 0);
   const notes = [];
   if (s.capo) notes.push(`As you play them with capo ${s.capo}.`);
   notes.push("Tap the chords you want to switch between, in order: they're added to the chords box above. Pick a stretch that repeats, so it loops nicely.");
@@ -901,8 +903,8 @@ function drawSongPart() {
   const part = $("fsPart").value;
   let rows;
   if (part === "list") {
-    // The chord list holds the chords as they sound; with a capo you play lower shapes
-    const listShift = (s.transpose || 0) - (s.capo || 0);
+    // The chord list: the chords you play (in the old "written for capo" format it held how they sounded)
+    const listShift = s.sheetCapo ? (s.transpose || 0) - (s.capo || 0) : (s.transpose || 0);
     rows = [{ words: "", chords: s.chords.map(c => songChordName(NOTES[c.root] + TYPES.find(t => t.id === c.type).suffix, listShift)) }];
   } else {
     const sec = s.sheet.sections[Number(part)];
