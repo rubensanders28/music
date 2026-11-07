@@ -100,6 +100,12 @@
   .known-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
   .known-summary b { color: var(--ink); }
   .chord .where { color: var(--muted); font-size: 0.75rem; margin-bottom: 4px; }
+  /* "Other shape" button on a guitar chord with more than one shape */
+  .shape-btn {
+    display: block; width: 100%; margin-top: 4px; font: inherit; font-size: 0.78rem; border: none;
+    border-radius: 8px; padding: 5px 4px; cursor: pointer; background: transparent; color: var(--accent);
+  }
+  .shape-btn:hover { background: var(--btn); }
 
   /* Chord diagram colours (the shapes are drawn by chord-data.js) */
   svg { display: block; width: 100%; height: auto; }
@@ -233,7 +239,8 @@ const selected = {
   roots:     new Set(NOTES.map((_, i) => String(i))),
   positions: new Set(["open", "low"]),
 };
-let settings = { instrument: "guitar", view: "shapes", formulaRoot: "0", known: "all" };
+// shapePick remembers which guitar shape you last chose for each chord: { "F♯m7♭5": "<guitarId of the shape>" }
+let settings = { instrument: "guitar", view: "shapes", formulaRoot: "0", known: "all", shapePick: {} };
 try {
   const saved = JSON.parse(localStorage.getItem("chordLibrary"));
   if (saved) {
@@ -465,7 +472,16 @@ function renderGuitar() {
   const shown = [...CHORDS.filter(c =>
     selected.types.has(c.type.id) && selected.roots.has(String(c.root)) && selected.positions.has(position(c)) && passesKnown(guitarId(c))), ...slash];
 
-  $("count").textContent = `Showing ${shown.length} chord shape${shown.length === 1 ? "" : "s"}`;
+  // One card per chord: all its shapes that pass the filters, open first, then up the neck.
+  // Slash chords have their own name (G/B), so they each get their own card.
+  const groups = new Map();
+  shown.forEach(c => {
+    const name = chordName(c);
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(c);
+  });
+
+  $("count").textContent = `Showing ${groups.size} chord${groups.size === 1 ? "" : "s"}, ${shown.length} shape${shown.length === 1 ? "" : "s"} in all`;
   if (shown.length === 0) {
     library.innerHTML = settings.known !== "all"
       ? `<p class="empty">No chord shapes here with "${KNOWN_FILTER.find(f => f.id === settings.known).label}". Choose "All" under My chords to see them all.</p>`
@@ -473,19 +489,44 @@ function renderGuitar() {
     return;
   }
 
-  // Group by root note (C first), and within a root keep the order of the chord types, lowest on the neck first
+  // A chord's card showing one of its shapes. "Other shape" swaps in the next one (and remembers it);
+  // the known/mastered bar is for the shape on show, since each shape is learned on its own.
+  function shapeCard(name, shapes, i) {
+    const c = shapes[i];
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 240 285");
+    drawChord(svg, c, { lefty, showRoot });
+    const card = chordCard(guitarId(c), `<div class="name">${name}</div><div class="where">${where(c)}</div>`, svg, () => strum(c));
+    if (shapes.length > 1) {
+      const btn = document.createElement("button");
+      btn.className = "shape-btn";
+      btn.textContent = `Other shape (${i + 1}/${shapes.length}) ›`;
+      btn.onclick = e => {
+        e.stopPropagation(); // don't also strum the chord
+        const next = (i + 1) % shapes.length;
+        settings.shapePick[name] = guitarId(shapes[next]);
+        save();
+        const fresh = shapeCard(name, shapes, next);
+        card.replaceWith(fresh);
+        fresh.querySelector(".shape-btn").focus();
+      };
+      card.appendChild(btn);
+    }
+    return card;
+  }
+
+  // Group by root note (C first), and within a root keep the order of the chord types
+  const order = c => c.slash ? TYPES.length + SLASH_CHORDS.indexOf(c) : TYPES.indexOf(c.type); // slash chords last
   NOTES.forEach((_, root) => {
-    const order = c => c.slash ? TYPES.length + SLASH_CHORDS.indexOf(c) : TYPES.indexOf(c.type); // slash chords last
-    const here = shown.filter(c => c.root === root)
-      .sort((a, b) => order(a) - order(b) || a.barre - b.barre);
+    const here = [...groups].filter(([, shapes]) => shapes[0].root === root)
+      .sort(([, a], [, b]) => order(a[0]) - order(b[0]));
     if (here.length === 0) return;
 
     const { section, grid } = rootSection(root);
-    here.forEach(c => {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "0 0 240 285");
-      drawChord(svg, c, { lefty, showRoot });
-      grid.appendChild(chordCard(guitarId(c), `<div class="name">${chordName(c)}</div><div class="where">${where(c)}</div>`, svg, () => strum(c)));
+    here.forEach(([name, shapes]) => {
+      shapes.sort((a, b) => a.barre - b.barre); // stable, so open shapes keep their chord-data.js order
+      const picked = shapes.findIndex(c => guitarId(c) === settings.shapePick[name]);
+      grid.appendChild(shapeCard(name, shapes, Math.max(0, picked)));
     });
     library.appendChild(section);
   });
