@@ -379,11 +379,14 @@
   <!-- 2. The chords -->
   <div class="panel">
     <h2>Chords in this song</h2>
-    <p class="muted">Add them in the order they're played. Pick the chord type, then click the root note.</p>
+    <p class="muted">Add them in the order they're played. Pick the chord type, then click the root note.
+      For a slash chord like G/B, pick the bass note first.</p>
     <div class="song-chords" id="songChords"></div>
     <div class="row"><button class="link-btn" id="undo">Remove last</button><button class="link-btn" id="clear">Clear all</button></div>
     <p class="step">1. Chord type</p>
     <div class="chips" id="typePicker"></div>
+    <p class="step">Bass note (optional, for slash chords like G/B)</p>
+    <div class="chips" id="bassPicker"></div>
     <p class="step">2. Root note (adds the chord)</p>
     <div class="roots" id="rootPicker"></div>
   </div>
@@ -475,7 +478,8 @@ if (!songs.some(s => s.id === currentId)) currentId = songs[0].id;
 
 const song = () => songs.find(s => s.id === currentId);
 const typeOf = id => TYPES.find(t => t.id === id);
-const sameChord = (a, b) => a.root === b.root && a.type === b.type;
+// A chord: { root: 0–11, type: "min", bass?: 0–11 } — bass only for a slash chord (G/B)
+const sameChord = (a, b) => a.root === b.root && a.type === b.type && (a.bass ?? null) === (b.bass ?? null);
 
 // ---------- 1. Song details ----------
 const $ = id => document.getElementById(id);
@@ -1015,7 +1019,8 @@ function chordOf(text) {
     const minorish = /^(m(?!aj)|min)/.test(suffix);
     type = minorish ? (/7|9|11/.test(suffix) ? "m7" : "min") : /maj/.test(suffix) ? "maj7" : /7|9|11|13/.test(suffix) ? "7" : "maj";
   }
-  return { root: (LETTER_PC[letter] + accOf(acc) + 12) % 12, type, approx, bass: bassLetter ? prettyNote(bassLetter, bassAcc) : null };
+  return { root: (LETTER_PC[letter] + accOf(acc) + 12) % 12, type, approx, bass: bassLetter ? prettyNote(bassLetter, bassAcc) : null,
+    bassPc: bassLetter ? (LETTER_PC[bassLetter] + accOf(bassAcc) + 12) % 12 : undefined };
 }
 
 // ----- Showing the sheet -----
@@ -1295,7 +1300,7 @@ function addSections(sections, how) {
       .sort((a, b) => keyOrder(parseKey(a, (l.w || []).length) || { i: 0, at: 0 }, parseKey(b, (l.w || []).length) || { i: 0, at: 0 })).map(k => l.c[k]), ...(l.o || [])]
       .forEach(t => t.split(" ").forEach(x => {
         // The chords as you play them, like everywhere else (the capo only changes how they sound)
-        const c = chordOf(x), played = c && { root: c.root, type: c.type };
+        const c = chordOf(x), played = c && { root: c.root, type: c.type, ...(c.bassPc !== undefined && c.bassPc !== c.root ? { bass: c.bassPc } : {}) };
         if (played && !seen.some(o => sameChord(o, played))) seen.push(played);
       }))));
     s.chords = seen;
@@ -1821,7 +1826,7 @@ function showChordStrip(name) {
   strip.hidden = false;
   document.body.classList.add("strip-open");
   const t = typeOf(c.type);
-  const notes = [c.bass ? `with ${c.bass} in the bass` : "", c.approx ? `shown as ${pretty(c.root)}${t.suffix}` : ""];
+  const notes = [c.bass ? `with ${c.bass} in the bass` : "", c.approx ? `shown as ${pretty(c.root)}${t.suffix}${c.bass ? "/" + c.bass : ""}` : ""];
   if (capo && piano) notes.push(`the guitar shape ${name} with capo ${capo}`);
   else if (capo) notes.push(`with capo ${capo} it sounds as ${shiftChord(name, capo)}`);
   const note = notes.filter(Boolean).join(" · ");
@@ -1830,12 +1835,14 @@ function showChordStrip(name) {
     <button class="btn" type="button" id="stripClose" aria-label="Close">✕</button>`;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   let play = null;
+  // A slash chord (G/B): with its bass note, on both instruments
+  const slashBass = c.bassPc !== undefined && c.bassPc !== c.root ? c.bassPc : undefined;
   if (piano) {
-    const keys = pianoChord(c.root, c.type);
+    const keys = [...(slashBass !== undefined ? [36 + slashBass] : []), ...pianoChord(c.root, c.type)];
     drawPianoChord(svg, keys, 48 + c.root);
     play = () => keys.forEach((m, i) => playPiano(m, i * 0.02));
   } else {
-    const shapes = CHORDS.filter(s => s.root === c.root && s.type.id === c.type).sort((a, b) => a.barre - b.barre);
+    const shapes = guitarShapes({ root: c.root, type: c.type, ...(slashBass !== undefined ? { bass: slashBass } : {}) });
     if (shapes.length) {
       svg.setAttribute("viewBox", "0 0 240 285");
       drawChord(svg, shapes[0], { lefty: lefty(), showRoot: true });
@@ -1871,7 +1878,8 @@ function convertOldCapo(s) {
   s.transpose = (s.transpose || 0) + s.sheetCapo - (s.capo || 0);
   if (s.transpose > 11) s.transpose -= 12;
   if (s.transpose < -11) s.transpose += 12;
-  s.chords = (s.chords || []).map(c => ({ ...c, root: (c.root - s.sheetCapo + 24) % 12 }));
+  s.chords = (s.chords || []).map(c => ({ ...c, root: (c.root - s.sheetCapo + 24) % 12,
+    ...(c.bass !== undefined ? { bass: (c.bass - s.sheetCapo + 24) % 12 } : {}) }));
   delete s.sheetCapo;
   return true;
 }
@@ -1927,10 +1935,34 @@ TYPES.forEach(t => {
   $("typePicker").appendChild(b);
 });
 
+// Slash chords: an optional bass note. It's used for the next chord you add, then goes back to "none".
+let pickedBass = null;
+function buildBassPicker() {
+  const box = $("bassPicker");
+  box.innerHTML = "";
+  [null, ...NOTES.map((_, i) => i)].forEach(i => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = i === null ? "none" : "/" + (FLATS[NOTES[i]] ? `${pretty(i)} ${FLATS[NOTES[i]]}` : NOTES[i]);
+    b.setAttribute("aria-pressed", i === pickedBass);
+    b.onclick = () => { pickedBass = i; buildBassPicker(); };
+    box.appendChild(b);
+  });
+}
+buildBassPicker();
+
 NOTES.forEach((n, i) => {
   const b = document.createElement("button");
   b.innerHTML = FLATS[n] ? `${pretty(i)}<br><small>${FLATS[n]}</small>` : n;
-  b.onclick = () => { song().chords.push({ root: i, type: pickedType }); saveSongs(); renderAll(); };
+  b.onclick = () => {
+    const c = { root: i, type: pickedType };
+    if (pickedBass !== null && pickedBass !== i) c.bass = pickedBass; // "C/C" is just C
+    song().chords.push(c);
+    pickedBass = null;
+    buildBassPicker();
+    saveSongs();
+    renderAll();
+  };
   $("rootPicker").appendChild(b);
 });
 
@@ -2007,14 +2039,26 @@ function degreeOf(root) {
   return { d: notes.findIndex(n => n.pc === (root + 11) % 12), shift: 1 };
 }
 
-// A chord's name, spelled to suit the key (B♭ in F major, A♯ in B major)
-function label(c) {
-  const t = typeOf(c.type);
-  if (!key) return pretty(c.root) + t.suffix;
-  const { d, shift } = degreeOf(c.root);
+// A note's name, spelled to suit the key (B♭ in F major, A♯ in B major)
+function noteInKey(pc) {
+  if (!key) return pretty(pc);
+  const { d, shift } = degreeOf(pc);
   const base = key.notes[d].name;
   const acc = { "": 0, "♯": 1, "♭": -1, "𝄪": 2, "𝄫": -2 }[base.slice(1)] + shift;
-  return base[0] + ACCIDENTAL[acc] + t.suffix;
+  return ACCIDENTAL[acc] !== undefined ? base[0] + ACCIDENTAL[acc] : pretty(pc);
+}
+// A slash chord's bass note, spelled from the chord: the 3rd of A is C♯ (A/C♯, not A/D♭), the 5th of D is A
+function bassName(c) {
+  const root = noteInKey(c.root), letter = LETTERS.indexOf(root[0]);
+  const semis = (c.bass - c.root + 12) % 12;
+  const letters = { 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6 }[semis];
+  const l = (letter + letters) % 7;
+  const acc = ((c.bass - NATURAL[l] + 18) % 12) - 6;
+  return ACCIDENTAL[acc] !== undefined && Math.abs(acc) < 2 ? LETTERS[l] + ACCIDENTAL[acc] : noteInKey(c.bass);
+}
+// A chord's name, spelled to suit the key; a slash chord gets its bass note after a slash (G/B)
+function label(c) {
+  return noteInKey(c.root) + typeOf(c.type).suffix + (c.bass !== undefined ? "/" + bassName(c) : "");
 }
 
 // A chord's Roman numeral in the key: uppercase for major, lowercase for minor.
@@ -2028,8 +2072,14 @@ function numeral(c) {
   const minorish = t.notes.includes(3) && !t.notes.includes(4);
   const base = (shift < 0 ? "♭" : shift > 0 ? "♯" : "") + (minorish ? ROMAN[d].toLowerCase() : ROMAN[d]);
   const special = { dim: "°", dim7: "°7", m7b5: "ø7", aug: "+" }[t.id];
-  if (special) return base + special;
-  return base + (minorish && t.suffix.startsWith("m") && !t.suffix.startsWith("maj") ? t.suffix.slice(1) : t.suffix);
+  const chord = special ? base + special : base + (minorish && t.suffix.startsWith("m") && !t.suffix.startsWith("maj") ? t.suffix.slice(1) : t.suffix);
+  // A slash chord: its bass note as a degree of the key's scale, so G/B in G major is I/3
+  if (c.bass === undefined) return chord;
+  // Count letters from the key's note to the bass as it's spelled (C♯ in G major is a ♯4, not a ♭5)
+  const name = bassName(c);
+  const bd = (LETTERS.indexOf(name[0]) - LETTERS.indexOf(key.notes[0].name[0]) + 7) % 7;
+  const bdiff = ((c.bass - key.pc - MAJOR[bd]) % 12 + 18) % 12 - 6;
+  return `${chord}/${bdiff < 0 ? "♭" : bdiff > 0 ? "♯" : ""}${bd + 1}`;
 }
 
 function renderKey() {
@@ -2084,7 +2134,36 @@ let cards = []; // one per different chord in the song: { chord, shapes, shapeIn
 // Piano: the chord's notes (pianoChord and drawPianoChord are in chord-data.js, shared with the Chord library)
 // With a capo, the piano plays the chord as it really sounds (the capo raises it)
 const soundingRoot = c => (c.root + (song().capo || 0)) % 12;
-function pianoNotes(c) { return pianoChord(soundingRoot(c), c.type); }
+// A slash chord on the piano: the bass note an octave below the chord, for the left hand
+function pianoNotes(c) {
+  const notes = pianoChord(soundingRoot(c), c.type);
+  return c.bass === undefined ? notes : [36 + (c.bass + (song().capo || 0)) % 12, ...notes];
+}
+
+// Guitar shapes for a chord. For a slash chord: the Chord library's shapes for it (G/B, D/F♯…); otherwise we build
+// one by putting the bass note on a lower string under a normal shape. If that doesn't fit, the normal shapes,
+// marked "approx" so the card says which bass to play.
+function guitarShapes(chord) {
+  const normal = CHORDS.filter(c => c.root === chord.root && c.type.id === chord.type).sort((a, b) => a.barre - b.barre);
+  if (chord.bass === undefined) return normal;
+  const known = SLASH_CHORDS.filter(s => s.root === chord.root && s.chordType.id === chord.type && s.bass === chord.bass);
+  const built = [];
+  normal.forEach(shape => {
+    const low = shape.frets.findIndex(f => f !== null);
+    const fretted = shape.frets.filter(f => f !== null && f > 0);
+    const lo = fretted.length ? Math.min(...fretted) : 0, hi = fretted.length ? Math.max(...fretted) : 0;
+    // Try the strings below the shape's lowest one, nearest first: the bass note within reach of the hand
+    for (let s = low - 1; s >= 0; s--) {
+      const f0 = (chord.bass - OPEN[s] % 12 + 12) % 12;
+      const f = [f0, f0 + 12].find(f => f === 0 || (f >= lo - 1 && f <= hi + 1 && f >= Math.max(1, hi - 3)));
+      if (f === undefined) continue;
+      built.push({ ...shape, frets: shape.frets.map((x, i) => i < s ? null : i === s ? f : x), barre: f === shape.barre ? shape.barre : 0 });
+      break;
+    }
+  });
+  const shapes = [...known, ...built.filter(b => !known.some(k => k.frets.join() === b.frets.join()))];
+  return shapes.length ? shapes : normal.map(s => ({ ...s, approx: true }));
+}
 
 const instrument = () => $("instrument").value;
 const lefty = () => $("hand").value === "left";
@@ -2106,8 +2185,8 @@ function renderCards() {
   const unique = song().chords.filter((c, i, all) => all.findIndex(o => sameChord(o, c)) === i);
   if (unique.length === 0) grid.innerHTML = `<p class="muted">The chords you add will appear here.</p>`;
   cards = unique.map(chord => {
-    // Open shapes first, then barres from low to high on the neck
-    const shapes = CHORDS.filter(c => c.root === chord.root && c.type.id === chord.type).sort((a, b) => a.barre - b.barre);
+    // Open shapes first, then barres from low to high on the neck (slash chords: see guitarShapes)
+    const shapes = guitarShapes(chord);
     const card = { chord, shapes, shapeIndex: 0, el: document.createElement("div") };
     card.el.className = "chord";
     grid.appendChild(card.el);
@@ -2119,9 +2198,13 @@ function renderCards() {
 function drawCard(card) {
   const capo = song().capo || 0, piano = instrument() === "piano";
   // On the piano with a capo song: the chord you hear, with the guitar shape it comes from
-  const name = piano && capo
-    ? `${playedName({ root: soundingRoot(card.chord), type: card.chord.type })}<div class="muted" style="font-size:.72rem;font-weight:500">${label(card.chord)} with capo ${capo}</div>`
+  const sounding = { ...card.chord, root: soundingRoot(card.chord), ...(card.chord.bass !== undefined ? { bass: (card.chord.bass + capo) % 12 } : {}) };
+  let name = piano && capo
+    ? `${playedName(sounding)}<div class="muted" style="font-size:.72rem;font-weight:500">${label(card.chord)} with capo ${capo}</div>`
     : label(card.chord);
+  // A slash chord we have no guitar shape for: the chord's shape, and which bass note to add
+  if (!piano && card.shapes[card.shapeIndex] && card.shapes[card.shapeIndex].approx)
+    name += `<div class="muted" style="font-size:.72rem;font-weight:500">play ${noteInKey(card.chord.bass)} in the bass</div>`;
   card.el.innerHTML = `<div class="numeral">${key ? numeral(card.chord) : ""}</div><div class="name">${name}</div>`;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   if (!piano) {
@@ -2129,7 +2212,7 @@ function drawCard(card) {
     drawChord(svg, card.shapes[card.shapeIndex], { lefty: lefty(), showRoot: true });
   } else {
     const notes = pianoNotes(card.chord);
-    drawPianoChord(svg, notes, 48 + soundingRoot(card.chord)); // colour the root key
+    drawPianoChord(svg, notes, notes.find(m => m >= 48 && m % 12 === soundingRoot(card.chord))); // colour the root key
   }
   svg.onclick = () => playChord(card);
   card.el.appendChild(svg);
@@ -2257,10 +2340,12 @@ function answer(i, button) {
 const loadKnown = () => { try { return { guitar: {}, piano: {}, ...JSON.parse(localStorage.getItem("chordsKnown")) }; } catch (e) { return { guitar: {}, piano: {} }; } };
 const saveKnown = known => { try { localStorage.setItem("chordsKnown", JSON.stringify(known)); } catch (e) {} };
 const RANK = { "": 0, know: 1, mastered: 2 };
+// How the Chord library names a chord in its marks: "7-maj" for G, "7-slash11" for the slash chord G/B
+const markId = c => `${c.root}-${c.bass !== undefined ? "slash" + c.bass : c.type}`;
 function knownStatus(known, inst, c) {
-  if (inst === "piano") return (known.piano[`${c.root}-${c.type}`] || {}).s || "";
+  if (inst === "piano") return (known.piano[markId(c)] || {}).s || "";
   let best = "";
-  Object.entries(known.guitar).forEach(([id, v]) => { if (id.startsWith(`${c.root}-${c.type}-`) && RANK[v.s] > RANK[best]) best = v.s; });
+  Object.entries(known.guitar).forEach(([id, v]) => { if (id.startsWith(markId(c) + "-") && RANK[v.s] > RANK[best]) best = v.s; });
   return best;
 }
 // The chords you play in a song: on guitar the chord list as entered (moved by transpose); on the piano,
@@ -2268,10 +2353,15 @@ function knownStatus(known, inst, c) {
 function playedChords(s, inst) {
   const shift = (s.transpose || 0) + (inst === "piano" ? (s.capo || 0) : 0);
   const out = [];
-  (s.chords || []).forEach(c => { const p = { root: (c.root + shift + 120) % 12, type: c.type }; if (!out.some(o => sameChord(o, p))) out.push(p); });
+  (s.chords || []).forEach(c => {
+    const p = { root: (c.root + shift + 120) % 12, type: c.type };
+    if (c.bass !== undefined) p.bass = (c.bass + shift + 120) % 12;
+    if (!out.some(o => sameChord(o, p))) out.push(p);
+  });
   return out;
 }
-const playedName = c => (/^m(?!aj)/.test(typeOf(c.type).suffix) ? MINOR_NAMES : MAJOR_NAMES)[c.root] + typeOf(c.type).suffix;
+const playedName = c => (/^m(?!aj)/.test(typeOf(c.type).suffix) ? MINOR_NAMES : MAJOR_NAMES)[c.root] + typeOf(c.type).suffix
+  + (c.bass !== undefined ? "/" + MINOR_NAMES[c.bass] : ""); // bass notes: C♯ and G♯ (A/C♯, E/G♯), E♭ and B♭
 const todayStamp = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 // Tap a chord to change its mark: still to learn → I know it → mastered → still to learn (like in the Chord library)
@@ -2279,15 +2369,15 @@ function cycleKnown(inst, c) {
   const known = loadKnown();
   const next = { "": "know", know: "mastered", mastered: "" }[knownStatus(known, inst, c)];
   if (inst === "piano") {
-    if (next) known.piano[`${c.root}-${c.type}`] = { s: next, d: todayStamp() }; else delete known.piano[`${c.root}-${c.type}`];
+    if (next) known.piano[markId(c)] = { s: next, d: todayStamp() }; else delete known.piano[markId(c)];
   } else {
     // Guitar: change the shapes you've marked; if none, mark the first (most common) shape
-    const mine = Object.keys(known.guitar).filter(id => id.startsWith(`${c.root}-${c.type}-`));
+    const mine = Object.keys(known.guitar).filter(id => id.startsWith(markId(c) + "-"));
     if (!next) mine.forEach(id => delete known.guitar[id]);
     else if (mine.length) mine.forEach(id => { known.guitar[id] = { s: next, d: todayStamp() }; });
     else {
-      const shape = CHORDS.filter(x => x.root === c.root && x.type.id === c.type).sort((a, b) => a.barre - b.barre)[0];
-      if (shape) known.guitar[`${c.root}-${c.type}-${shape.frets.map(f => f === null ? "x" : f).join(",")}`] = { s: next, d: todayStamp() };
+      const shape = guitarShapes(c)[0];
+      if (shape) known.guitar[`${markId(c)}-${shape.frets.map(f => f === null ? "x" : f).join(",")}`] = { s: next, d: todayStamp() };
     }
   }
   saveKnown(known);
