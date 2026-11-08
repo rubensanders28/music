@@ -138,6 +138,7 @@ const SLASH_CHORDS = [
   { name: "G/F♯", root: 7, type: "maj", bass: 6, frets: [2, x, 0, 0, 0, 3] },
   { name: "G/A", root: 7, type: "maj", bass: 9, frets: [x, 0, 0, 0, 0, 3] },
   { name: "A/C♯", root: 9, type: "maj", bass: 1, frets: [x, 4, 2, 2, 2, 0] },
+  { name: "Bm/G♯", root: 11, type: "min", bass: 8, frets: [4, x, 4, 4, 3, x] },
   { name: "A/E", root: 9, type: "maj", bass: 4, frets: [0, 0, 2, 2, 2, 0] },
   { name: "Am/G", root: 9, type: "min", bass: 7, frets: [3, 0, 2, 2, 1, 0] },
   { name: "Am/E", root: 9, type: "min", bass: 4, frets: [0, 0, 2, 2, 1, 0] },
