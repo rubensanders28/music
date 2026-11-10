@@ -111,6 +111,8 @@
   .stats span { color: var(--muted); font-size: 0.8rem; }
   .hint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 16px; line-height: 1.5; }
   .progress { color: var(--muted); font-size: 0.8rem; text-align: center; margin: 0 0 4px; }
+  /* "Only ones I know" ignores the type/root/shape filters, so hide them */
+  .known-only .filter-only { display: none !important; }
 </style>
 </head>
 <body>
@@ -125,18 +127,24 @@
   </div>
 
   <div class="filters">
-    <div class="filter">
+    <div class="filter filter-only">
       <div class="filter-head"><h2>Chord types</h2>
         <button class="link-btn" data-all="types">All</button><button class="link-btn" data-none="types">None</button></div>
       <div class="chips" id="typeChips"></div>
     </div>
-    <div class="filter">
+    <div class="filter filter-only">
       <div class="filter-head"><h2>Root notes</h2>
         <button class="link-btn" data-all="roots">All</button><button class="link-btn" data-none="roots">None</button></div>
       <div class="chips" id="rootChips"></div>
     </div>
     <div class="filter settings">
-      <label class="guitar-only">Shapes
+      <label>Chords
+        <select id="knownOnly">
+          <option value="off">Use the filters</option>
+          <option value="on">Only ones I know</option>
+        </select>
+      </label>
+      <label class="guitar-only filter-only">Shapes
         <select id="shapes">
           <option value="open">Open chords only</option>
           <option value="low">Near the nut</option>
@@ -174,6 +182,10 @@
     <div class="choices" id="roots"></div>
     <h2>Chord type</h2>
     <div class="choices" id="types"></div>
+    <div id="bassBox" hidden>
+      <h2>Bass note</h2>
+      <div class="choices" id="basses"></div>
+    </div>
   </div>
 
   <div class="stats">
@@ -197,11 +209,12 @@ const svg = $("diagram");
 
 // ---------- Settings, remembered between visits ----------
 // types / roots: which chords are in the quiz. The first time: major and minor, every root.
-let settings = { instrument: "guitar", types: ["maj", "min"], roots: NOTES.map((_, i) => String(i)), shapes: "open", rootDot: "on", sound: "on" };
+let settings = { instrument: "guitar", types: ["maj", "min"], roots: NOTES.map((_, i) => String(i)), shapes: "open", rootDot: "on", sound: "on", knownOnly: "off" };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem("chordTrainer")) }; } catch (e) {}
-["shapes", "rootDot", "sound"].forEach(id => $(id).value = settings[id]);
+const SAVED = ["shapes", "rootDot", "sound", "knownOnly"];
+SAVED.forEach(id => $(id).value = settings[id]);
 function save() {
-  ["shapes", "rootDot", "sound"].forEach(id => settings[id] = $(id).value);
+  SAVED.forEach(id => settings[id] = $(id).value);
   try { localStorage.setItem("chordTrainer", JSON.stringify(settings)); } catch (e) {}
 }
 const piano = () => settings.instrument === "piano";
@@ -213,36 +226,70 @@ const bestKey = () => piano() ? "chordTrainerPianoBest" : "chordTrainerBest";
 function draw(chord) {
   svg.classList.toggle("piano", piano());
   if (piano()) {
-    drawPianoChord(svg, pianoChord(chord.root, chord.type.id), $("rootDot").value === "on" ? 48 + chord.root : null);
+    drawPianoChord(svg, pianoNotes(chord), $("rootDot").value === "on" ? 48 + chord.root : null);
   } else {
     svg.setAttribute("viewBox", "0 0 240 285");
-    drawChord(svg, chord, { lefty: $("hand").value === "left", showRoot: $("rootDot").value === "on" });
+    // The diagram colours the lowest note as the root. In a slash chord the lowest note is the bass
+    // instead, so colouring it would be misleading (and give the bass away): no highlight then.
+    drawChord(svg, chord, { lefty: $("hand").value === "left", showRoot: $("rootDot").value === "on" && !chord.slash });
   }
 }
 
+// Piano notes: a slash chord (from SLASH_CHORDS in chord-data.js) gets its bass note an octave below the chord
+const pianoNotes = c => c.slash ? pianoSlashChord(c) : pianoChord(c.root, c.type.id);
+
 function play(chord) {
   if ($("sound").value !== "on") return;
-  if (piano()) pianoChord(chord.root, chord.type.id).forEach((m, i) => playPiano(m, i * 0.02));
+  if (piano()) pianoNotes(chord).forEach((m, i) => playPiano(m, i * 0.02));
   else strum(chord);
 }
 
+// ---------- Slash chords ----------
+// A slash chord like G/B is answered in three parts: root G, type major, bass note B.
+// A normal chord's bass is "none" (its bass note is just the root).
+const answerType = c => c.slash ? c.chordType.id : c.type.id;
+const answerBass = c => c.slash ? c.bass : "none";
+
 // ---------- Which chords can come up ----------
+// The chords you marked as known (or mastered) in the chord library, saved as "chordsKnown".
+// On the guitar each shape is marked on its own ("0-maj-x,3,2,0,1,0"), on the piano the chord ("0-maj").
+const knownOnly = () => $("knownOnly").value === "on";
+function knownMarks() {
+  try { return (JSON.parse(localStorage.getItem("chordsKnown")) || {})[settings.instrument] || {}; } catch (e) { return {}; }
+}
+const guitarId = c => `${c.root}-${c.type.id}-${c.frets.map(f => f === null ? "x" : f).join(",")}`;
+
 function pool() {
+  if (knownOnly()) {
+    // Only your known chords: the type, root and shape filters don't apply
+    const marks = knownMarks();
+    if (!piano()) return [...CHORDS, ...SLASH_CHORDS].filter(c => marks[guitarId(c)]);
+    return Object.keys(marks).flatMap(id => {
+      const [root, typeId] = id.split("-");
+      const type = TYPES.find(t => t.id === typeId);
+      if (type) return [{ root: Number(root), type }];
+      // A slash chord is marked as "<root>-slash<bass>" (e.g. "7-slash11" = G/B)
+      return SLASH_CHORDS.filter(s => `${s.root}-${s.type.id}` === id);
+    });
+  }
   const types = TYPES.filter(t => settings.types.includes(t.id));
   const roots = settings.roots.map(Number);
-  if (piano()) return roots.flatMap(root => types.map(type => ({ root, type })));
+  // The "Slash chords" chip adds the common slash chords (whose top chord has a root you picked).
+  // They're all played near the nut, so the Shapes setting doesn't apply to them.
+  const slash = settings.types.includes("slash") ? SLASH_CHORDS.filter(s => roots.includes(s.root)) : [];
+  if (piano()) return [...roots.flatMap(root => types.map(type => ({ root, type }))), ...slash];
   const shapes = $("shapes").value;
-  return CHORDS.filter(c => {
+  return [...slash, ...CHORDS.filter(c => {
     if (!settings.types.includes(c.type.id) || !roots.includes(c.root)) return false;
     if (shapes === "open") return position(c) === "open";
     if (shapes === "low") return position(c) !== "high"; // open chords + barres within the first 4 frets
     return true;
-  });
+  })];
 }
 
 // ---------- Game logic ----------
 let current = null;
-let pickedRoot = null, pickedType = null;
+let pickedRoot = null, pickedType = null, pickedBass = null;
 let locked = false;
 let correct = 0, total = 0, streak = 0;
 let nextTimer = null;
@@ -257,6 +304,7 @@ const weak = () => piano() ? weakPiano : weakGuitar;
 function showWeak() {
   const keys = [...new Set(pool().map(chordKey))];
   weak().show($("weak"), keys, k => {
+    if (k.includes("/")) return k; // a slash chord's key is its name, like "G/B"
     const [root, type] = k.split("-");
     return pretty(Number(root)) + TYPES.find(t => t.id === type).suffix;
   });
@@ -269,7 +317,8 @@ const typesEl = $("types");
 // Chords are dealt like a shuffled deck of cards: every chord name (like "Am" or "F♯7")
 // comes up once before any repeats. Then the deck is shuffled again.
 let deck = [], deckSize = 0;
-const chordKey = c => c.root + "-" + c.type.id;
+// A slash chord's key is its name: D/C and Dm/C share a root and a bass, so "root-type" wouldn't tell them apart
+const chordKey = c => c.slash ? c.name : c.root + "-" + c.type.id;
 
 function shuffle(list) {
   // Fisher–Yates: walk backwards, swapping each item with a random earlier (or same) one
@@ -284,7 +333,7 @@ function nextRound() {
   clearTimeout(nextTimer);
   const options = pool();
   locked = false;
-  pickedRoot = pickedType = null;
+  pickedRoot = pickedType = pickedBass = null;
   feedback.textContent = "";
   feedback.className = "feedback";
   buildButtons();
@@ -295,7 +344,9 @@ function nextRound() {
     $("hearBtn").style.display = "none";
     $("progress").textContent = "";
     $("empty").hidden = false;
-    $("empty").textContent = settings.types.length === 0 || settings.roots.length === 0
+    $("empty").innerHTML = knownOnly()
+      ? `You haven't marked any ${piano() ? "piano" : "guitar"} chords as known yet. Mark them in the <a href="chord-library.html">Chord library</a>.`
+      : settings.types.length === 0 || settings.roots.length === 0
       ? "Pick at least one chord type and one root note."
       : "There are no shapes for these chords here. Try \"Near the nut\" or \"Whole neck\" under Shapes.";
     return;
@@ -315,7 +366,14 @@ function nextRound() {
   }
   const key = deck.pop();
   // On the guitar a chord can have several shapes (e.g. an open one and a barre one); pick one of them
-  const shapes = options.filter(c => chordKey(c) === key);
+  let shapes = options.filter(c => chordKey(c) === key);
+  // If you've marked shapes of this chord as known in the chord library, show one of those:
+  // that's the shape you actually play. (It wins even over the Shapes setting.)
+  if (!piano()) {
+    const marks = knownMarks();
+    const mine = [...CHORDS, ...SLASH_CHORDS].filter(c => chordKey(c) === key && marks[guitarId(c)]);
+    if (mine.length) shapes = mine;
+  }
   current = shapes[Math.floor(Math.random() * shapes.length)];
   $("progress").textContent = `Chord ${deckSize - deck.length} of ${deckSize}`;
   draw(current);
@@ -332,7 +390,11 @@ function buildButtons() {
     rootsEl.appendChild(b);
   });
   typesEl.innerHTML = "";
-  TYPES.filter(t => settings.types.includes(t.id)).forEach(t => {
+  // The type buttons: only the types of the chords that can come up (for G/B that's major)
+  const options = pool();
+  const ids = new Set(options.map(answerType));
+  const types = TYPES.filter(t => ids.has(t.id));
+  types.forEach(t => {
     const b = document.createElement("button");
     b.textContent = t.label;
     b.dataset.type = t.id;
@@ -340,10 +402,26 @@ function buildButtons() {
     typesEl.appendChild(b);
   });
   // With only one type in the quiz there's nothing to choose: it's picked for you
-  if (settings.types.length === 1) {
-    pickedType = settings.types[0];
+  if (types.length === 1) {
+    pickedType = types[0].id;
     typesEl.firstChild.classList.add("picked");
   }
+
+  // The bass note row, only when slash chords can come up. Then every chord needs a bass answer:
+  // "None" for a normal chord, or the note after the slash.
+  const hasSlash = options.some(c => c.slash);
+  $("bassBox").hidden = !hasSlash;
+  const bassEl = $("basses");
+  bassEl.innerHTML = "";
+  if (!hasSlash) { pickedBass = "none"; return; }
+  ["none", ...NOTES.map((_, i) => i)].forEach(v => {
+    const b = document.createElement("button");
+    const n = NOTES[v];
+    b.innerHTML = v === "none" ? "None<br><small>no slash</small>" : FLATS[n] ? `/${pretty(v)}<br><small>/${FLATS[n]}</small>` : "/" + n;
+    b.dataset.bass = v;
+    b.onclick = () => { pickedBass = v; mark(bassEl, b); check(); };
+    bassEl.appendChild(b);
+  });
 }
 
 function mark(group, button) {
@@ -354,13 +432,14 @@ function mark(group, button) {
 
 // Once both a root and a type are picked, check the answer
 function check() {
-  if (locked || !current || pickedRoot === null || pickedType === null) return;
+  if (locked || !current || pickedRoot === null || pickedType === null || pickedBass === null) return;
   locked = true;
   total++;
 
   const rootRight = pickedRoot === current.root;
-  const typeRight = pickedType === current.type.id;
-  const right = rootRight && typeRight;
+  const typeRight = pickedType === answerType(current);
+  const bassRight = pickedBass === answerBass(current);
+  const right = rootRight && typeRight && bassRight;
   if (right) { correct++; streak++; } else { streak = 0; }
   recent.add(right);
   weak().add(chordKey(current), right);
@@ -369,9 +448,13 @@ function check() {
 
   // Green for the right answer in each row, red for a wrong pick
   rootsEl.querySelector(`[data-root="${current.root}"]`).classList.add("good");
-  typesEl.querySelector(`[data-type="${current.type.id}"]`).classList.add("good");
+  typesEl.querySelector(`[data-type="${answerType(current)}"]`).classList.add("good");
   if (!rootRight) rootsEl.querySelector(`[data-root="${pickedRoot}"]`).classList.add("bad");
   if (!typeRight) typesEl.querySelector(`[data-type="${pickedType}"]`).classList.add("bad");
+  if (!$("bassBox").hidden) {
+    $("basses").querySelector(`[data-bass="${answerBass(current)}"]`).classList.add("good");
+    if (!bassRight) $("basses").querySelector(`[data-bass="${pickedBass}"]`).classList.add("bad");
+  }
 
   play(current);
   feedback.textContent = right ? `Yes! ${chordName(current)}` : `That was ${chordName(current)}`;
@@ -389,7 +472,7 @@ function updateStats() {
 
 // ---------- Chord type and root chips ----------
 const CHIP_ITEMS = {
-  types: TYPES.map(t => ({ id: t.id, label: t.label })),
+  types: [...TYPES.map(t => ({ id: t.id, label: t.label })), { id: "slash", label: "Slash chords" }],
   roots: NOTES.map((n, i) => ({ id: String(i), label: FLATS[n] ? `${pretty(i)}/${FLATS[n]}` : n })),
 };
 const CHIP_BOXES = { types: "typeChips", roots: "rootChips" };
@@ -431,7 +514,8 @@ function setInstrument(inst) {
   $("hearBtn").textContent = piano() ? "▶ Play it" : "▶ Strum it";
   $("hint").innerHTML = "Chords you've been getting wrong come up more often, until you get them right a few times.<br>" + (piano()
     ? "The lit keys are the notes of the chord, played with the root at the bottom. The dark blue key is the root (unless you hide it)."
-    : "How to read the diagram: the vertical lines are strings, the horizontal ones are frets. Dots are where your fingers go, ○ means play the string open, × means don't play it. A label like \"5fr\" means the diagram starts at the 5th fret. The lowest note played is always the root.")
+    : "How to read the diagram: the vertical lines are strings, the horizontal ones are frets. Dots are where your fingers go, ○ means play the string open, × means don't play it. A label like \"5fr\" means the diagram starts at the 5th fret. The lowest note played is the root, except in slash chords.")
+    + "<br>Slash chords like G/B (a G chord with B as its lowest note) are answered with a third pick, the bass note; for a normal chord pick \"None\"."
     + `<br>${piano() ? "Piano" : "Guitar"} sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by Nicholas Brosowsky, licensed
     <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.`;
   // A fresh start: the score and streak belong to one instrument
@@ -451,6 +535,9 @@ hand.onchange = () => {
 $("rootDot").onchange = () => { save(); if (current) draw(current); };
 $("sound").onchange = save;
 $("shapes").onchange = restart;
+const showFilters = () => document.body.classList.toggle("known-only", knownOnly());
+$("knownOnly").onchange = () => { showFilters(); restart(); };
+showFilters();
 $("hearBtn").onclick = () => { if (current) play(current); };
 
 makeChips("types");
