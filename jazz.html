@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R&amp;B and Jazz</title>
+<style>
+  /* Same colour setup as the other pages */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6b665e;
+    --line: #2a2723;
+    --accent: #3b5bdb;
+    --accent-soft: #a9b8f2;
+    --btn: #ece8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a;
+      --card: #222127;
+      --ink: #f1efe9;
+      --muted: #a29d94;
+      --line: #e6e2da;
+      --accent: #8ea2ff;
+      --accent-soft: #4a5a9e;
+      --btn: #2f2d35;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.3rem; margin: 36px 0 4px; }
+  h3 { font-size: 1.05rem; margin: 22px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; max-width: 760px; line-height: 1.5; }
+  .muted { color: var(--muted); }
+  p { line-height: 1.5; }
+
+  .panel { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+  .settings label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+  select { font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--btn); background: var(--card); color: var(--ink); }
+  .jump { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 0.9rem; }
+
+  button.btn { font: inherit; font-weight: 600; border: none; border-radius: 8px; padding: 6px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  button.btn:hover { outline: 2px solid var(--accent); }
+  button.link { background: none; border: none; color: var(--accent); font: inherit; font-size: 0.85rem; cursor: pointer; padding: 2px 0; }
+
+  /* "What you should know" cards */
+  .ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 10px; }
+  .idea { background: var(--card); border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .idea h4 { margin: 0 0 4px; font-size: 1rem; }
+  .idea p { margin: 0; font-size: 0.92rem; }
+  .idea .n { color: var(--accent); font-family: Georgia, serif; margin-right: 6px; }
+
+  /* Chord cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }
+  .chord {
+    background: var(--card); border-radius: 12px; padding: 10px 10px 8px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 3px;
+  }
+  .chord .name { font-weight: 700; font-size: 1.2rem; }
+  .chord .formula { font-family: Georgia, serif; color: var(--accent); font-size: 0.95rem; }
+  .chord .spelled { font-size: 0.85rem; color: var(--muted); }
+  .chord .about { font-size: 0.8rem; color: var(--muted); text-align: left; margin: 4px 0 2px; line-height: 1.4; }
+  .chord svg, .mini svg, .voicing svg { cursor: pointer; }
+
+  /* Progressions */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .filters button { font: inherit; font-size: 0.9rem; border: none; border-radius: 999px; padding: 4px 12px; background: var(--btn); color: var(--ink); cursor: pointer; }
+  .filters button.sel { background: var(--accent); color: #fff; }
+  .progs { display: grid; gap: 10px; margin-top: 10px; }
+  .prog { background: var(--card); border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .prog-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .prog .title { font-weight: 700; }
+  .tag { font-size: 0.75rem; border-radius: 999px; padding: 2px 8px; background: var(--btn); color: var(--muted); }
+  .prog .numerals { font-family: Georgia, serif; color: var(--accent); margin-top: 6px; }
+  .prog .names { font-weight: 700; margin-top: 2px; }
+  .prog .names span { border-radius: 6px; padding: 0 3px; transition: background .1s; }
+  .prog .names span.on { background: var(--accent-soft); }
+  .prog .about { font-size: 0.9rem; color: var(--muted); margin: 6px 0 2px; }
+  .minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 8px; }
+  .mini, .voicing { border: 2px solid transparent; border-radius: 10px; padding: 4px; text-align: center; font-size: 0.85rem; font-weight: 600; transition: border-color .1s; }
+  .mini.on, .voicing.on { border-color: var(--accent); }
+  .mini small, .voicing small { display: block; font-weight: 400; color: var(--muted); }
+
+  /* Exercises */
+  .exercise { margin-top: 12px; }
+  .exercise h3 { margin-top: 0; }
+  .exercise p { margin: 4px 0 8px; font-size: 0.95rem; }
+  .drill-key { font-size: 1.4rem; font-weight: 700; margin: 8px 0; }
+  .answer { display: flex; flex-wrap: wrap; gap: 8px; min-height: 2.2em; margin: 6px 0 10px; }
+  .answer span { background: var(--btn); border-radius: 8px; padding: 4px 10px; font-weight: 700; }
+  .answer span small { font-family: Georgia, serif; color: var(--accent); font-weight: 400; margin-right: 4px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  table { border-collapse: collapse; margin: 6px 0 10px; }
+  th, td { padding: 4px 14px 4px 0; text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+  td.slide { color: var(--accent); font-weight: 700; }
+  .voicings { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 8px 0; max-width: 560px; }
+  ol.more { margin: 6px 0 0; padding-left: 22px; line-height: 1.55; }
+  ol.more li { margin-bottom: 6px; }
+
+  /* Chord diagram colours (the shapes are drawn by chord-data.js) */
+  svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--line); stroke-width: 1.5; }
+  .nut { stroke: var(--line); stroke-width: 6; }
+  .finger { fill: var(--line); }
+  .finger.root { fill: var(--accent); }
+  .marker { fill: none; stroke: var(--line); stroke-width: 2; }
+  .label { fill: var(--muted); font-size: 13px; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .fret-label { fill: var(--ink); font-size: 14px; font-weight: 600; text-anchor: middle; font-family: system-ui, sans-serif; }
+  .pk-white { fill: #fdfdfb; stroke: #555; stroke-width: 1; }
+  .pk-black { fill: #1c1c1c; }
+  .pk-on { fill: var(--accent-soft); }
+  .pk-root { fill: var(--accent); }
+  .pk-label { fill: #888; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
+
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 28px; line-height: 1.6; max-width: 760px; }
+</style>
+</head>
+<body>
+<script src="nav.js"></script><script src="sync.js"></script>
+<main>
+  <h1>R&amp;B and Jazz</h1>
+  <p class="sub">Both styles grow from the same roots: the blues, gospel and the 7th chord. Jazz is about moving through
+    chords (and keys) with tension and release; R&amp;B and neo-soul take the same rich chords, slow them down and
+    groove on them. Learn the ideas, the chords and the progressions below, then work through the exercises.</p>
+
+  <div class="panel">
+    <div class="settings">
+      <label>Key <select id="key"></select></label>
+      <label>Instrument
+        <select id="inst">
+          <option value="guitar">Guitar</option>
+          <option value="piano">Piano</option>
+        </select>
+      </label>
+      <label id="handWrap">Hand
+        <select id="hand">
+          <option value="right">Right-handed</option>
+          <option value="left">Left-handed</option>
+        </select>
+      </label>
+    </div>
+    <div class="jump">
+      <a href="#know">What you should know</a>
+      <a href="#chords">Common chords</a>
+      <a href="#progressions">Progressions</a>
+      <a href="#exercises">Exercises</a>
+    </div>
+  </div>
+
+  <!-- ========== What you should know ========== -->
+  <h2 id="know">What you should know</h2>
+  <p class="muted">Ten ideas that explain most of what you hear in jazz and R&amp;B.</p>
+  <div class="ideas">
+    <div class="idea"><h4><span class="n">1</span>The 7th chord is home</h4>
+      <p>In pop and rock a chord is usually 3 notes. In jazz and R&amp;B the 4-note 7th chord is the normal chord:
+        C becomes Cmaj7 or C6, Dm becomes Dm7, G becomes G7. Plain triads sound bare in these styles.</p></div>
+    <div class="idea"><h4><span class="n">2</span>Extensions add colour</h4>
+      <p>Keep stacking 3rds past the 7th and you get the 9th, 11th and 13th: the 2nd, 4th and 6th, an octave up.
+        They don't change what a chord <i>does</i>, only how rich it sounds. R&amp;B lives on the 9th (m9, maj9).</p></div>
+    <div class="idea"><h4><span class="n">3</span>The 3rd and 7th carry the chord</h4>
+      <p>The 3rd says major or minor, the 7th says what kind of 7th chord it is. Together they're called the
+        <b>guide tones</b>. The 5th adds little and is often left out, and the bass player plays the root,
+        so the pianist or guitarist often leaves that out too.</p></div>
+    <div class="idea"><h4><span class="n">4</span>ii – V – I is the engine</h4>
+      <p>The V7 chord is full of tension and wants to fall a 5th to I. Put the ii chord in front and you get
+        ii–V–I (Dm7 – G7 – Cmaj7 in C). Most jazz standards are chains of ii–V–Is, often moving through several keys.</p></div>
+    <div class="idea"><h4><span class="n">5</span>Any chord can have its own V7</h4>
+      <p>To make a chord feel like a target, put <i>its</i> V7 in front of it: A7 before Dm7, E7 before Am7.
+        These <b>secondary dominants</b> are why jazz and soul chords so often have notes outside the key.</p></div>
+    <div class="idea"><h4><span class="n">6</span>Tension is good</h4>
+      <p>Dominant 7ths can be "altered": a ♯9, ♭9 or ♯5 adds grit and makes the pull home stronger.
+        The <b>tritone substitution</b> swaps G7 for D♭7: they share the same 3rd and 7th (B and F),
+        so the bass slides down by semitones: Dm7 – D♭7 – Cmaj7.</p></div>
+    <div class="idea"><h4><span class="n">7</span>Feel: swing vs. the pocket</h4>
+      <p>Jazz <b>swings</b>: pairs of 8th notes are played long–short, like a triplet with the middle note left out.
+        R&amp;B and neo-soul sit on straight or lightly swung 16ths, often slightly <i>behind</i> the beat.
+        Leaving space is part of the groove: what you don't play matters.</p></div>
+    <div class="idea"><h4><span class="n">8</span>Voice leading</h4>
+      <p>When the chord changes, move each note the shortest way to the next chord, not the whole hand.
+        Smooth inner lines are what makes these chords sound "expensive". On guitar, small 3–4 string shapes
+        work better than big six-string barre chords.</p></div>
+    <div class="idea"><h4><span class="n">9</span>A scale for every chord</h4>
+      <p>Over a m7 chord use Dorian, over a dominant 7 Mixolydian, over a maj7 the major scale.
+        The blues scale and the pentatonics work over almost all of R&amp;B. Approach target notes from a semitone
+        below or above for that jazzy sound. <a href="scales.html">Scale shapes</a> has the fingerings.</p></div>
+    <div class="idea"><h4><span class="n">10</span>It's learned by ear</h4>
+      <p>These styles come from records, not books. Pick a song you love, slow it down, and figure out the chords
+        and a few phrases. Copying the players you like is how everyone learned. Keep them in
+        <a href="songs.html">My songs</a>.</p></div>
+  </div>
+
+  <!-- ========== Chords ========== -->
+  <h2 id="chords">Chords you'll meet all the time</h2>
+  <p class="muted" id="chordsIntro"></p>
+  <div id="chordGroups"></div>
+
+  <!-- ========== Progressions ========== -->
+  <h2 id="progressions">Progressions</h2>
+  <p class="muted">The chord sequences that come up again and again, in the key you picked at the top.
+    Roman numerals count the chords from the key note, so the same progression works in every key.</p>
+  <div class="filters" id="filters">
+    <button data-style="all" class="sel">All</button>
+    <button data-style="Jazz">Jazz</button>
+    <button data-style="R&amp;B">R&amp;B and soul</button>
+  </div>
+  <div class="progs" id="progs"></div>
+
+  <!-- ========== Exercises ========== -->
+  <h2 id="exercises">Exercises</h2>
+  <p class="muted">Do a few of these every practice session. Slow and correct beats fast and sloppy.</p>
+
+  <div class="panel exercise">
+    <h3>1. ii – V – I in every key</h3>
+    <p>Name (or play) the three chords of the ii–V–I in the key shown, then check. Aim to answer in under three seconds.
+      Going round the circle of 4ths is the order jazz tunes move in.</p>
+    <div class="row">
+      <label class="muted">Order
+        <select id="drillOrder">
+          <option value="fourths">Round the circle of 4ths</option>
+          <option value="random">Random</option>
+        </select>
+      </label>
+    </div>
+    <div class="drill-key" id="drillKey"></div>
+    <div class="answer" id="drillAnswer"></div>
+    <div class="row">
+      <button class="btn" id="drillReveal">Check and play</button>
+      <button class="btn" id="drillNext">Next key ›</button>
+    </div>
+  </div>
+
+  <div class="panel exercise">
+    <h3>2. Guide tones</h3>
+    <p>Play just the 3rd and 7th of each chord (with the root in the bass, or a friend playing it).
+      Watch how little your hand moves: the 7th of each chord slides down a semitone to become the 3rd of the next.
+      That smooth line is the sound of a ii–V–I.</p>
+    <table id="guideTable"></table>
+    <p class="muted" id="guideNote"></p>
+    <button class="btn" id="guidePlay">▶ Play guide tones</button>
+  </div>
+
+  <div class="panel exercise">
+    <h3 id="voicingTitle"></h3>
+    <p id="voicingText"></p>
+    <div class="voicings" id="voicings"></div>
+    <button class="btn" id="voicingPlay">▶ Play</button>
+  </div>
+
+  <div class="panel exercise">
+    <h3>4. Comping: the Charleston rhythm</h3>
+    <p>"Comping" is accompanying: short chord stabs that leave room for the singer or soloist instead of
+      strumming every beat. Start with the Charleston: hit the chord on beat 1 and on the "and" of 2, then let it
+      rest. Use the voicings from exercise 3. When it feels easy, move the hits around: just the "and" of 4, or
+      beats 2 and 4.</p>
+    <button class="btn" id="charlestonPlay">▶ Hear it on ii – V – I</button>
+  </div>
+
+  <div class="panel exercise">
+    <h3>5. More to practise</h3>
+    <ol class="more">
+      <li><b>7th chords through the key.</b> Play all seven 7th chords in a key, up and down
+        (<a href="keys.html">Chords in a key</a> → set Chords to "7th chords"). Say each name as you play it.</li>
+      <li><b>Vamp and improvise.</b> Loop the "Minor 9 vamp" progression above and improvise over it with the Dorian
+        scale or the minor pentatonic. Use only three notes at first and focus on rhythm.</li>
+      <li><b>Swing your 8ths.</b> Put on the <a href="metronome.html">metronome</a> at a slow tempo, clicks on 2 and 4,
+        and play a scale long–short. Then try the same scale with straight 16ths for an R&amp;B feel.</li>
+      <li><b>Play the 12-bar blues.</b> Learn the "Jazz blues" progression above in F and B♭, the two most common keys
+        for jam sessions. Then improvise over it with the blues scale.</li>
+      <li><b>Hear the chord types.</b> Can you tell maj7, m7 and 7 apart by ear? Click the chord cards above with your
+        eyes closed, or use the <a href="ear.html">Ear trainer</a>.</li>
+      <li><b>Learn songs.</b> Learn one jazz standard and one R&amp;B song you love, by ear if you can. Ballads are a
+        good start: the chords go by slowly.</li>
+    </ol>
+  </div>
+
+  <p class="hint"><b>Reading the Roman numerals:</b> uppercase (V) is a major-type chord, lowercase (ii) minor.
+    ø means half-diminished (m7♭5) and ° diminished. A ♭ or ♯ in front means the chord's root is a semitone lower or
+    higher than the note of the major scale.<br>
+    Guitar and piano sounds: <a href="https://github.com/nbrosowsky/tonejs-instruments">tonejs-instruments</a> by
+    Nicholas Brosowsky, licensed <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.</p>
+</main>
+
+<!-- Chord shapes, diagram drawing and guitar sound are shared with the other chord pages; piano sound too -->
+<script src="chord-data.js"></script>
+<script src="piano-sound.js"></script>
+<script>
+// Everything is inside (() => { ... })() so our names can't clash with the shared scripts' global names.
+(() => {
+// ---------- Music data ----------
+// Keys as jazz musicians usually name them (B♭ rather than A♯, and so on)
+const KEY_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+// The circle of 4ths: each key is a 4th above the last, which is how ii–V–Is chain together in real tunes
+const FOURTHS = ["C", "F", "Bb", "Eb", "Ab", "Db", "F#", "B", "E", "A", "D", "G"];
+
+// Which chord tone (1st, 3rd, 5th, 7th, 9th ...) each note of a chord type is, in the same order as TYPES[...].notes.
+// We need this to spell the notes with the right letters: the 9th of C is D, even though it's only 2 semitones up.
+const DEGREES = {
+  maj: [1, 3, 5], min: [1, 3, 5],
+  maj7: [1, 3, 5, 7], m7: [1, 3, 5, 7], "7": [1, 3, 5, 7], m7b5: [1, 3, 5, 7], dim7: [1, 3, 5, 7], mmaj7: [1, 3, 5, 7],
+  "6": [1, 3, 5, 6], m6: [1, 3, 5, 6], add9: [1, 3, 5, 9], "7sus4": [1, 4, 5, 7],
+  maj9: [1, 3, 5, 7, 9], m9: [1, 3, 5, 7, 9], "9": [1, 3, 5, 7, 9], "7s9": [1, 3, 5, 7, 9], "13": [1, 3, 5, 7, 13],
+};
+
+// The chord types this page teaches, grouped roughly by how often you'll meet them
+const GROUPS = [
+  { title: "The everyday four", text: "Learn these first: almost every jazz tune and most R&B songs are built from them.",
+    chords: [
+      ["maj7", "Soft and dreamy: the jazz version of a plain major chord. The I and IV chords of most ballads."],
+      ["m7", "Smooth, mellow minor. The ii chord in every ii–V–I, and the home chord of countless soul and funk grooves."],
+      ["7", "Bluesy and restless: it wants to move. The V chord that pulls back home, and all three chords of a blues."],
+      ["m7b5", "\"Half-diminished\". Dark and unsettled: the ii chord of a minor-key ii–V–i."],
+    ] },
+  { title: "R&B and neo-soul colours", text: "Add one more note to the everyday chords and you get the lush sound of R&B, gospel and neo-soul.",
+    chords: [
+      ["maj9", "A maj7 with the 9th on top: glossy and open. Pure neo-soul."],
+      ["m9", "The R&B minor chord: warm and lush. You can vamp on it for minutes."],
+      ["9", "A dominant 7 with the 9th on top. Funk, soul and gospel; James Brown grooves sit on one chord like this."],
+      ["13", "A dominant with the 13th (the 6th) on top: the big-band and gospel V chord."],
+      ["add9", "A major chord plus the 9th, no 7th. Pretty and modern; pop-R&B ballads love it."],
+      ["7sus4", "The 3rd is lifted to the 4th, so it floats without resolving. Gospel and modern jazz; often resolves to a plain 7."],
+    ] },
+  { title: "Spice and passing chords", text: "Used less often, but each one has a job you'll start to recognise.",
+    chords: [
+      ["6", "Major with an added 6th: the swing-era home chord, sweeter and more old-fashioned than maj7."],
+      ["m6", "The minor home chord of older jazz: the i at the end of a minor ii–V–i."],
+      ["7s9", "The \"Hendrix chord\": major and minor 3rd rubbing together. Funk and blues tension."],
+      ["dim7", "Four notes all a minor 3rd apart. A passing chord that links two chords a whole step apart (C – C♯°7 – Dm7). Gospel loves it."],
+      ["mmaj7", "Minor with a major 7th: mysterious, film-noir. Heard in falling lines like Cm – Cm(maj7) – Cm7 – Cm6."],
+    ] },
+];
+
+// Progressions. Each chord is [scale degree 1–7, shift in semitones from the major scale, chord type, beats].
+// Beats default to 4 (one bar). The shift lets us write chords outside the key: [2, -1, "7"] is ♭II7 (D♭7 in C).
+const PROGRESSIONS = [
+  { style: "Jazz", title: "Major ii – V – I", chords: [[2, 0, "m7"], [5, 0, "7"], [1, 0, "maj7", 8]],
+    about: "The most important progression in jazz. Learn it in every key before anything else." },
+  { style: "Jazz", title: "Minor ii – V – i", chords: [[2, 0, "m7b5"], [5, 0, "7"], [1, 0, "m6", 8]],
+    about: "The same idea in a minor key: a half-diminished ii, a dominant V and a minor home chord." },
+  { style: "Jazz", title: "Turnaround: I – VI – ii – V", chords: [[1, 0, "maj7"], [6, 0, "7"], [2, 0, "m7"], [5, 0, "7"]],
+    about: "Used at the end of a section to loop back to the start. The vi chord is turned into a dominant (VI7) to pull harder to ii." },
+  { style: "Jazz", title: "iii – VI – ii – V – I", chords: [[3, 0, "m7"], [6, 0, "7"], [2, 0, "m7"], [5, 0, "7"], [1, 0, "maj7", 8]],
+    about: "A longer chain of chords falling in 5ths, each one pulling to the next. Heard in countless standards." },
+  { style: "Jazz", title: "Tritone substitution", chords: [[2, 0, "m7"], [2, -1, "7"], [1, 0, "maj7", 8]],
+    about: "The V7 is swapped for the dominant a tritone away. Same guide tones, but the bass now slides down in semitones." },
+  { style: "Jazz", title: "Backdoor ii – V", chords: [[4, 0, "m7"], [7, -1, "7"], [1, 0, "maj7", 8]],
+    about: "Coming home from a whole step below instead of from V. Softer and more surprising; borrowed from the minor key." },
+  { style: "Jazz", title: "Jazz blues (12 bars)",
+    chords: [[1, 0, "7"], [4, 0, "7"], [1, 0, "7"], [1, 0, "7"], [4, 0, "7"], [4, 1, "dim7"], [1, 0, "7"], [6, 0, "7"],
+             [2, 0, "m7"], [5, 0, "7"], [1, 0, "7", 2], [6, 0, "7", 2], [2, 0, "m7", 2], [5, 0, "7", 2]],
+    about: "The 12-bar blues with jazz additions: a passing ♯iv°7 in bar 6, and ii–V turnarounds at the end. The jam-session staple." },
+  { style: "R&B", title: "Neo-soul float: Imaj9 – IVmaj9", chords: [[1, 0, "maj9", 8], [4, 0, "maj9", 8]],
+    about: "Just two lush chords rocking back and forth. Loop it, lay back and groove." },
+  { style: "R&B", title: "Minor 9 vamp", chords: [[1, 0, "m9", 8], [4, 0, "9", 8]],
+    about: "Minor i to a major IV: the Dorian sound of funk and soul. Great for improvising: use the Dorian scale or minor pentatonic." },
+  { style: "R&B", title: "Smooth ii – V – I", chords: [[2, 0, "m9"], [5, 0, "13"], [1, 0, "maj9", 8]],
+    about: "The jazz ii–V–I with 9ths and 13ths. Exactly the same function, a much silkier sound." },
+  { style: "R&B", title: "Sus ii – V – I", chords: [[2, 0, "m9"], [5, 0, "7sus4", 2], [5, 0, "7", 2], [1, 0, "maj9", 8]],
+    about: "Delay the V with a sus4 and let it resolve to the plain 7 at the last moment. Very gospel." },
+  { style: "R&B", title: "Falling soul: IV – III – vi – v – I", chords: [[4, 0, "maj7"], [3, 0, "7"], [6, 0, "m7"], [5, 0, "m7", 2], [1, 0, "7", 2]],
+    about: "A famous R&B and city-pop sequence. III7 pulls to vi, and v7–I7 is a ii–V into IV, so it loops forever." },
+  { style: "R&B", title: "Royal road: IV – V – iii – vi", chords: [[4, 0, "maj7"], [5, 0, "7"], [3, 0, "m7"], [6, 0, "m7"]],
+    about: "Bittersweet and always moving. A favourite in neo-soul, J-pop and anime soundtracks." },
+  { style: "R&B", title: "Gospel walk-up", chords: [[1, 0, "maj7"], [1, 0, "7"], [4, 0, "maj7"], [4, 1, "dim7"], [1, 0, "maj7"], [6, 0, "7"], [2, 0, "m7"], [5, 0, "7"]],
+    about: "I7 pushes to IV, the ♯iv°7 walks the bass up a semitone back to I, then a I–VI–ii–V turnaround. Church in eight chords." },
+];
+
+// Roman-numeral endings for each chord type (lowercase numerals for the minor types)
+const NUM_SUFFIX = { maj: "", min: "", maj7: "maj7", "7": "7", m7: "7", m9: "9", maj9: "maj9", "9": "9", "13": "13",
+  m7b5: "ø7", dim7: "°7", "6": "6", m6: "6", mmaj7: "(maj7)", "7s9": "7♯9", "7sus4": "7sus4", add9: "add9" };
+const MINORISH = ["min", "m7", "m9", "m6", "m7b5", "dim7", "mmaj7"];
+
+const typeOf = id => TYPES.find(t => t.id === id);
+
+// ---------- Spelling ----------
+// A note is { letter (0 = C ... 6 = B), pc (pitch, 0 = C ... 11 = B), name }.
+function keyNote(name) {
+  const letter = LETTERS.indexOf(name[0]);
+  const pc = (NATURAL[letter] + (name[1] === "#" ? 1 : name[1] === "b" ? -1 : 0) + 12) % 12;
+  return { letter, pc, name: LETTERS[letter] + (name[1] === "#" ? "♯" : name[1] === "b" ? "♭" : "") };
+}
+// The note `semi` semitones above `root`, that is the deg-th note counting letters (3rd = two letters up).
+// The letter is fixed by the degree; then we add whatever ♯ or ♭ lands it on the right pitch.
+function spell(root, semi, deg) {
+  const letter = (root.letter + deg - 1) % 7;
+  const pc = (root.pc + semi + 120) % 12;
+  const acc = ((pc - NATURAL[letter] + 18) % 12) - 6;
+  return { letter, pc, name: LETTERS[letter] + ACCIDENTAL[acc] };
+}
+// "♭7", "♯9", "13": how a chord tone compares with the major scale
+function degreeLabel(semi, deg) {
+  const shift = ((semi - MAJOR[(deg - 1) % 7]) + 18) % 12 - 6;
+  return ACCIDENTAL[shift] + deg;
+}
+// A chord from a progression, in a key
+function chordIn(key, [deg, shift, typeId, beats = 4]) {
+  let root = spell(key, MAJOR[deg - 1] + shift, deg);
+  // Strictly, ♭II in E♭ is F♭, but nobody writes F♭7: musicians write E7. So for chord names we swap
+  // double flats/sharps and F♭, C♭, E♯, B♯ for the simpler name of the same note.
+  if (/𝄫|𝄪|F♭|C♭|E♯|B♯/.test(root.name)) {
+    root = [root.letter + 6, root.letter + 1].map(l => {
+      const letter = l % 7, acc = ((root.pc - NATURAL[letter] + 18) % 12) - 6;
+      return { letter, pc: root.pc, name: LETTERS[letter] + ACCIDENTAL[acc], acc };
+    }).sort((a, b) => Math.abs(a.acc) - Math.abs(b.acc))[0];
+  }
+  const r =ROMAN[deg - 1];
+  const numeral = ACCIDENTAL[shift] + (MINORISH.includes(typeId) ? r.toLowerCase() : r) + NUM_SUFFIX[typeId];
+  return { root, typeId, beats, numeral, name: root.name + typeOf(typeId).suffix };
+}
+
+// ---------- Voicings ----------
+// Guitar: every shape for a chord, open shapes first
+const shapesFor = (pc, typeId) => CHORDS.filter(c => c.root === pc && c.type.id === typeId).sort((a, b) => a.barre - b.barre);
+// For a progression, pick shapes that stay in the same area of the neck, so your hand doesn't jump around.
+function guitarShapes(chords) {
+  let prev = null;
+  return chords.map(c => {
+    const shapes = shapesFor(c.root.pc, c.typeId);
+    const pick = prev === null ? (shapes.find(s => s.barre <= 7) || shapes[0])
+      : shapes.reduce((best, s) => Math.abs(s.barre - prev) < Math.abs(best.barre - prev) ? s : best);
+    prev = pick.barre;
+    return pick;
+  });
+}
+
+// Piano: the right hand plays the chord without its root (the left hand or bass has it): a "rootless" voicing.
+// For each chord we try every inversion and keep the one closest to where the hand already is: voice leading.
+const rootless = id => { const n = typeOf(id).notes; return n.length >= 4 ? n.filter(v => v !== 0) : n; };
+function pianoVoicings(chords, tonesOf = rootless) {
+  let centre = 62; // around middle C
+  return chords.map(c => {
+    const pcs = [...new Set(tonesOf(c.typeId).map(n => (c.root.pc + n) % 12))].sort((a, b) => a - b);
+    let best = null, bestScore = Infinity;
+    pcs.forEach((_, r) => {
+      const order = pcs.slice(r).concat(pcs.slice(0, r));  // this inversion: start from the r-th note
+      let m = 50 + ((order[0] - 50) % 12 + 12) % 12;      // the lowest note goes between D3 and C♯4
+      const notes = [m];
+      order.slice(1).forEach(p => { m += ((p - m) % 12 + 12) % 12 || 12; notes.push(m); }); // each next note just above
+      const score = Math.abs(avg(notes) - centre);
+      if (score < bestScore) { bestScore = score; best = notes; }
+    });
+    centre = (2 * avg(best) + 62) / 3; // follow the hand, but drift back towards the middle
+    return best;
+  });
+}
+const avg = list => list.reduce((a, b) => a + b, 0) / list.length;
+const bassOf = pc => 36 + pc; // C2 to B2: the left hand's root
+
+// ---------- Sound ----------
+// Each playable thing gets a play() function, so the player below doesn't care whether it's guitar or piano.
+function strumNow(frets) { let d = 0; frets.forEach((f, s) => { if (f !== null) { pluck(OPEN[s] + f, d); d += 0.03; } }); }
+function notesNow(bass, notes) {
+  if (inst() === "piano") { playPiano(bass); notes.forEach(m => playPiano(m)); }
+  else { pluck(bass + 12, 0); notes.forEach((m, i) => pluck(m, 0.03 * (i + 1))); } // guitar: a quick strum of the same notes
+}
+
+// Play a list of { beats, play } one after another, calling onStep(i) as each starts (-1 at the end).
+// hits: on which beats of each chord to play it (0 = beat 1). The default is once, at the start.
+const BEAT = 0.38; // seconds per beat (about 160 bpm, so a bar of 4 lasts about 1.5 seconds)
+let timers = [];
+function stopAll() {
+  timers.forEach(clearTimeout);
+  timers = [];
+  document.querySelectorAll(".on").forEach(e => e.classList.remove("on"));
+}
+function playSequence(items, onStep, hits = [0]) {
+  stopAll();
+  let t = 0;
+  items.forEach((item, i) => {
+    timers.push(setTimeout(() => onStep(i), t * 1000));
+    hits.filter(h => h < item.beats).forEach(h => timers.push(setTimeout(item.play, (t + h * BEAT) * 1000)));
+    t += item.beats * BEAT;
+  });
+  timers.push(setTimeout(() => onStep(-1), t * 1000 + 300));
+}
+// Highlight the i-th element of a list (and un-highlight the rest)
+const highlight = (els, i) => els.forEach((e, n) => e.classList.toggle("on", n === i));
+
+// ---------- Settings ----------
+const keySel = document.getElementById("key");
+const instSel = document.getElementById("inst");
+const hand = document.getElementById("hand");
+KEY_NAMES.forEach(k => keySel.add(new Option(keyNote(k).name, k)));
+try {
+  const saved = JSON.parse(localStorage.getItem("jazzPage")) || {};
+  if (saved.key) keySel.value = saved.key;
+  if (saved.inst) instSel.value = saved.inst;
+  hand.value = localStorage.getItem("fretTrainerHand") || "right"; // shared with the other pages
+} catch (e) {}
+const inst = () => instSel.value;
+const key = () => keyNote(keySel.value);
+const lefty = () => hand.value === "left";
+
+function save() {
+  try { localStorage.setItem("jazzPage", JSON.stringify({ key: keySel.value, inst: instSel.value })); } catch (e) {}
+}
+
+// A guitar diagram or a piano keyboard, as an <svg> that plays when clicked
+function guitarSvg(chord, play) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 240 285");
+  drawChord(svg, chord, { lefty: lefty(), showRoot: true });
+  svg.onclick = play;
+  return svg;
+}
+function pianoSvg(midis, rootMidi, play) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  drawPianoChord(svg, midis, rootMidi);
+  svg.onclick = play;
+  return svg;
+}
+
+// ---------- Chord cards ----------
+function renderChords() {
+  const root = key();
+  document.getElementById("chordsIntro").textContent =
+    `All on ${root.name}, so you can compare them. Click a diagram to hear it. The formula shows which notes of the major scale each chord uses.`;
+  const box = document.getElementById("chordGroups");
+  box.innerHTML = "";
+  GROUPS.forEach(g => {
+    box.insertAdjacentHTML("beforeend", `<h3>${g.title}</h3><p class="muted">${g.text}</p>`);
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    g.chords.forEach(([id, about]) => {
+      const type = typeOf(id);
+      const notes = type.notes.map((semi, i) => spell(root, semi, DEGREES[id][i]).name);
+      const formula = type.notes.map((semi, i) => degreeLabel(semi, DEGREES[id][i]));
+      const card = document.createElement("div");
+      card.className = "chord";
+      card.innerHTML = `<div class="name">${root.name}${type.suffix}</div>
+        <div class="formula">${formula.join(" ")}</div><div class="spelled">${notes.join(" ")}</div>`;
+      const pic = document.createElement("div");
+      card.appendChild(pic);
+      if (inst() === "piano") {
+        const midis = pianoChord(root.pc, id);
+        pic.appendChild(pianoSvg(midis, midis[0], () => midis.forEach(m => playPiano(m))));
+      } else {
+        const shapes = shapesFor(root.pc, id);
+        let n = 0;
+        const btn = document.createElement("button");
+        btn.className = "link";
+        const draw = () => {
+          pic.innerHTML = "";
+          pic.appendChild(guitarSvg(shapes[n], () => strum(shapes[n])));
+          btn.textContent = `Other shape (${n + 1}/${shapes.length}) ›`;
+        };
+        btn.onclick = () => { n = (n + 1) % shapes.length; draw(); };
+        draw();
+        if (shapes.length > 1) card.appendChild(btn);
+      }
+      card.insertAdjacentHTML("beforeend", `<div class="about">${about}</div>`);
+      grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  });
+}
+
+// ---------- Progressions ----------
+let styleFilter = "all";
+function renderProgressions() {
+  const k = key();
+  const box = document.getElementById("progs");
+  box.innerHTML = "";
+  PROGRESSIONS.filter(p => styleFilter === "all" || p.style === styleFilter).forEach(p => {
+    const chords = p.chords.map(c => chordIn(k, c));
+    const shapes = guitarShapes(chords);
+    const voicings = pianoVoicings(chords);
+    const items = chords.map((c, i) => ({
+      beats: c.beats,
+      play: inst() === "piano" ? () => notesNow(bassOf(c.root.pc), voicings[i]) : () => strum(shapes[i]),
+    }));
+
+    const row = document.createElement("div");
+    row.className = "prog";
+    row.innerHTML = `<div class="prog-head"><button class="btn play">▶ Play</button>
+        <span class="title">${p.title}</span><span class="tag">${p.style === "R&B" ? "R&amp;B" : "Jazz"}</span></div>
+      <div class="numerals">${chords.map(c => c.numeral).join(" – ")}</div>
+      <div class="names">${chords.map(c => `<span>${c.name}</span>`).join(" – ")}</div>
+      <p class="about">${p.about}</p>
+      <button class="link show">Show chords ›</button><div class="minis" hidden></div>`;
+    const names = [...row.querySelectorAll(".names span")];
+    const minis = row.querySelector(".minis");
+
+    // The diagrams are only built when you open them, to keep the page quick
+    row.querySelector(".show").onclick = e => {
+      if (minis.hidden && !minis.children.length) {
+        chords.forEach((c, i) => {
+          const m = document.createElement("div");
+          m.className = "mini";
+          m.innerHTML = `${c.name}<small>${c.numeral}</small>`;
+          if (inst() === "piano") {
+            m.appendChild(pianoSvg(voicings[i], null, items[i].play));
+            m.insertAdjacentHTML("beforeend", `<small>left hand: ${c.root.name}</small>`);
+          } else m.appendChild(guitarSvg(shapes[i], items[i].play));
+          minis.appendChild(m);
+        });
+      }
+      minis.hidden = !minis.hidden;
+      e.target.textContent = minis.hidden ? "Show chords ›" : "Hide chords";
+    };
+    row.querySelector(".play").onclick = () => playSequence(items, i => {
+      highlight(names, i);
+      highlight([...minis.children], i);
+    });
+    box.appendChild(row);
+  });
+}
+document.getElementById("filters").onclick = e => {
+  if (!e.target.dataset.style) return;
+  styleFilter = e.target.dataset.style;
+  document.querySelectorAll("#filters button").forEach(b => b.classList.toggle("sel", b === e.target));
+  renderProgressions();
+};
+
+// ---------- Exercise 1: ii–V–I drill ----------
+const IIVI = [[2, 0, "m7"], [5, 0, "7"], [1, 0, "maj7", 8]];
+let drillIndex = 0, drillKey = "C";
+function newDrillKey(step) {
+  if (document.getElementById("drillOrder").value === "fourths") {
+    drillIndex = (FOURTHS.indexOf(drillKey) + step + 12) % 12;
+    drillKey = FOURTHS[drillIndex];
+  } else {
+    let k;
+    do { k = KEY_NAMES[Math.floor(Math.random() * 12)]; } while (k === drillKey && step !== 0);
+    drillKey = k;
+  }
+  document.getElementById("drillKey").textContent = `Key of ${keyNote(drillKey).name} major:  ii – V – I = ?`;
+  document.getElementById("drillAnswer").innerHTML = "";
+}
+document.getElementById("drillNext").onclick = () => newDrillKey(1);
+document.getElementById("drillOrder").onchange = () => newDrillKey(0);
+document.getElementById("drillReveal").onclick = () => {
+  const chords = IIVI.map(c => chordIn(keyNote(drillKey), c));
+  const answer = document.getElementById("drillAnswer");
+  answer.innerHTML = chords.map(c => `<span><small>${c.numeral}</small>${c.name}</span>`).join("");
+  const shapes = guitarShapes(chords), voicings = pianoVoicings(chords);
+  playSequence(chords.map((c, i) => ({
+    beats: c.beats,
+    play: inst() === "piano" ? () => notesNow(bassOf(c.root.pc), voicings[i]) : () => strum(shapes[i]),
+  })), i => highlight([...answer.children], i));
+};
+
+// ---------- Exercise 2: guide tones ----------
+const guideTones = id => typeOf(id).notes.filter(n => [3, 4, 10, 11].includes(n)); // the 3rd and the 7th
+function renderGuideTones() {
+  const chords = IIVI.map(c => chordIn(key(), c));
+  const rows = chords.map(c => {
+    const t = typeOf(c.typeId).notes;
+    return { name: c.name, third: spell(c.root, t[1], 3).name, seventh: spell(c.root, t[3], 7).name };
+  });
+  document.getElementById("guideTable").innerHTML = `<tr><th>Chord</th><th>3rd</th><th>7th</th></tr>` +
+    rows.map(r => `<tr><td><b>${r.name}</b></td><td>${r.third}</td><td>${r.seventh}</td></tr>`).join("");
+  document.getElementById("guideNote").textContent =
+    `The 7th of ${rows[0].name} (${rows[0].seventh}) slides down to ${rows[1].third}, the 3rd of ${rows[1].name}, ` +
+    `while ${rows[0].third} stays and becomes its 7th. Then the 7th of ${rows[1].name} (${rows[1].seventh}) slides down to ` +
+    `${rows[2].third}, the 3rd of ${rows[2].name}.`;
+}
+document.getElementById("guidePlay").onclick = () => {
+  const chords = IIVI.map(c => chordIn(key(), c));
+  const voicings = pianoVoicings(chords, guideTones);
+  const cells = [...document.querySelectorAll("#guideTable tr")].slice(1);
+  playSequence(chords.map((c, i) => ({ beats: c.beats, play: () => notesNow(bassOf(c.root.pc), voicings[i]) })),
+    i => highlight(cells, i));
+};
+
+// ---------- Exercise 3: shell voicings (guitar) / rootless voicings (piano) ----------
+// Guitar shells: just the root, 3rd and 7th on three strings. Fret offsets from the root's fret, low E → high E.
+const SHELLS = {
+  6: { m7: [0, x, 0, 0, x, x], "7": [0, x, 0, 1, x, x], maj7: [0, x, 1, 1, x, x] }, // root on the 6th string
+  5: { m7: [x, 0, x, 0, 1, x], "7": [x, 0, x, 0, 2, x], maj7: [x, 0, x, 1, 2, x] }, // root on the 5th string
+};
+// Piano rootless voicings (the Bill Evans sound), in semitones above each chord's root:
+// ii m9 = ♭3 5 ♭7 9, V13 = ♭7 9 3 13, Imaj9 = 3 5 7 9. Each note only moves a step or stays put.
+const ROOTLESS = [[3, 7, 10, 14], [10, 14, 16, 21], [4, 7, 11, 14]];
+const ROOTLESS_CHORDS = [[2, 0, "m9"], [5, 0, "13"], [1, 0, "maj9", 8]];
+
+function voicingItems() {
+  if (inst() === "piano") {
+    return ROOTLESS_CHORDS.map((c, i) => {
+      const ch = chordIn(key(), c);
+      let notes = ROOTLESS[i].map(n => ch.root.pc + n);
+      const lift = Math.ceil((50 - notes[0]) / 12) * 12; // move it so the lowest note is between D3 and C♯4
+      notes = notes.map(m => m + lift);
+      return { chord: ch, notes, beats: ch.beats, play: () => notesNow(bassOf(ch.root.pc), notes) };
+    });
+  }
+  // ii on the 5th string, V on the 6th string at the same fret area, I back on the 5th string: no jumping
+  const chords = IIVI.map(c => chordIn(key(), c));
+  let fret = (chords[0].root.pc - 9 + 12) % 12; // where the ii's root is on the A string
+  if (fret < 2) fret += 12;
+  const where = [[5, fret], [6, fret - 2], [5, fret - 2]];
+  return chords.map((ch, i) => {
+    const [string, f] = where[i];
+    const frets = SHELLS[string][ch.typeId].map(o => o === null ? null : o + f);
+    return { chord: ch, frets, beats: ch.beats, play: () => strumNow(frets) };
+  });
+}
+function renderVoicings() {
+  const piano = inst() === "piano";
+  document.getElementById("voicingTitle").textContent = piano ? "3. Rootless voicings" : "3. Shell voicings";
+  document.getElementById("voicingText").textContent = piano
+    ? "Jazz and R&B pianists rarely play the root in the right hand: the left hand or the bass has it. These four-note " +
+      "voicings of a ii–V–I add the 9th and 13th, and each note moves a step at most. Play the root with your left hand, " +
+      "the voicing with your right, then take them through all 12 keys."
+    : "Three notes: root, 3rd and 7th, and no 5th. These are the shapes jazz guitarists comp with. Mute the strings " +
+      "in between with your fingers. The ii has its root on the 5th string, the V on the 6th, the I on the 5th again, so " +
+      "your hand barely moves. Then move it to other keys by sliding the whole pattern.";
+  const box = document.getElementById("voicings");
+  box.innerHTML = "";
+  voicingItems().forEach(v => {
+    const d = document.createElement("div");
+    d.className = "voicing";
+    d.innerHTML = `${v.chord.name}<small>${v.chord.numeral}</small>`;
+    if (piano) {
+      d.appendChild(pianoSvg(v.notes, null, v.play));
+      const names = v.notes.map(m => spellPc(v.chord, m % 12));
+      d.insertAdjacentHTML("beforeend", `<small>${names.join(" ")} · left hand ${v.chord.root.name}</small>`);
+    } else d.appendChild(guitarSvg({ frets: v.frets, barre: 0 }, v.play));
+    box.appendChild(d);
+  });
+}
+// Spell a note of a chord by working out which chord tone it is (3rd, 5th, 7th, 9th, 13th)
+function spellPc(chord, pc) {
+  const semi = (pc - chord.root.pc + 12) % 12;
+  const deg = { 0: 1, 3: 3, 4: 3, 7: 5, 10: 7, 11: 7, 2: 9, 9: 13 }[semi];
+  return spell(chord.root, semi, deg).name;
+}
+document.getElementById("voicingPlay").onclick = () => {
+  const items = voicingItems();
+  playSequence(items, i => highlight([...document.querySelectorAll("#voicings .voicing")], i));
+};
+
+// ---------- Exercise 4: the Charleston comping rhythm ----------
+// Hits on beat 1 and the swung "and" of 2. Swung 8ths split a beat 2/3 + 1/3, so that "and" lands 1⅔ beats in.
+document.getElementById("charlestonPlay").onclick = () => {
+  const items = voicingItems().map(v => ({ ...v, beats: 4 }));
+  const twice = items.concat(items); // play the ii–V–I twice so the rhythm sinks in
+  playSequence(twice, i => highlight([...document.querySelectorAll("#voicings .voicing")], i % 3), [0, 1 + 2 / 3]);
+};
+
+// ---------- Putting it together ----------
+function render() {
+  save();
+  stopAll();
+  document.getElementById("handWrap").hidden = inst() !== "guitar";
+  renderChords();
+  renderProgressions();
+  renderGuideTones();
+  renderVoicings();
+}
+keySel.onchange = render;
+instSel.onchange = render;
+hand.onchange = () => {
+  try { localStorage.setItem("fretTrainerHand", hand.value); } catch (e) {}
+  render();
+};
+newDrillKey(0);
+render();
+})();
+</script>
+</body>
+</html>

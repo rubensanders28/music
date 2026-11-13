@@ -14,6 +14,7 @@
     ["rhythm.html", "Rhythm trainer"],
     ["chord-library.html", "Chord library"],
     ["keys.html", "Chords in a key"],
+    ["jazz.html", "R&B and jazz"],
     ["songs.html", "My songs"],
     ["intervals.html", "Intervals"],
     ["circle.html", "Circle of fifths"],
